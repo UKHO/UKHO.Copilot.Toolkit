@@ -1,0 +1,29 @@
+# Safe implementation validation checklist
+
+- [ ] Every change is covered by the approved plan.
+- [ ] No unrelated files or formatting were changed.
+- [ ] The exact developer-named approved plan path and, when authorized, the exact immutable implementation-report path are recorded; neither is selected by latest/highest-prefix inference.
+- [ ] Any implementation report uses a valid three-digit `implementation-report` identity allocated independently within the plan's lifecycle folder.
+- [ ] Report allocation inspected the matching-suffix inventory twice, re-inspected immediately before creation, and did not overwrite an existing target; malformed or inaccessible inventory stopped the operation.
+- [ ] The report is in the same folder as the exact approved plan, links to that exact plan path, was re-read after creation, and is not revised or overwritten.
+- [ ] The report contains the required identity, pass, hierarchy, changed-file, behavior, acceptance, validation, deviation, scope, evidence, risk, and next-action information.
+- [ ] The report explicitly remains non-authorizing execution evidence; the plan remains authoritative for scope, hierarchy, status, approval, handoff, and acceptance.
+- [ ] Every agent-discovered material unknown was resolved through `agent-question-resolution` before completion or handoff.
+- [ ] **Open questions** is omitted unless it contains a specifically named question with explicit developer-declared intentional-open/unknown provenance; other material unknowns are not deferred there.
+- [ ] Frontmatter is valid and names are unique.
+- [ ] Relative links resolve to existing repository files.
+- [ ] Tool permissions and delegation lists remain least-privilege.
+- [ ] Handoffs target existing agents and remain human-approved.
+- [ ] The diff was re-read for accidental policy changes.
+- [ ] Checks that passed or were otherwise actually performed are listed separately from checks that failed, were unavailable, or were not run, with no unavailable or not-run check claimed as successful.
+- [ ] Any failed validation is recorded with its observed failure and disposition; unavailable validation identifies the missing capability or approved mechanism; not-run validation is distinguished from both.
+- [ ] The general repository terminal-command prohibition remains in force.
+- [ ] Any directory-cleanup exception is limited to the exact target named in the approved canonical implementation plan.
+- [ ] The cleanup target was confirmed empty before the operation.
+- [ ] The cleanup target was confirmed to be contained within the workspace.
+- [ ] The specific cleanup invocation received manual developer approval; terminal auto-approval was not used.
+- [ ] The cleanup operation was non-recursive and used no wildcard or traversal behavior.
+- [ ] No unlisted target, outside-workspace path, or unrelated command work was included.
+- [ ] The target's parent path was inspected after the operation and the observed outcome was recorded.
+- [ ] The report names the exact target, pre-operation checks, approval, operation outcome, parent-path inspection, and checks that were unavailable or not run.
+- [ ] No ordinary command-based validation is claimed when it was unavailable.

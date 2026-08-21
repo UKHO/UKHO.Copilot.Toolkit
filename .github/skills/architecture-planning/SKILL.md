@@ -1,0 +1,19 @@
+---
+name: architecture-planning
+description: Convert approved requirements and repository evidence into a file-level implementation plan with trade-offs, risks, and acceptance criteria. Use when planning a feature, refactor, or customization workflow before edits.
+user-invocable: false
+---
+
+# Architecture planning
+
+Use this skill to produce the final executable plan record without independently changing repository files.
+
+1. Read the approved research brief and inspect the affected repository areas.
+2. Map each requirement to affected files, symbols, interfaces, or documentation sections.
+3. Identify existing patterns to reuse and alternatives that should be rejected.
+4. Define the delivery approach, including sequencing or rollout only when applicable, dependencies, controls, and key mitigations.
+5. Define conditional baseline and pre-completion gates for each work item. Distinguish available, manual/structural, and unavailable validation; never invent commands or evidence.
+6. Complete the [implementation plan template](./implementation-plan-template.md) with lifecycle identity, Research provenance, approval state, one authoritative planned-work-item register, and reusable detailed work-item sections. Use exactly the prospective statuses `Plan drafted`, `Implementing`, `Ready for review`, and `Accepted`, retaining `Plan drafted` as the initial state and explicit developer approval before Implement. In each detailed Work Item, author an initially unchecked Work Item execution-completion marker, one or more scoped unchecked `Task <work-item-id>.<task-number>` entries, and one or more ordered scoped unchecked `Step <work-item-id>.<task-number>.<step-number>` entries per Task. A unit is complete only when its defined implementation work is complete; require completed children before checking a parent, and allow affected units and parents to be unchecked for rework. These markers do not represent validation, authorization, review, or acceptance. State each Task's planned purpose or outcome; make each Step one concrete planned operation with its exact evidenced target. Give known repeated targets separate Steps; when the target inventory is unknown, record unresolved, conditional, or bounded handling rather than inventing targets. Identify exact files, folders, symbols, or documentation locations when evidenced, and record dependencies, execution gates, validation, rollback/backout, and user or operator effects without duplicating Work Item controls unless an evidenced narrower control is necessary. Treat specifications, commands, documentation updates, rollout details, and operator guidance as conditional: cite them when available or mark them `N/A`/unavailable with a reason. Do not invent file paths, commands, frameworks, or dependencies. Preserve the template's cross-cutting validation and acceptance, risks, compatibility, migration, rollback, and validation-gap sections. Plan owns initial hierarchy authoring and canonical persistence; adding, removing, or restructuring hierarchy requires a Plan-stage amendment, and existing plans retain legacy planning-only checkbox semantics unless amended by Plan.
+7. Direct the owning Plan coordinator to persist the completed final synthesis at the approved lifecycle path before returning its chat summary. Persistence does not authorize implementation.
+
+Mark unresolved decisions explicitly. Preserve the existing gates and the prohibition on invented commands, paths, frameworks, and dependencies. Do not create a parallel delivery plan or duplicate workflow. Persistence is owned by the Plan coordinator and does not authorize implementation.
