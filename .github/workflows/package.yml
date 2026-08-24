@@ -1,0 +1,49 @@
+name: Package Toolkit
+
+on:
+  push:
+    paths:
+      - package.json
+      - package-lock.json
+      - README.md
+      - CHANGELOG.md
+      - .github/instructions/**
+      - .github/agents/**
+      - .github/prompts/**
+      - .github/skills/**
+      - .github/workflows/package.yml
+  pull_request:
+    paths:
+      - package.json
+      - package-lock.json
+      - README.md
+      - CHANGELOG.md
+      - .github/instructions/**
+      - .github/agents/**
+      - .github/prompts/**
+      - .github/skills/**
+      - .github/workflows/package.yml
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Check out Toolkit
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Package Toolkit
+        run: npm run package
+      - name: Verify package boundary
+        run: npm run verify-package

@@ -2,6 +2,10 @@
 
 - [ ] Every change is covered by the approved plan.
 - [ ] No unrelated files or formatting were changed.
+- [ ] A remediation request, when applicable, names the literal exact canonical plan path and literal exact source Review-report path; ordinary initial `/implement` remains plan-only.
+- [ ] Before remediation edits, the source Review report is accessible, immutable, same-folder, linked to the exact plan, and linked to the exact reviewed implementation report; missing, malformed, inferred, reused, wrong-folder, wrong-plan, mismatched, stale, or invalid-state evidence stopped the pass before edits, markers, or report allocation.
+- [ ] Every remediation finding maps to existing Work Items, Tasks, and Steps; affected existing markers and parents are reopened for rework, and hierarchy expansion, removal, or restructuring stopped for Plan amendment.
+- [ ] A remediation implementation report links the exact source Review report and records each finding's resolution or remaining blocker before the manual Review handoff.
 - [ ] The exact developer-named approved plan path and, when authorized, the exact immutable implementation-report path are recorded; neither is selected by latest/highest-prefix inference.
 - [ ] Any implementation report uses a valid three-digit `implementation-report` identity allocated independently within the plan's lifecycle folder.
 - [ ] Report allocation inspected the matching-suffix inventory twice, re-inspected immediately before creation, and did not overwrite an existing target; malformed or inaccessible inventory stopped the operation.
@@ -15,6 +19,20 @@
 - [ ] Tool permissions and delegation lists remain least-privilege.
 - [ ] Handoffs target existing agents and remain human-approved.
 - [ ] The diff was re-read for accidental policy changes.
+- [ ] Guarded command execution remains unavailable by default and is limited to the responsible `Implement` coordinator; no worker, lifecycle phase, or inferred tool route can execute it.
+- [ ] The exact developer-named canonical plan path is confirmed and contains a dedicated approved-command record for the proposed invocation.
+- [ ] The proposed command matches the plan’s literal byte-for-byte and the working directory matches its fixed recorded directory; no normalization, substitution, composition, inference, or repair occurred.
+- [ ] The working directory and every declared output/write path are contained within the workspace; traversal, wildcards, external paths, and undeclared writes are denied.
+- [ ] The command, arguments, environment, configuration, and expected effects are screened for secrets, credentials, authentication/login, publishing, deployment, release/tag or remote mutation, global changes, shell composition, redirection, substitution, aliases, arbitrary script targets, `npx`, recursive deletion, and safety-control bypass.
+- [ ] The execution context is secret-free and sensitive output, environment values, credentials, tokens, and untrusted output are not exposed or recorded verbatim.
+- [ ] Default Approvals are in effect, terminal auto-approval is disabled, and fresh developer approval was obtained after presenting the unchanged literal, fixed directory, Tier, purpose, expected output/result, effects, and failure disposition.
+- [ ] Native Windows is not represented as sandbox-contained; human review, approval, and fixed contained paths remain mandatory.
+- [ ] Tier 1 is separately checked as an exact approved local build, test, or script invocation with recorded purpose, output/result, effects, inputs, and failure disposition.
+- [ ] Tier 2 is separately checked for an existing reviewed `package.json`, existing lockfile, `.npmrc`, dependency sources, install-script policy, and prohibited mutation/script/source conditions; it is not bundled with or treated as Tier 1.
+- [ ] Preflight failure, approval/settings uncertainty, command mismatch, unexpected prompt/effect, non-zero exit, timeout, or boundary violation caused an immediate stop with no substitute, modified retry, or continuation.
+- [ ] Execution evidence is sanitized and separate from validation, readiness, and acceptance; it records plan path, literal, fixed directory, Tier, approval, result/exit state, output summary, and observed effects.
+- [ ] Post-command inspection inventoried changed, untracked, generated, and expected output artifacts and checked the recorded directory and relevant parent paths for unexpected changes.
+- [ ] A successful exit is not treated as build, test, diagnostic, compatibility, package, readiness, or acceptance validation.
 - [ ] Checks that passed or were otherwise actually performed are listed separately from checks that failed, were unavailable, or were not run, with no unavailable or not-run check claimed as successful.
 - [ ] Any failed validation is recorded with its observed failure and disposition; unavailable validation identifies the missing capability or approved mechanism; not-run validation is distinguished from both.
 - [ ] The general repository terminal-command prohibition remains in force.

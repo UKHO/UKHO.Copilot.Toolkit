@@ -19,6 +19,7 @@
 - **Tracker snapshot metadata:** N/A until a Work Item exists
 - **Source-of-truth boundary:** After Work Item creation or import, the external tracker remains authoritative for workflow state, priority, assignment, and discussion.
 - **Associated implementation report:** Exact same-folder path or `N/A` until a separately authorized Implement pass; one report per approved pass, immutable after persistence, and non-authorizing execution evidence only.
+- **Associated Review report:** Exact same-folder path or `N/A` until a completed evidence-based Review pass; exactly one independently allocated report per completed pass, immutable after persistence, and non-authorizing review evidence only. Record disposition as `No remediation required`, `Remediation required`, or `Blocked / clarification required`, not as a lifecycle status.
 
 ## Objective, success measures, and scope
 
@@ -59,6 +60,16 @@ Record gates per planned work item. Do not invent commands, environments, or evi
 | --- | --- | --- | --- | --- |
 | Baseline |  | Approved, documented target-repository validation before item work. | Manual or structural inspection, with unavailable checks and gaps stated. | Baseline outcome or explicit gap is recorded before work begins. |
 | Pre-completion |  | Approved, documented target-repository validation after item work. | Manual or structural completion evidence, residual risks, and unavailable checks. | Outcome, owner, and residual gap are recorded before completion. |
+
+## Approved commands
+
+Record command candidates only after inspecting the applicable repository's evidenced build, test, and script surfaces. This section is the sole location for potential command invocations and does not replace exact-plan authority, Implement-only execution, fresh per-invocation developer approval, or other policy controls. Do not record category-only, inferred, changed, or invented commands.
+
+If no command is evidenced, required, or acceptable, write: **No approved commands — unavailable because `<specific evidence-based rationale>`.** State the rationale for each required but unavailable command rather than leaving the decision implicit. Tier 2 must be recorded separately from Tier 1 and cannot be bundled with or substituted for it. Native Windows does not provide a sandbox-containment guarantee; record the portable fixed-path, review, and approval controls that remain required.
+
+| Tier | Literal command (unchanged) | Fixed workspace-contained directory | Purpose | Expected output or result | Known effects | Inputs and preflight | Fresh approval point | Post-command inspection | Failure disposition | Rollback |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Tier 1 or Tier 2 | `N/A` when unavailable; otherwise exact evidenced literal | `N/A` when unavailable; otherwise exact fixed path |  |  |  |  | Present unchanged command and directory for fresh developer approval |  | Stop and record failure; do not substitute or modify the command |  |
 
 ## Planned work items
 
@@ -104,7 +115,10 @@ Repeat this section for each planned work item. Keep headings conditional, but e
 - Exact plan identity and repository-relative path:
 - Exact approved research-brief path:
 - Associated implementation-report path, when authorized:
-- The plan remains authoritative for scope, Work Item/Task/Step hierarchy, lifecycle status, acceptance, and validation. Any implementation report is immutable evidence only; it does not approve, authorize, expand, revise, or replace this plan.
+- Associated Review-report path, when authorized:
+- **Review-report contract and provenance (when applicable):** Exact canonical plan path, exact reviewed implementation-report path, exact allocated Review-report path, lifecycle identity, suffix-specific two-scan allocation evidence, and delegated-review/omission evidence.
+- **Review acceptance and remediation traceability (when applicable):** Persist the Review report before disposition/acceptance; only `No remediation required` followed by explicit developer acceptance may lead to `Accepted`. Remediation requires explicit authorization naming exact plan and source Review-report paths, verified linkage, existing Work Item/Task/Step mapping, and a Plan-stage amendment for hierarchy change.
+- The plan remains authoritative for scope, Work Item/Task/Step hierarchy, lifecycle status, completion markers, acceptance, and validation. Any implementation report or Review report is immutable evidence only; neither approves, authorizes, expands, revises, or replaces this plan, and a Review report cannot authorize remediation.
 
 ## Risks and controls
 
