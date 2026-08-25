@@ -3,15 +3,15 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const { discover } = require('./discover-copilot-artifacts.cjs');
 
 const root = path.resolve(__dirname, '..');
 const manifestPath = path.join(root, 'package.json');
-const expectedVsix = path.join(root, 'ukho.copilot-toolkit-0.1.0.vsix');
-const classes = [
-  ['chatInstructions', 2],
-  ['chatAgents', 16],
-  ['chatPromptFiles', 4],
-  ['chatSkills', 10]
+const contributionNames = [
+  'chatInstructions',
+  'chatAgents',
+  'chatPromptFiles',
+  'chatSkills'
 ];
 const prohibited = [
   '.github/copilot-instructions.md',
@@ -87,17 +87,26 @@ function readManifest() {
   } catch (error) {
     fail(`Cannot parse package.json: ${error.message}`);
   }
+  if (typeof manifest.name !== 'string' || !manifest.name || typeof manifest.version !== 'string' || !manifest.version) {
+    fail('package.json name and version are required');
+  }
+  const discovered = discover(root);
   const contributions = [];
-  for (const [name, count] of classes) {
-    if (!Array.isArray(manifest.contributes?.[name]) || manifest.contributes[name].length !== count) {
-      fail(`${name} must contain exactly ${count} entries`);
+  for (const name of contributionNames) {
+    if (!Array.isArray(manifest.contributes?.[name])) {
+      fail(`${name} must be an array`);
     }
-    for (const entry of manifest.contributes[name]) {
+    const manifestPaths = manifest.contributes[name].map((entry) => {
       if (!entry || typeof entry.path !== 'string') fail(`${name} contains an invalid path entry`);
       const relative = normalize(entry.path);
       assertAllowed(relative);
-      contributions.push({ name, relative });
+      return relative;
+    });
+    const discoveredPaths = discovered[name];
+    if (!Array.isArray(discoveredPaths) || manifestPaths.length !== discoveredPaths.length || manifestPaths.some((value, index) => value !== discoveredPaths[index])) {
+      fail(`${name} does not match shared discovery inventory`);
     }
+    contributions.push(...manifestPaths.map((relative) => ({ name, relative })));
   }
   if (!Array.isArray(manifest.files)) fail('package.json files must be an array');
   const boundary = new Set(['package.json']);
@@ -123,6 +132,10 @@ function readManifest() {
     }
   }
   return { manifest, boundary, contributions };
+}
+
+function expectedVsixPath(manifest) {
+  return path.join(root, `${manifest.publisher}.${manifest.name}-${manifest.version}.vsix`);
 }
 
 function archiveMembers(buffer) {
@@ -225,7 +238,7 @@ function verifyPackagedReadme(buffer) {
   if (readme.split(expectedLink).length !== 2 || readme.includes(relativeLink)) fail('Packaged extension/readme.md has an invalid CHANGELOG.md link');
 }
 
-function verifyArchive(boundary) {
+function verifyArchive(boundary, expectedVsix) {
   if (!fs.existsSync(expectedVsix)) fail(`Expected Toolkit VSIX is unavailable: ${path.basename(expectedVsix)}`);
   const expected = new Set(['[Content_Types].xml', 'extension.vsixmanifest']);
   for (const file of boundary) expected.add(archiveName(file));
@@ -240,8 +253,9 @@ function verifyArchive(boundary) {
 }
 
 try {
-  const { boundary, contributions } = readManifest();
-  verifyArchive(boundary);
+  const { manifest, boundary, contributions } = readManifest();
+  const expectedVsix = expectedVsixPath(manifest);
+  verifyArchive(boundary, expectedVsix);
   console.log(`Verified ${contributions.length} contributions and ${boundary.size} source files in ${path.basename(expectedVsix)}.`);
 } catch (error) {
   console.error(`VSIX boundary verification failed: ${error.message}`);

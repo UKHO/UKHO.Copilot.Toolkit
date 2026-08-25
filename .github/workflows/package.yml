@@ -5,23 +5,27 @@ on:
     paths:
       - package.json
       - package-lock.json
+      - resources/**
       - README.md
       - CHANGELOG.md
       - .github/instructions/**
       - .github/agents/**
       - .github/prompts/**
       - .github/skills/**
+      - scripts/verify-vsix-boundary.cjs
       - .github/workflows/package.yml
   pull_request:
     paths:
       - package.json
       - package-lock.json
+      - resources/**
       - README.md
       - CHANGELOG.md
       - .github/instructions/**
       - .github/agents/**
       - .github/prompts/**
       - .github/skills/**
+      - scripts/verify-vsix-boundary.cjs
       - .github/workflows/package.yml
 
 permissions:
