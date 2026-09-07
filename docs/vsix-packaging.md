@@ -41,6 +41,130 @@ The synchronizer retains unrelated `files` entries and unrelated manifest fields
 
 Repository maintainers must run every interface from the repository root: `c:\Repos\UKHO.Copilot.Toolkit`.
 
+### Toolkit packaging operation metadata
+
+The following constrained metadata records the five Toolkit-specific packaging interfaces maintained by this repository. These records are packaging documentation and verification inputs, not a global consumer operation-ID allow-list, the root consumer catalogue, or execution authorization. The root `.github/copilot-script-catalogue.md` is consumer-owned and remains separate from this metadata and from VSIX packaging; its complete, safety-valid entries use the ten ordered fields in the [repository script catalogue Skill](../.github/skills/repository-script-catalogue/SKILL.md). VS Code Workspace Trust, permissions, and managed organization policy control approval behavior.
+
+<!-- vsix-packaging-operation-metadata:start -->
+```json
+[
+	{
+		"id": "toolkit-discover-copilot-artifacts",
+		"classification": "read-only",
+		"packagingIdentity": "none",
+		"command": "node scripts/discover-copilot-artifacts.cjs",
+		"cwd": ".",
+		"arguments": [],
+		"outputsOrWrites": [],
+		"effects": [
+			"Reports the sorted customization inventory as JSON without workspace mutation."
+		],
+		"prerequisites": [
+			"Workspace Trust.",
+			"Repository root is the fixed working directory."
+		],
+		"stopBehavior": "Stop on an error, prompt, unexpected network or script effect, non-zero result, timeout, mismatch, undeclared write, or missing prerequisite; investigate the underlying issue without substituting a command.",
+		"prohibitedEffects": [
+			"No dependency installation, secrets, authentication, publishing, deployment, release/tag, remote mutation, global configuration, external-path write, shell composition, redirection, substitution, aliases, wildcards, traversal, npx, arbitrary interpreter or script target, recursive deletion, or safety-control bypass."
+		]
+	},
+	{
+		"id": "toolkit-check-copilot-manifest",
+		"classification": "read-only",
+		"packagingIdentity": "none",
+		"command": "node scripts/sync-copilot-manifest.cjs check",
+		"cwd": ".",
+		"arguments": [],
+		"outputsOrWrites": [],
+		"effects": [
+			"Checks the discovered inventory against controlled manifest values without writing package.json."
+		],
+		"prerequisites": [
+			"Workspace Trust.",
+			"Repository root is the fixed working directory."
+		],
+		"stopBehavior": "Stop on an error, prompt, unexpected network or script effect, non-zero result, timeout, mismatch, undeclared write, or missing prerequisite; investigate the underlying issue without substituting a command.",
+		"prohibitedEffects": [
+			"No dependency installation, secrets, authentication, publishing, deployment, release/tag, remote mutation, global configuration, external-path write, shell composition, redirection, substitution, aliases, wildcards, traversal, npx, arbitrary interpreter or script target, recursive deletion, or safety-control bypass."
+		]
+	},
+	{
+		"id": "toolkit-sync-copilot-manifest",
+		"classification": "packaging-controlled-write",
+		"packagingIdentity": "ukho.copilot-toolkit",
+		"command": "node scripts/sync-copilot-manifest.cjs sync",
+		"cwd": ".",
+		"arguments": [],
+		"outputsOrWrites": [
+			"package.json.files entries under .github/instructions, .github/agents, .github/prompts, and .github/skills collectively",
+			"package.json.contributes.chatInstructions",
+			"package.json.contributes.chatAgents",
+			"package.json.contributes.chatPromptFiles",
+			"package.json.contributes.chatSkills",
+			"One contained, transient, randomly named atomic temporary path that is removed after replacement or failure handling"
+		],
+		"effects": [
+			"Synchronizes only the declared packaging manifest locations after the non-mutating check has been reviewed."
+		],
+		"prerequisites": [
+			"Workspace Trust.",
+			"Repository root is the fixed working directory.",
+			"A successful reviewed manifest check and understood drift."
+		],
+		"stopBehavior": "Stop on an error, prompt, unexpected network or script effect, non-zero result, timeout, mismatch, undeclared write, or missing prerequisite; investigate the underlying issue without substituting a command.",
+		"prohibitedEffects": [
+			"No dependency installation, secrets, authentication, publishing, deployment, release/tag, remote mutation, global configuration, external-path write, shell composition, redirection, substitution, aliases, wildcards, traversal, npx, arbitrary interpreter or script target, recursive deletion, or safety-control bypass."
+		]
+	},
+	{
+		"id": "toolkit-package-vsix",
+		"classification": "build/test",
+		"packagingIdentity": "none",
+		"command": "npm run package",
+		"cwd": ".",
+		"arguments": [],
+		"outputsOrWrites": [
+			"ukho.copilot-toolkit-<package.json version>.vsix"
+		],
+		"effects": [
+			"Creates the version-derived VSIX from reviewed packaging inputs."
+		],
+		"prerequisites": [
+			"Workspace Trust.",
+			"Repository root is the fixed working directory.",
+			"Reviewed package.json and packaging inputs.",
+			"Existing local package dependencies required by the package script."
+		],
+		"stopBehavior": "Stop on an error, prompt, unexpected network or script effect, non-zero result, timeout, mismatch, undeclared write, or missing prerequisite; investigate the underlying issue without substituting a command.",
+		"prohibitedEffects": [
+			"No dependency installation, secrets, authentication, publishing, deployment, release/tag, remote mutation, global configuration, external-path write, shell composition, redirection, substitution, aliases, wildcards, traversal, npx, arbitrary interpreter or script target, recursive deletion, or safety-control bypass."
+		]
+	},
+	{
+		"id": "toolkit-verify-vsix-boundary",
+		"classification": "read-only",
+		"packagingIdentity": "none",
+		"command": "npm run verify-package",
+		"cwd": ".",
+		"arguments": [],
+		"outputsOrWrites": [],
+		"effects": [
+			"Verifies the generated VSIX boundary, manifest contributions, and packaged README changelog link without workspace mutation."
+		],
+		"prerequisites": [
+			"Workspace Trust.",
+			"Repository root is the fixed working directory.",
+			"The expected version-derived VSIX exists."
+		],
+		"stopBehavior": "Stop on an error, prompt, unexpected network or script effect, non-zero result, timeout, mismatch, undeclared write, or missing prerequisite; investigate the underlying issue without substituting a command.",
+		"prohibitedEffects": [
+			"No dependency installation, secrets, authentication, publishing, deployment, release/tag, remote mutation, global configuration, external-path write, shell composition, redirection, substitution, aliases, wildcards, traversal, npx, arbitrary interpreter or script target, recursive deletion, or safety-control bypass."
+		]
+	}
+]
+```
+<!-- vsix-packaging-operation-metadata:end -->
+
 Run the following commands in order:
 
 1. `node scripts/discover-copilot-artifacts.cjs` — reports the sorted customization inventory as JSON and is intended to make the discovered inputs visible without repository mutation.
@@ -74,6 +198,6 @@ A failure in discovery, manifest parsing, checking, synchronization, manifest re
 
 This guide records intended behavior from the current scripts, manifest, README, and workflow. It does not claim that the interfaces have been executed. Runtime discovery, synchronization, Windows replacement behavior, packaging, archive verification, installed-extension checks, and cross-platform equivalence remain unvalidated here.
 
-The workflow currently runs package before verification on Ubuntu, but its path filters do not include changes to `scripts/discover-copilot-artifacts.cjs`; therefore this guide makes no complete-CI-coverage claim. It also makes no cross-platform validation or release-readiness claim.
+The workflow validates this constrained metadata before packaging on Ubuntu. It also makes no cross-platform validation or release-readiness claim.
 
 **Sources:** `scripts/discover-copilot-artifacts.cjs`, `scripts/sync-copilot-manifest.cjs`, `scripts/verify-vsix-boundary.cjs`, `package.json`, `README.md`, and `.github/workflows/package.yml`.

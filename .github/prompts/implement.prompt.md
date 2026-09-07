@@ -1,14 +1,14 @@
 ---
 name: implement
-description: Launch the existing Implement agent for one explicitly approved implementation plan without inferring scope or authorizing lifecycle actions.
-argument-hint: Exact saved prefixed canonical implementation-plan path
+description: Launch the existing Implement agent for one approved implementation plan without inferring scope or authorizing lifecycle actions.
+argument-hint: One lifecycle-core-eligible implementation-plan alias or one inline Markdown link with that alias as its destination
 agent: Implement
 ---
 
-Run the existing `Implement` agent for the exact saved, prefixed canonical implementation-plan path provided below.
+Run the existing `Implement` agent for the canonical implementation-plan input provided below.
 
-Implementation plan: ${input:implementationPlanPath:Exact saved prefixed canonical implementation-plan path}
+Implementation plan: ${input:implementationPlanPath:One lifecycle-core-eligible alias to the implementation plan, or one inline Markdown link whose destination is that alias}
 
-Treat the supplied path as a literal repository-relative path. Do not select, normalize, repair, substitute, or infer a plan using a prefix, suffix, recency, “latest”, or any other heuristic. Stop if the path is missing, malformed, inaccessible, ambiguous, not an exact saved prefixed canonical path, or otherwise materially uncertain, and apply [agent-question-resolution](../skills/agent-question-resolution/SKILL.md) before proceeding.
+Pass the supplied value verbatim. Accept only one bounded alias or one inline Markdown destination exactly as defined by [RPIR lifecycle core](../skills/rpir-lifecycle-core/SKILL.md); first derive and validate its one canonical identity, then let `Implement` apply its expected-type, lifecycle-folder, scope, report, and approval checks. Stop if it is invalid or materially uncertain, and apply [agent-question-resolution](../skills/agent-question-resolution/SKILL.md) before proceeding.
 
-This invocation only starts the selected Implement stage. It does not approve editing, authorize work beyond the named plan, or auto-submit the Review handoff. Preserve the existing Implement agent's approval, scope, validation, report, and manual handoff controls; the developer must provide any required approval separately.
+This valid phase request starts the selected Implement stage; do not ask a duplicate phase-authorization question. It does not replace the separate explicit developer approval required before editing, authorize work beyond the named plan, or auto-submit the Review handoff. Preserve the existing Implement agent's scope, validation, command, report, and manual handoff controls.

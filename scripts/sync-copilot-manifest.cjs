@@ -13,7 +13,7 @@ function fail(message) {
 }
 
 function manifestPathValue(relative) {
-  return `./${normalize(relative)}`;
+  return normalize(relative);
 }
 
 function isControlled(relative) {
@@ -69,13 +69,13 @@ function desiredManifest(manifest, inventory) {
 function differences(current, inventory) {
   const changes = [];
   for (const definition of classes) {
-    const actual = current.contributes[definition.name].map((entry) => normalize(entry.path));
+    const actual = current.contributes[definition.name].map((entry) => entry.path);
     const expected = inventory[definition.name];
     if (JSON.stringify(actual) !== JSON.stringify(expected)) {
       changes.push(`${definition.name}: ${formatDelta(actual, expected)}`);
     }
   }
-  const actualFiles = current.files.filter((entry) => isControlled(normalize(entry))).map(normalize);
+  const actualFiles = current.files.filter((entry) => isControlled(normalize(entry)));
   const expectedFiles = classes.flatMap((definition) => inventory[definition.name]);
   if (JSON.stringify(actualFiles) !== JSON.stringify(expectedFiles)) {
     changes.push(`files: ${formatDelta(actualFiles, expectedFiles)}`);

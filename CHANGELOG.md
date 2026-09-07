@@ -2,12 +2,30 @@
 
 All notable releases of the UKHO Copilot Toolkit are documented here. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Breaking changes
+
+- Script Runner catalogue entries now use the ten-field schema. When adopting `1.0.0`, remove `Owner and immutable review evidence` from every existing entry; no replacement attestation is required.
+- The immutable-review-evidence and Runner-authored fresh-confirmation gates have been removed. VS Code and managed organization policy continue to control execution permissions and approvals.
+
+### Added
+
+- Script Runner and its repository script catalogue Skill for safety-valid consumer `read-only` and `build/test` operations.
+- Consumer guidance for catalogue ownership, Workspace Trust, operation exclusions, and native-Windows limitations.
+- A packaging-only `packaging-controlled-write` catalogue class for the bounded manifest synchronizer write set, retaining packaging identity, post-run diff inspection, and fail-closed refusal of all other writes or effects.
+- Discovery-authoritative package-inventory wording to avoid manually maintained count drift.
+
+### Safety controls retained
+
+- Fixed single-root catalogue selection, static safety validation, declared write limits, secret-free context, prohibited-effect checks, and post-run artifact inspection remain required. Native Windows is not sandbox containment.
+
 ## [0.1.0] — 2026-08-21
 
 ### Added
 
 - Initial private VSIX release for VS Code `>=1.130.0 <2.0.0`.
-- The approved customization set: 16 agents, 4 prompts, 2 instructions, and 10 complete skills with supporting files.
+- The approved customization set included agents, prompts, instructions, and complete skills with supporting files.
 - Root release documentation covering private installation, support, security reporting, governance limits, and rollback.
 
 ### Distribution

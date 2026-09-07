@@ -12,7 +12,12 @@ on:
       - .github/agents/**
       - .github/prompts/**
       - .github/skills/**
+      - .github/copilot-script-catalogue.md
+      - docs/vsix-packaging.md
+      - scripts/discover-copilot-artifacts.cjs
+      - scripts/sync-copilot-manifest.cjs
       - scripts/verify-vsix-boundary.cjs
+      - scripts/verify-vsix-packaging-guide.cjs
       - .github/workflows/package.yml
   pull_request:
     paths:
@@ -25,7 +30,12 @@ on:
       - .github/agents/**
       - .github/prompts/**
       - .github/skills/**
+      - .github/copilot-script-catalogue.md
+      - docs/vsix-packaging.md
+      - scripts/discover-copilot-artifacts.cjs
+      - scripts/sync-copilot-manifest.cjs
       - scripts/verify-vsix-boundary.cjs
+      - scripts/verify-vsix-packaging-guide.cjs
       - .github/workflows/package.yml
 
 permissions:
@@ -47,6 +57,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Verify VSIX packaging guide
+        run: npm run verify-vsix-packaging-guide
       - name: Package Toolkit
         run: npm run package
       - name: Verify package boundary

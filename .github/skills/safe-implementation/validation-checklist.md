@@ -2,11 +2,12 @@
 
 - [ ] Every change is covered by the approved plan.
 - [ ] No unrelated files or formatting were changed.
-- [ ] A remediation request, when applicable, names the literal exact canonical plan path and literal exact source Review-report path; ordinary initial `/implement` remains plan-only.
-- [ ] Before remediation edits, the source Review report is accessible, immutable, same-folder, linked to the exact plan, and linked to the exact reviewed implementation report; missing, malformed, inferred, reused, wrong-folder, wrong-plan, mismatched, stale, or invalid-state evidence stopped the pass before edits, markers, or report allocation.
+- [ ] Before initial implementation checks, the developer-supplied plan input is resolved under the lifecycle core to one eligible derived exact repository-relative canonical plan identity; ordinary initial `/implement` remains plan-only and separate approval/authorization checks follow resolution.
+- [ ] Before remediation checks, the developer-supplied plan and source Review-report inputs are each resolved under the lifecycle core to one eligible derived exact repository-relative canonical identity; exact canonical linkage checks follow resolution.
+- [ ] Before remediation edits, the source Review report is accessible, immutable, same-folder, linked to the exact canonical plan, and linked to the exact canonical reviewed implementation report; missing, malformed, inaccessible, inferred, reused, wrong-folder, wrong-plan, mismatched, stale, or invalid-state input or evidence stopped the pass before edits, markers, or report allocation.
 - [ ] Every remediation finding maps to existing Work Items, Tasks, and Steps; affected existing markers and parents are reopened for rework, and hierarchy expansion, removal, or restructuring stopped for Plan amendment.
 - [ ] A remediation implementation report links the exact source Review report and records each finding's resolution or remaining blocker before the manual Review handoff.
-- [ ] The exact developer-named approved plan path and, when authorized, the exact immutable implementation-report path are recorded; neither is selected by latest/highest-prefix inference.
+- [ ] The lifecycle-core-derived exact approved canonical plan identity and, when authorized, the exact immutable implementation-report canonical identity are recorded; neither is selected by latest/highest-prefix inference.
 - [ ] Any implementation report uses a valid three-digit `implementation-report` identity allocated independently within the plan's lifecycle folder.
 - [ ] Report allocation inspected the matching-suffix inventory twice, re-inspected immediately before creation, and did not overwrite an existing target; malformed or inaccessible inventory stopped the operation.
 - [ ] The report is in the same folder as the exact approved plan, links to that exact plan path, was re-read after creation, and is not revised or overwritten.

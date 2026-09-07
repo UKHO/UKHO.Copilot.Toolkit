@@ -3,7 +3,7 @@
 ## Lifecycle identity and status
 
 - **Lifecycle:** Planning initiative or delivery Work Item:
-- **Canonical record:** Exact allocated `docs/planning/<initiative-slug>/<NNN>-implementation-plan.md` or `docs/delivery/<work-item-id>-<short-slug>/<NNN>-implementation-plan.md`, with `NNN` exactly three ASCII decimal digits
+- **Canonical record:** Lifecycle-core-derived exact repository-relative identity: allocated `docs/planning/<initiative-slug>/<NNN>-implementation-plan.md` or `docs/delivery/<work-item-id>-<short-slug>/<NNN>-implementation-plan.md`, with `NNN` exactly three ASCII decimal digits; do not persist a raw alias, local absolute path, or Markdown destination
 - **Status:** Plan drafted / Implementing / Ready for review / Accepted:
 - **Plan revision:** Initial / Material revision; supersedes:
 - **Approval boundary:** `Plan drafted` is the initial plan state. This record does not authorize implementation; explicit developer approval is required before the Implement handoff, and a developer request naming this saved canonical plan authorizes its scoped Implement pass.
@@ -11,15 +11,16 @@
 
 ## Research basis and delivery metadata
 
-- **Approved Research brief:** Exact numbered repository-relative path:
+- **Approved Research brief:** Lifecycle-core-derived exact numbered repository-relative canonical identity:
+- **Direct Research provenance:** The canonical Research-brief identity above is authoritative; add a direct validated one-hop renderable Markdown link from this plan to that same record (the destination is evidence only):
 - **Research provenance:** Evidence, assumptions, decisions, and sources carried forward from that exact brief:
 - **Research evidence used:**
 - **Delivery Work Item ID:** N/A until a Work Item exists
 - **Tracker URL:** N/A until a Work Item exists
 - **Tracker snapshot metadata:** N/A until a Work Item exists
 - **Source-of-truth boundary:** After Work Item creation or import, the external tracker remains authoritative for workflow state, priority, assignment, and discussion.
-- **Associated implementation report:** Exact same-folder path or `N/A` until a separately authorized Implement pass; one report per approved pass, immutable after persistence, and non-authorizing execution evidence only.
-- **Associated Review report:** Exact same-folder path or `N/A` until a completed evidence-based Review pass; exactly one independently allocated report per completed pass, immutable after persistence, and non-authorizing review evidence only. Record disposition as `No remediation required`, `Remediation required`, or `Blocked / clarification required`, not as a lifecycle status.
+- **Associated implementation report:** Lifecycle-core-derived exact same-folder repository-relative canonical identity or `N/A` until a separately authorized Implement pass; one report per approved pass, immutable after persistence, and non-authorizing execution evidence only.
+- **Associated Review report:** Lifecycle-core-derived exact same-folder repository-relative canonical identity or `N/A` until a completed evidence-based Review pass; exactly one independently allocated report per completed pass, immutable after persistence, and non-authorizing review evidence only. Record disposition as `No remediation required`, `Remediation required`, or `Blocked / clarification required`, not as a lifecycle status.
 
 ## Objective, success measures, and scope
 
@@ -29,6 +30,29 @@
 - **Out of scope:**
 - **Preserved behavior:**
 - **Conditional gates:**
+
+## Conditional Script Runner catalogue planning
+
+Use this section only when a planned maintenance script is explicitly intended for later execution by Script Runner. Otherwise record **N/A — no planned maintenance script is intended for later Script Runner execution; no catalogue entry is planned.** This section describes consumer-owned catalogue planning only; it does not create a catalogue entry, authorize execution, or replace the lifecycle `Approved commands` section.
+
+For a triggered plan, record the complete existing catalogue entry in this exact field order, using evidenced values only:
+
+- **Stable operation ID:**
+- **Classification:** `read-only`, `build/test`, or `packaging-controlled-write` only.
+- **Packaging identity:**
+- **Exact literal command:**
+- **Fixed workspace-relative cwd:**
+- **Enumerated arguments:**
+- **Expected outputs/writes:**
+- **Prohibited effects:**
+- **Prerequisites:**
+- **Failure disposition:**
+
+- **Stable-ID uniqueness evidence:** Complete consumer-catalogue inspection confirms that the stable operation ID is unique:
+- **Safety-validity gate:** Allowed classification, containment, exact command/cwd/arguments, declared boundaries, and prohibited effects are verified:
+- **Unknown-value gate:** Any missing, ambiguous, unverified, or otherwise unknown field or uniqueness result blocks completion; do not use a placeholder or infer an executable value.
+- **Validation:** Triggered path — manually verify every field is present in the listed order, the stable ID is unique in the complete catalogue, and the safety-validity and unknown-value gates pass. `N/A` path — verify that no planned maintenance script is explicitly Runner-intended and that no catalogue work is invented. Record unavailable checks and residual gaps honestly.
+- **Acceptance:** Triggered path is accepted only when the complete consumer-owned entry facts, uniqueness evidence, safety-validity result, validation result, and blocking-gate result are recorded. `N/A` is accepted only when the explicit no-intent condition is recorded. In both paths, keep catalogue planning separate from `Approved commands`; neither plan scope nor an unfinished entry is Script Runner execution authorization.
 
 ## Assumptions and unresolved decisions
 
@@ -112,12 +136,12 @@ Repeat this section for each planned work item. Keep headings conditional, but e
 
 ## Provenance and report authority
 
-- Exact plan identity and repository-relative path:
-- Exact approved research-brief path:
-- Associated implementation-report path, when authorized:
-- Associated Review-report path, when authorized:
-- **Review-report contract and provenance (when applicable):** Exact canonical plan path, exact reviewed implementation-report path, exact allocated Review-report path, lifecycle identity, suffix-specific two-scan allocation evidence, and delegated-review/omission evidence.
-- **Review acceptance and remediation traceability (when applicable):** Persist the Review report before disposition/acceptance; only `No remediation required` followed by explicit developer acceptance may lead to `Accepted`. Remediation requires explicit authorization naming exact plan and source Review-report paths, verified linkage, existing Work Item/Task/Step mapping, and a Plan-stage amendment for hierarchy change.
+- Lifecycle-core-derived exact plan identity and repository-relative path:
+- Lifecycle-core-derived exact approved research-brief identity and direct validated one-hop renderable provenance link from this plan to that same record:
+- Lifecycle-core-derived exact associated implementation-report canonical identity, when authorized:
+- Lifecycle-core-derived exact associated Review-report canonical identity, when authorized:
+- **Review-report contract and provenance (when applicable):** Lifecycle-core-derived exact canonical identities for the plan, reviewed implementation report, and allocated Review report; lifecycle identity, suffix-specific two-scan allocation evidence, and delegated-review/omission evidence.
+- **Review acceptance and remediation traceability (when applicable):** Persist the Review report before disposition/acceptance; only `No remediation required` followed by explicit developer acceptance may lead to `Accepted`. Resolve the explicitly authorized plan and source Review-report inputs under the lifecycle core before requiring their exact canonical linkage, existing Work Item/Task/Step mapping, and a Plan-stage amendment for hierarchy change.
 - The plan remains authoritative for scope, Work Item/Task/Step hierarchy, lifecycle status, completion markers, acceptance, and validation. Any implementation report or Review report is immutable evidence only; neither approves, authorizes, expands, revises, or replaces this plan, and a Review report cannot authorize remediation.
 
 ## Risks and controls
@@ -165,7 +189,7 @@ Cover only applicable scenarios and do not require checks unavailable in the tar
 **Purpose:** Plan-completeness review, not duplicate test evidence.
 
 - [ ] Scope and exclusions are explicit.
-- [ ] Exact numbered plan, research-brief, and any authorized report paths are recorded; provenance is cited and reports are explicitly non-authorizing.
+- [ ] Lifecycle-core-derived exact numbered plan, research-brief, and any authorized report canonical identities are recorded; provenance is cited and reports are explicitly non-authorizing.
 - [ ] Every requirement maps to a planned work item, acceptance criterion, and validation scenario in the authoritative register.
 - [ ] Exact files, sections, symbols, sequencing, and dependencies are identified.
 - [ ] Each detailed Work Item contains at least one scoped unchecked Task, and each Task contains at least one nested ordered unchecked scoped Step.

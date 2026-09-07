@@ -2,13 +2,14 @@
   "name": "copilot-toolkit",
   "displayName": "UKHO Copilot Toolkit",
   "publisher": "ukho",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Static UKHO GitHub Copilot customization artifacts for VS Code.",
   "icon": "resources/ukho-icon.png",
   "vsce": {
     "baseContentUrl": "https://github.com/UKHO/UKHO.Copilot.Toolkit/blob/main/"
   },
   "scripts": {
+    "verify-vsix-packaging-guide": "node scripts/verify-vsix-packaging-guide.cjs",
     "package": "node -e \"const fs=require('fs');const cp=require('child_process');const p=JSON.parse(fs.readFileSync('package.json','utf8'));const bin=process.platform==='win32'?'node_modules/@vscode/vsce/vsce':'node_modules/.bin/vsce';const r=cp.spawnSync(process.execPath,[bin,'package','--allow-missing-repository','--out',`ukho.${p.name}-${p.version}.vsix`],{stdio:'inherit'});process.exit(r.status===null?1:r.status)\"",
     "verify-package": "node scripts/verify-vsix-boundary.cjs"
   },
@@ -25,142 +26,158 @@
     "CHANGELOG.md",
     "LICENSE",
     "resources/ukho-icon.png",
-    "./.github/instructions/lifecycle-implementation-plans.instructions.md",
-    "./.github/instructions/lifecycle-research-briefs.instructions.md",
-    "./.github/agents/architecture-analyst.agent.md",
-    "./.github/agents/codebase-investigator.agent.md",
-    "./.github/agents/correctness-reviewer.agent.md",
-    "./.github/agents/domain-investigator.agent.md",
-    "./.github/agents/feasibility-investigator.agent.md",
-    "./.github/agents/implement.agent.md",
-    "./.github/agents/implementation-worker.agent.md",
-    "./.github/agents/maintainability-reviewer.agent.md",
-    "./.github/agents/plan.agent.md",
-    "./.github/agents/requirements-analyst.agent.md",
-    "./.github/agents/research.agent.md",
-    "./.github/agents/review.agent.md",
-    "./.github/agents/security-reviewer.agent.md",
-    "./.github/agents/test-strategist.agent.md",
-    "./.github/agents/test-worker.agent.md",
-    "./.github/agents/validation-worker.agent.md",
-    "./.github/prompts/implement.prompt.md",
-    "./.github/prompts/plan.prompt.md",
-    "./.github/prompts/remediate-review.prompt.md",
-    "./.github/prompts/review.prompt.md",
-    "./.github/skills/agent-question-resolution",
-    "./.github/skills/architecture-planning",
-    "./.github/skills/code-review",
-    "./.github/skills/codebase-research",
-    "./.github/skills/create-copilot-agent",
-    "./.github/skills/create-copilot-instruction",
-    "./.github/skills/create-copilot-prompt",
-    "./.github/skills/create-copilot-skill",
-    "./.github/skills/safe-implementation",
-    "./.github/skills/test-design"
+    ".github/instructions/lifecycle-implementation-plans.instructions.md",
+    ".github/instructions/lifecycle-research-briefs.instructions.md",
+    ".github/agents/architecture-analyst.agent.md",
+    ".github/agents/codebase-investigator.agent.md",
+    ".github/agents/correctness-reviewer.agent.md",
+    ".github/agents/domain-investigator.agent.md",
+    ".github/agents/feasibility-investigator.agent.md",
+    ".github/agents/implement.agent.md",
+    ".github/agents/implementation-worker.agent.md",
+    ".github/agents/maintainability-reviewer.agent.md",
+    ".github/agents/plan.agent.md",
+    ".github/agents/requirements-analyst.agent.md",
+    ".github/agents/research.agent.md",
+    ".github/agents/review.agent.md",
+    ".github/agents/script-runner.agent.md",
+    ".github/agents/security-reviewer.agent.md",
+    ".github/agents/test-strategist.agent.md",
+    ".github/agents/test-worker.agent.md",
+    ".github/agents/validation-worker.agent.md",
+    ".github/prompts/implement.prompt.md",
+    ".github/prompts/plan.prompt.md",
+    ".github/prompts/remediate-review.prompt.md",
+    ".github/prompts/review.prompt.md",
+    ".github/skills/agent-question-resolution",
+    ".github/skills/architecture-planning",
+    ".github/skills/code-review",
+    ".github/skills/codebase-research",
+    ".github/skills/create-copilot-agent",
+    ".github/skills/create-copilot-instruction",
+    ".github/skills/create-copilot-prompt",
+    ".github/skills/create-copilot-skill",
+    ".github/skills/repository-script-catalogue",
+    ".github/skills/rpir-lifecycle-core",
+    ".github/skills/safe-implementation",
+    ".github/skills/test-design",
+    ".github/skills/wiki-maintenance"
   ],
   "contributes": {
     "chatInstructions": [
       {
-        "path": "./.github/instructions/lifecycle-implementation-plans.instructions.md"
+        "path": ".github/instructions/lifecycle-implementation-plans.instructions.md"
       },
       {
-        "path": "./.github/instructions/lifecycle-research-briefs.instructions.md"
+        "path": ".github/instructions/lifecycle-research-briefs.instructions.md"
       }
     ],
     "chatAgents": [
       {
-        "path": "./.github/agents/architecture-analyst.agent.md"
+        "path": ".github/agents/architecture-analyst.agent.md"
       },
       {
-        "path": "./.github/agents/codebase-investigator.agent.md"
+        "path": ".github/agents/codebase-investigator.agent.md"
       },
       {
-        "path": "./.github/agents/correctness-reviewer.agent.md"
+        "path": ".github/agents/correctness-reviewer.agent.md"
       },
       {
-        "path": "./.github/agents/domain-investigator.agent.md"
+        "path": ".github/agents/domain-investigator.agent.md"
       },
       {
-        "path": "./.github/agents/feasibility-investigator.agent.md"
+        "path": ".github/agents/feasibility-investigator.agent.md"
       },
       {
-        "path": "./.github/agents/implement.agent.md"
+        "path": ".github/agents/implement.agent.md"
       },
       {
-        "path": "./.github/agents/implementation-worker.agent.md"
+        "path": ".github/agents/implementation-worker.agent.md"
       },
       {
-        "path": "./.github/agents/maintainability-reviewer.agent.md"
+        "path": ".github/agents/maintainability-reviewer.agent.md"
       },
       {
-        "path": "./.github/agents/plan.agent.md"
+        "path": ".github/agents/plan.agent.md"
       },
       {
-        "path": "./.github/agents/requirements-analyst.agent.md"
+        "path": ".github/agents/requirements-analyst.agent.md"
       },
       {
-        "path": "./.github/agents/research.agent.md"
+        "path": ".github/agents/research.agent.md"
       },
       {
-        "path": "./.github/agents/review.agent.md"
+        "path": ".github/agents/review.agent.md"
       },
       {
-        "path": "./.github/agents/security-reviewer.agent.md"
+        "path": ".github/agents/script-runner.agent.md"
       },
       {
-        "path": "./.github/agents/test-strategist.agent.md"
+        "path": ".github/agents/security-reviewer.agent.md"
       },
       {
-        "path": "./.github/agents/test-worker.agent.md"
+        "path": ".github/agents/test-strategist.agent.md"
       },
       {
-        "path": "./.github/agents/validation-worker.agent.md"
+        "path": ".github/agents/test-worker.agent.md"
+      },
+      {
+        "path": ".github/agents/validation-worker.agent.md"
       }
     ],
     "chatPromptFiles": [
       {
-        "path": "./.github/prompts/implement.prompt.md"
+        "path": ".github/prompts/implement.prompt.md"
       },
       {
-        "path": "./.github/prompts/plan.prompt.md"
+        "path": ".github/prompts/plan.prompt.md"
       },
       {
-        "path": "./.github/prompts/remediate-review.prompt.md"
+        "path": ".github/prompts/remediate-review.prompt.md"
       },
       {
-        "path": "./.github/prompts/review.prompt.md"
+        "path": ".github/prompts/review.prompt.md"
       }
     ],
     "chatSkills": [
       {
-        "path": "./.github/skills/agent-question-resolution"
+        "path": ".github/skills/agent-question-resolution"
       },
       {
-        "path": "./.github/skills/architecture-planning"
+        "path": ".github/skills/architecture-planning"
       },
       {
-        "path": "./.github/skills/code-review"
+        "path": ".github/skills/code-review"
       },
       {
-        "path": "./.github/skills/codebase-research"
+        "path": ".github/skills/codebase-research"
       },
       {
-        "path": "./.github/skills/create-copilot-agent"
+        "path": ".github/skills/create-copilot-agent"
       },
       {
-        "path": "./.github/skills/create-copilot-instruction"
+        "path": ".github/skills/create-copilot-instruction"
       },
       {
-        "path": "./.github/skills/create-copilot-prompt"
+        "path": ".github/skills/create-copilot-prompt"
       },
       {
-        "path": "./.github/skills/create-copilot-skill"
+        "path": ".github/skills/create-copilot-skill"
       },
       {
-        "path": "./.github/skills/safe-implementation"
+        "path": ".github/skills/repository-script-catalogue"
       },
       {
-        "path": "./.github/skills/test-design"
+        "path": ".github/skills/rpir-lifecycle-core"
+      },
+      {
+        "path": ".github/skills/safe-implementation"
+      },
+      {
+        "path": ".github/skills/test-design"
+      },
+      {
+        "path": ".github/skills/wiki-maintenance"
       }
     ]
   }
