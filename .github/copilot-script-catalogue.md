@@ -98,3 +98,20 @@
   - `Repository root is the fixed working directory.`
   - `The expected version-derived VSIX exists.`
 - Failure disposition: `Stop on an error, prompt, unexpected network or script effect, non-zero result, timeout, mismatch, undeclared write, or missing prerequisite; investigate the underlying issue without substituting a command.`
+
+## Operation: `toolkit-verify-copilot-contracts`
+
+- Stable operation ID: `toolkit-verify-copilot-contracts`
+- Classification: `read-only`
+- Packaging identity: `none`
+- Exact literal command: `npm run verify-copilot-contracts`
+- Fixed workspace-relative cwd: `.`
+- Enumerated arguments:
+  - `none`
+- Expected outputs/writes:
+  - `none`
+- Prohibited effects:
+  - `No dependency installation, secrets, authentication, publishing, deployment, release/tag, remote mutation, global configuration, external-path write, shell composition, redirection, substitution, aliases, wildcards, traversal, npx, arbitrary interpreter or script target, recursive deletion, or safety-control bypass.`
+- Prerequisites:
+  - `Repository root is the fixed working directory.`
+- Failure disposition: `Stop on an error, prompt, unexpected network or script effect, non-zero result, timeout, mismatch, undeclared write, or missing prerequisite; investigate the underlying issue without substituting a command.`

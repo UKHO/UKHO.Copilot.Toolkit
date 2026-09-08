@@ -8,7 +8,7 @@
 
 ## Prerequisites
 
-- Start with the repository [contribution and governance policy](../.github/copilot-instructions.md).
+- Start with the repository [contribution and governance policy](../../.github/copilot-instructions.md).
 - Confirm the exact approved target, scope, and handoff before editing. For consequential work, use the repository's Research → Plan → Implement → Review lifecycle rather than treating this page as authorization.
 
 ## Content
@@ -21,7 +21,7 @@ For custom agents, grant only the tools required for the role. Use an explicit w
 
 ### Make metadata and transitions explicit
 
-Make identity, applicability, activation, inputs, outputs, exclusions, side effects, and validation visible in the artifact metadata and body. Follow the linked authoring Skills for artifact-specific metadata and resource guidance. For lifecycle transitions and manual handoffs, use [RPIR](rpir.md), [Lifecycle evidence and authority](lifecycle-evidence-and-authority.md), and the [repository policy](../.github/copilot-instructions.md) rather than duplicating their controls here.
+Make identity, applicability, activation, inputs, outputs, exclusions, side effects, and validation visible in the artifact metadata and body. Follow the linked authoring Skills for artifact-specific metadata and resource guidance. For lifecycle transitions and manual handoffs, use [RPIR](rpir.md), [Lifecycle evidence and authority](lifecycle-evidence-and-authority.md), and the [repository policy](../../.github/copilot-instructions.md) rather than duplicating their controls here.
 
 ### Prefer composition and canonical links
 
@@ -31,12 +31,11 @@ When adding a resource-backed Skill, include only resources that materially impr
 
 ## Canonical references
 
-- [Repository guidance](../.github/copilot-instructions.md) — authoritative repository scope, least-privilege, approval, lifecycle, and link-boundary rules.
-- [Artifact best-practices research](planning/copilot-artifact-best-practices/001-research-brief.md) — evidence-based selection model, composition guidance, metadata patterns, and risks.
-- [Create a custom agent](../.github/skills/create-copilot-agent/SKILL.md) — role, tools, explicit workers, and manual handoff authoring guidance.
-- [Create a custom instruction](../.github/skills/create-copilot-instruction/SKILL.md) — narrow applicability and metadata guidance.
-- [Create a prompt file](../.github/skills/create-copilot-prompt/SKILL.md) — explicit inputs, selected agent, side-effect boundaries, and stop conditions.
-- [Create an Agent Skill](../.github/skills/create-copilot-skill/SKILL.md) — resource-backed Skill structure, relative resource links, and validation guidance.
+- [Repository guidance](../../.github/copilot-instructions.md) — authoritative repository scope, least-privilege, approval, lifecycle, and link-boundary rules.
+- [Create a custom agent](../../.github/skills/create-copilot-agent/SKILL.md) — role, tools, explicit workers, and manual handoff authoring guidance.
+- [Create a custom instruction](../../.github/skills/create-copilot-instruction/SKILL.md) — narrow applicability and metadata guidance.
+- [Create a prompt file](../../.github/skills/create-copilot-prompt/SKILL.md) — explicit inputs, selected agent, side-effect boundaries, and stop conditions.
+- [Create an Agent Skill](../../.github/skills/create-copilot-skill/SKILL.md) — resource-backed Skill structure, relative resource links, and validation guidance.
 
 ## Related links
 

@@ -30,10 +30,9 @@ These artifacts guide Copilot; they do not provide deterministic security or app
 
 ## Canonical references
 
-- [GitHub Copilot artifact best-practices research brief](planning/copilot-artifact-best-practices/001-research-brief.md) — Research-backed selection model, activation distinctions, composition guidance, and compatibility cautions.
-- [Repository Copilot instructions](../.github/copilot-instructions.md) — Canonical repository governance, least-privilege, approval, and scope boundaries.
-- [Custom agent guidance](../.github/agents/implement.agent.md) — Example of explicit role, tool, delegation, and manual-handoff boundaries.
-- [Wiki-maintenance Skill](../.github/skills/wiki-maintenance/SKILL.md) — Boundaries for repository-managed Markdown and canonical-source linking.
+- [Repository Copilot instructions](../../.github/copilot-instructions.md) — Canonical repository governance, least-privilege, approval, and scope boundaries.
+- [Custom agent guidance](../../.github/agents/implement.agent.md) — Example of explicit role, tool, delegation, and manual-handoff boundaries.
+- [Wiki-maintenance Skill](../../.github/skills/wiki-maintenance/SKILL.md) — Boundaries for repository-managed Markdown and canonical-source linking.
 
 ## Related links
 

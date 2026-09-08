@@ -8,7 +8,7 @@
 - Scope:
 - Success criteria:
 - Lifecycle identity and exact artifact path:
-- **Status:** In progress / Completed:
+- **Status:** In progress (set by Research) / Completed (reserved for valid explicit `/plan` admission of this exact canonical in-progress brief):
 - **Research revision:** Initial / Revision; supersedes or amendment provenance:
 - **Exact phase input:** Lifecycle-core-derived exact repository-relative canonical identity (do not persist the raw alias, local absolute path, or Markdown destination; a Markdown reference is evidence only):
 
@@ -45,4 +45,4 @@
 - Exact lifecycle folder and artifact path:
 - Direct provenance: Lifecycle-core-derived exact repository-relative canonical identity for each required source record, plus a direct validated one-hop renderable Markdown link from this record to the same record (the destination is evidence only):
 - Evidence sources and observed repository paths:
-- This record captures Research evidence only; it does not approve the Plan handoff or authorize implementation.
+- This record captures Research evidence only; it does not approve the Plan handoff or authorize implementation. Research-created and Research-amended records remain `Status: In progress`; completed records are immutable. Only valid explicit `/plan` admission of this exact canonical in-progress brief is the prospective closure route.

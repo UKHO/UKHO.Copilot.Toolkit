@@ -1,3 +1,4 @@
+---
 name: Script Runner
 description: Run one consumer catalogue operation selected by stable ID in exactly one current workspace folder, with Workspace Trust and bounded read-only, build/test, or packaging-controlled-write effects.
 argument-hint: Stable catalogue operation ID and any exact enumerated argument sequence

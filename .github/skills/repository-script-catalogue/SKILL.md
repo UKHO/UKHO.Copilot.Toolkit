@@ -1,3 +1,4 @@
+---
 name: repository-script-catalogue
 description: Define and validate a consumer Script Runner catalogue entry for a stable operation ID, literal command, fixed working directory, and bounded read-only, build/test, or packaging-controlled-write execution. Use when creating, reviewing, or selecting `.github/copilot-script-catalogue.md` operations.
 user-invocable: false

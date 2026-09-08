@@ -1,5 +1,16 @@
 # Safe implementation validation checklist
 
+## Validation Worker read-only structural checks
+
+Use this section only when acting as the delegated Validation Worker. Read and search the approved canonical plan and changed files; return a concise structural validation report with cited evidence, passed checks, failed checks, unavailable checks, and risks. Do not inspect or perform allocation, persistence, marker or status changes, command preflight or execution, cleanup, reconciliation, approval, acceptance, handoff, scope, or hierarchy decisions. Those duties remain coordinator-owned.
+
+- [ ] Each inspected changed file is within the approved plan scope.
+- [ ] Changed worker contracts use only their declared least-privilege tools and prohibit editing, commands, and nested delegation.
+- [ ] Frontmatter delimiters, names, and local relative links in inspected changed files are structurally valid.
+- [ ] Worker inputs and required outputs match the approved role boundary and do not transfer lifecycle authority.
+- [ ] No inspected worker procedure allocates, selects, creates, persists, revises, or authorizes lifecycle artifacts, handoffs, commands, cleanup, scope, hierarchy, approvals, or acceptance.
+- [ ] Checks requiring command execution, runtime delegation, VS Code diagnostics, packaging, or installed-VSIX exercise are reported as unavailable or not run unless separately evidenced by the coordinator.
+
 - [ ] Every change is covered by the approved plan.
 - [ ] No unrelated files or formatting were changed.
 - [ ] Before initial implementation checks, the developer-supplied plan input is resolved under the lifecycle core to one eligible derived exact repository-relative canonical plan identity; ordinary initial `/implement` remains plan-only and separate approval/authorization checks follow resolution.

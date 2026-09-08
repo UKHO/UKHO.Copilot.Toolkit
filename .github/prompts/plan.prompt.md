@@ -5,10 +5,10 @@ argument-hint: Provide one lifecycle-core-eligible research-brief alias or one i
 agent: Plan
 ---
 
-Use the existing `Plan` agent to plan from this approved research brief:
+Use the existing `Plan` agent to plan from this approved research brief and to process the sole explicit `/plan` admission event:
 
 ${input:researchBriefPath:One lifecycle-core-eligible alias to the approved research brief, or one inline Markdown link whose destination is that alias}
 
-Pass the supplied `researchBriefPath` value verbatim. Accept only one bounded alias or one inline Markdown destination exactly as defined by [RPIR lifecycle core](../skills/rpir-lifecycle-core/SKILL.md); first derive and validate its one canonical identity, then let `Plan` apply its expected-type, lifecycle-folder, approval, and provenance checks. If it is invalid or materially uncertain, stop and apply [agent-question-resolution](../skills/agent-question-resolution/SKILL.md) rather than guessing.
+Pass the supplied `researchBriefPath` value verbatim. Let `Plan` apply [RPIR lifecycle core](../skills/rpir-lifecycle-core/SKILL.md) to the one bounded alias or inline Markdown destination, including expected type, lifecycle folder, approval, provenance, exact `Status: In progress`, and procedural preimage/write/postimage checks. Only this explicit `/plan` invocation may admit and close that exact Research brief by changing its one status field to `Completed`; a generic Plan handoff or inferred invocation does not qualify. Do not allocate or persist a Plan on rejection or integrity failure.
 
-This valid phase request starts the Plan stage; do not ask a duplicate phase-authorization question. It does not authorize implementation or auto-send a handoff to Implement; the developer must explicitly approve the saved plan before any Implement handoff.
+This explicit `/plan` invocation supplies the admission event; its phase-entry confirmation remains only the manual handoff of the preceding exact canonical in-progress Research-brief evidence to Plan, so do not ask a duplicate phase-entry question. The invocation does not authorize implementation, commands, remediation, source or customization edits, Plan scope or hierarchy changes, acceptance, Plan allocation/persistence, or auto-send a handoff to Implement. The separate bounded closure is limited to the one validated Research `Status` field and its procedural integrity checks; the developer must separately approve the saved plan before any Implement handoff.

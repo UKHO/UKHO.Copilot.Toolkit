@@ -9,24 +9,24 @@
 ## Prerequisites
 
 - Start with the exact approved page targets and the relevant canonical sources.
-- Read the [Wiki maintenance skill](../.github/skills/wiki-maintenance/SKILL.md), [Wiki page template](../.github/skills/wiki-maintenance/templates/wiki-page.md), and [Wiki validation checklist](../.github/skills/wiki-maintenance/references/wiki-validation-checklist.md).
+- Read the [Wiki maintenance skill](../../.github/skills/wiki-maintenance/SKILL.md), [Wiki page template](../../.github/skills/wiki-maintenance/templates/wiki-page.md), and [Wiki validation checklist](../../.github/skills/wiki-maintenance/references/wiki-validation-checklist.md).
 - Treat `.github/` policy, lifecycle records, manifest data, and artifact metadata as canonical sources rather than copying their bodies into Wiki pages.
 
 ## Content
 
 ### Exact targets and scope
 
-For this Wiki initiative, the approved targets are:
+For this Wiki initiative, the approved root and page inventory are:
 
-- `docs/index.md`
-- `docs/choose-an-artifact.md`
-- `docs/rpir.md`
-- `docs/lifecycle-evidence-and-authority.md`
-- `docs/maintain-the-toolkit.md`
-- `docs/artifact-catalogue.md`
-- `docs/keeping-the-wiki-current.md`
+- `docs/Wiki/index.md`
+- `docs/Wiki/choose-an-artifact.md`
+- `docs/Wiki/rpir.md`
+- `docs/Wiki/lifecycle-evidence-and-authority.md`
+- `docs/Wiki/maintain-the-toolkit.md`
+- `docs/Wiki/artifact-catalogue.md`
+- `docs/Wiki/keeping-the-wiki-current.md`
 
-`README.md` is the sole approved inbound navigation target outside `docs/`. Do not add inferred pages, indexes, Wiki subtrees, customization artifacts, maintenance scripts, hosted-Wiki integration, commands, or packaging changes. A target or hierarchy change requires a Plan-stage amendment before implementation.
+`README.md` is the sole approved inbound navigation target outside `docs/Wiki/`. Future Wiki creation requires an explicit developer-selected repository-contained non-lifecycle parent, with the exact root derived as `<selected-parent>/Wiki/` and the page, index, and navigation inventory named in approved scope. Do not infer a location or add pages, indexes, customization artifacts, maintenance scripts, hosted-Wiki integration, commands, or packaging changes outside that approved root and inventory. A target or hierarchy change requires a Plan-stage amendment before implementation.
 
 ### Canonical sources and source verification
 
@@ -46,7 +46,7 @@ For the artifact inventory, compare every listed path and activation model with 
 
 ### RPIR and manual checks
 
-Use [RPIR](rpir.md) for the phase and handoff summary, and [Lifecycle evidence and authority](lifecycle-evidence-and-authority.md) for plan authority and the non-authorizing role of lifecycle evidence. Apply the repository's [canonical policy](../.github/copilot-instructions.md) for the exact approval, scope, and reporting controls.
+Use [RPIR](rpir.md) for the phase and handoff summary, and [Lifecycle evidence and authority](lifecycle-evidence-and-authority.md) for plan authority and the non-authorizing role of lifecycle evidence. Apply the repository's [canonical policy](../../.github/copilot-instructions.md) for the exact approval, scope, and reporting controls.
 
 Before completion, manually:
 
@@ -61,17 +61,15 @@ No approved Markdown or link-check command is available for this scope. Automate
 
 ## Canonical references
 
-- [Wiki maintenance skill](../.github/skills/wiki-maintenance/SKILL.md) — authoritative scope, procedure, and reporting boundaries.
-- [Wiki page template](../.github/skills/wiki-maintenance/templates/wiki-page.md) — required page structure.
-- [Wiki validation checklist](../.github/skills/wiki-maintenance/references/wiki-validation-checklist.md) — manual validation expectations.
-- [Repository guidance](../.github/copilot-instructions.md) — canonical policy and RPIR controls.
-- [New Wiki implementation plan](planning/new-wiki/001-implementation-plan.md) — approved target inventory and acceptance criteria.
+- [Wiki maintenance skill](../../.github/skills/wiki-maintenance/SKILL.md) — authoritative scope, procedure, and reporting boundaries.
+- [Wiki page template](../../.github/skills/wiki-maintenance/templates/wiki-page.md) — required page structure.
+- [Wiki validation checklist](../../.github/skills/wiki-maintenance/references/wiki-validation-checklist.md) — manual validation expectations.
+- [Repository guidance](../../.github/copilot-instructions.md) — canonical policy and RPIR controls.
 
 ## Related links
 
 - [Artifact catalogue](artifact-catalogue.md) — current paths, purposes, activation models, and maintenance triggers.
-- [Copilot artifact best-practices research brief](planning/copilot-artifact-best-practices/001-research-brief.md) — supporting taxonomy and link-first recommendations.
-- [VSIX packaging guide](vsix-packaging.md) — packaging-specific documentation, outside ordinary Wiki upkeep scope.
+- [VSIX packaging guide](../vsix-packaging.md) — packaging-specific documentation, outside ordinary Wiki upkeep scope.
 
 ## Next steps
 

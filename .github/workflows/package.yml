@@ -17,6 +17,7 @@ on:
       - scripts/discover-copilot-artifacts.cjs
       - scripts/sync-copilot-manifest.cjs
       - scripts/verify-vsix-boundary.cjs
+      - scripts/verify-copilot-contracts.cjs
       - scripts/verify-vsix-packaging-guide.cjs
       - .github/workflows/package.yml
   pull_request:
@@ -35,6 +36,7 @@ on:
       - scripts/discover-copilot-artifacts.cjs
       - scripts/sync-copilot-manifest.cjs
       - scripts/verify-vsix-boundary.cjs
+      - scripts/verify-copilot-contracts.cjs
       - scripts/verify-vsix-packaging-guide.cjs
       - .github/workflows/package.yml
 
@@ -57,6 +59,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Verify Copilot customization contracts
+        run: npm run verify-copilot-contracts
       - name: Verify VSIX packaging guide
         run: npm run verify-vsix-packaging-guide
       - name: Package Toolkit

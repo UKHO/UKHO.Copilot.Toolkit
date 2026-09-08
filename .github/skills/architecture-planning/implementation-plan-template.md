@@ -31,9 +31,16 @@
 - **Preserved behavior:**
 - **Conditional gates:**
 
+## Implementation readiness and observation boundary
+
+- **Readiness predicate:** Before persistence or handoff, every implementation-relevant requirement, exact or deterministically selected target, branch, concrete operation/design choice, safety decision, command or dependency decision, validation condition, acceptance condition, rollback, and operator effect is resolved in this plan. A missing, ambiguous, unverified, or unplanned item blocks persistence and handoff; it must not be invented or deferred to Implement.
+- **Sole permitted observation boundary:** An implementation-time observation is permitted only when its exact target or deterministic selection predicate, every permitted branch and operation, stop condition, safety gate, validation, acceptance, rollback, and operator effect are fully prescribed here, and the observation cannot change scope, hierarchy, target selection, design, safety, commands, dependencies, acceptance, or any other implementation decision. Otherwise the activity is research or a decision and blocks readiness.
+- **Validation disclosure:** Validation that is genuinely unavailable may remain recorded as unavailable with its reason and residual gap; it does not satisfy an implementation-relevant validation, acceptance, safety, or rollback requirement. Context explicitly demonstrated to be irrelevant to implementation may also be disclosed without blocking readiness.
+- **Authority boundary:** Plan owns the initial scope and Work Item/Task/Step hierarchy. This readiness section does not authorize implementation, commands, remediation, acceptance, or automatic handoff.
+
 ## Conditional Script Runner catalogue planning
 
-Use this section only when a planned maintenance script is explicitly intended for later execution by Script Runner. Otherwise record **N/A — no planned maintenance script is intended for later Script Runner execution; no catalogue entry is planned.** This section describes consumer-owned catalogue planning only; it does not create a catalogue entry, authorize execution, or replace the lifecycle `Approved commands` section.
+Use this section only when a planned maintenance script is explicitly intended for later execution by Script Runner. Otherwise record **N/A — no planned maintenance script is intended for later Script Runner execution; no catalogue entry is planned.** It is consumer-owned and non-authorizing; it does not replace `Approved commands`.
 
 For a triggered plan, record the complete existing catalogue entry in this exact field order, using evidenced values only:
 
@@ -97,7 +104,7 @@ If no command is evidenced, required, or acceptable, write: **No approved comman
 
 ## Planned work items
 
-This is the one authoritative register for requirement and Research traceability. Use `N/A` or “unavailable — <reason>” for inapplicable or unsupported fields.
+This is the one authoritative register for requirement and Research traceability. Use `N/A` or “unavailable — <reason>” where applicable.
 
 | Work Item completion, ID and order | Description and exact location | Research/requirement evidence | Acceptance criterion and validation scenario | Specification references, when applicable | Dependencies | Validation and gates | Rollback/backout | User or operator instructions |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -105,7 +112,7 @@ This is the one authoritative register for requirement and Research traceability
 
 ## Detailed work items
 
-Repeat this section for each planned work item. Keep headings conditional, but every item must account for scope, dependencies, validation, rollback/backout, and user or operator effects. Work Item, Task, and Step boxes are initially unchecked execution-completion markers: check a unit only when its defined implementation work is complete, and check a parent only after all required children are complete. Uncheck the affected unit and its affected parents when rework is needed. These markers are not validation, authorization, review, or acceptance state; hierarchy changes require a Plan-stage amendment.
+Repeat this section for each planned work item. Every item must account for scope, dependencies, validation, rollback/backout, and user or operator effects. Work Item, Task, and Step boxes are unchecked execution-completion markers, not validation, authorization, review, or acceptance state; hierarchy changes require a Plan-stage amendment.
 
 ### Work item <ID> — <short description>
 
@@ -115,7 +122,7 @@ Repeat this section for each planned work item. Keep headings conditional, but e
 - [ ] **Task <work-item-id>.<task-number> — <repeat for each additional planned outcome or purpose>.**
 	1. [ ] **Step <work-item-id>.<task-number>.<step-number> — <one concrete planned operation> at <exact evidenced target>.**
 
-	Use at least one Task and at least one nested Step per Task. Create a separate Step for each known repeated target. When the target inventory is unknown, record the target as unresolved, conditional on evidence-gathering, or bounded to an evidenced grouping; do not invent target paths, symbols, or entries. Task and Step checkboxes track defined implementation-work completion only, not validation, approval, authorization, review, handoff, or acceptance status. Plan owns the initial hierarchy and canonical persistence; adding, removing, or restructuring Work Items, Tasks, or Steps requires a Plan-stage amendment.
+	Use at least one Task and one nested Step per Task. Create separate Steps for known repeated targets. An implementation-relevant unknown target inventory blocks persistence and handoff unless covered by the prescribed observation boundary; do not invent targets. Adding, removing, or restructuring hierarchy requires a Plan-stage amendment.
 
 **Validation purpose:** Individual-item evidence.
 
@@ -125,7 +132,7 @@ Repeat this section for each planned work item. Keep headings conditional, but e
 - [ ] **Dependencies and execution gates:**
 - [ ] **Validation:** Record available, manual/structural, and unavailable checks separately.
 - [ ] **Rollback/backout:**
-- [ ] **User or operator effects and instructions:** N/A or provide evidenced guidance.
+- [ ] **User or operator effects and instructions:** N/A only when shown irrelevant to implementation; otherwise provide the complete evidenced effect and instruction.
 
 ## Compatibility, migration, and rollback
 
@@ -186,7 +193,7 @@ Cover only applicable scenarios and do not require checks unavailable in the tar
 
 ## Acceptance checklist
 
-**Purpose:** Plan-completeness review, not duplicate test evidence.
+**Purpose:** Plan-completeness review, not test evidence.
 
 - [ ] Scope and exclusions are explicit.
 - [ ] Lifecycle-core-derived exact numbered plan, research-brief, and any authorized report canonical identities are recorded; provenance is cited and reports are explicitly non-authorizing.
@@ -194,11 +201,13 @@ Cover only applicable scenarios and do not require checks unavailable in the tar
 - [ ] Exact files, sections, symbols, sequencing, and dependencies are identified.
 - [ ] Each detailed Work Item contains at least one scoped unchecked Task, and each Task contains at least one nested ordered unchecked scoped Step.
 - [ ] Each Task states a planned outcome or purpose, and each Step states one concrete planned operation with exact evidenced target guidance.
-- [ ] Known repeated targets have separate Steps, and unknown target inventories are unresolved, conditional, or bounded rather than invented.
+- [ ] Known repeated targets have separate Steps; an implementation-relevant unknown target inventory is resolved or blocks persistence and handoff, while only an irrelevant or fully prescribed observation target may remain bounded rather than invented.
 - [ ] The prospective lifecycle defines only `Plan drafted`, `Implementing`, `Ready for review`, and `Accepted`; `Plan drafted` is initial, developer approval gates Implement, and explicit developer acceptance gates `Accepted`.
 - [ ] The Planned work items table remains the sole authoritative Work Item register, with an initially unchecked Work Item execution-completion marker in each entry; subordinate Task/Step markers represent defined implementation-work completion only and do not represent validation, approval, authorization, review, handoff, or acceptance.
 - [ ] Completion requires completed children before a parent, permits affected units and parents to be unchecked for rework, and requires a Plan-stage amendment for hierarchy changes; Plan retains hierarchy authorship and canonical persistence.
 - [ ] Risks, compatibility, migration, rollback, gates, and unresolved decisions are recorded.
+- [ ] No implementation-relevant requirement, target, branch, design, safety, command, dependency, validation, acceptance, rollback, or operator-effect gap remains; any unresolved item blocks persistence and handoff.
+- [ ] Any implementation-time observation is fully prescribed, bounded, non-decision-changing, and satisfies the sole observation boundary; otherwise it is treated as research and blocks readiness.
 - [ ] Available, manual, and unavailable validation are distinguished honestly.
 - [ ] Developer approval is recorded before the Implement handoff.
 - [ ] Every agent-discovered material unknown is resolved through the shared Skill before completion or handoff; **Open questions** is omitted unless a named developer-declared intentional unknown exists.

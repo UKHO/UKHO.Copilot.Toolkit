@@ -4,7 +4,7 @@ A private VS Code extension containing the approved UKHO Copilot customization s
 
 ## Documentation
 
-[Explore the Copilot Toolkit Wiki](docs/index.md).
+[Explore the Copilot Toolkit Wiki](docs/Wiki/index.md).
 
 ## Scope
 

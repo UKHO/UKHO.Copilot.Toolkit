@@ -29,16 +29,15 @@ This Wiki covers the repository's `.github` instructions, skills, prompts, agent
 
 ## Canonical references
 
-- [Repository guidance](../.github/copilot-instructions.md) — Authoritative repository policy, scope boundaries, and approval controls.
-- [RPIR lifecycle core](../.github/skills/rpir-lifecycle-core/SKILL.md) — Lifecycle provenance, authority, and phase-boundary rules.
-- [Wiki maintenance skill](../.github/skills/wiki-maintenance/SKILL.md) — Bounded Markdown Wiki authoring and source-validation procedure.
-- [Wiki page template](../.github/skills/wiki-maintenance/templates/wiki-page.md) — Required page anatomy for future Wiki pages.
-- [Copilot artifact best practices](planning/copilot-artifact-best-practices/001-research-brief.md) — Research-backed artifact selection and composition guidance.
+- [Repository guidance](../../.github/copilot-instructions.md) — Authoritative repository policy, scope boundaries, and approval controls.
+- [RPIR lifecycle core](../../.github/skills/rpir-lifecycle-core/SKILL.md) — Lifecycle provenance, authority, and phase-boundary rules.
+- [Wiki maintenance skill](../../.github/skills/wiki-maintenance/SKILL.md) — Bounded Markdown Wiki authoring and source-validation procedure.
+- [Wiki page template](../../.github/skills/wiki-maintenance/templates/wiki-page.md) — Required page anatomy for future Wiki pages.
 
 ## Related links
 
-- [VSIX packaging guide](vsix-packaging.md) — Packaging-specific documentation kept separate from the Wiki scope.
-- [Changelog](../CHANGELOG.md) — Release history for the Toolkit.
+- [VSIX packaging guide](../vsix-packaging.md) — Packaging-specific documentation kept separate from the Wiki scope.
+- [Changelog](../../CHANGELOG.md) — Release history for the Toolkit.
 
 ## Next steps
 

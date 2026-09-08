@@ -9,6 +9,7 @@
     "baseContentUrl": "https://github.com/UKHO/UKHO.Copilot.Toolkit/blob/main/"
   },
   "scripts": {
+    "verify-copilot-contracts": "node scripts/verify-copilot-contracts.cjs",
     "verify-vsix-packaging-guide": "node scripts/verify-vsix-packaging-guide.cjs",
     "package": "node -e \"const fs=require('fs');const cp=require('child_process');const p=JSON.parse(fs.readFileSync('package.json','utf8'));const bin=process.platform==='win32'?'node_modules/@vscode/vsce/vsce':'node_modules/.bin/vsce';const r=cp.spawnSync(process.execPath,[bin,'package','--allow-missing-repository','--out',`ukho.${p.name}-${p.version}.vsix`],{stdio:'inherit'});process.exit(r.status===null?1:r.status)\"",
     "verify-package": "node scripts/verify-vsix-boundary.cjs"
@@ -27,7 +28,9 @@
     "LICENSE",
     "resources/ukho-icon.png",
     ".github/instructions/lifecycle-implementation-plans.instructions.md",
+    ".github/instructions/lifecycle-implementation-reports.instructions.md",
     ".github/instructions/lifecycle-research-briefs.instructions.md",
+    ".github/instructions/lifecycle-review-reports.instructions.md",
     ".github/agents/architecture-analyst.agent.md",
     ".github/agents/codebase-investigator.agent.md",
     ".github/agents/correctness-reviewer.agent.md",
@@ -42,6 +45,7 @@
     ".github/agents/review.agent.md",
     ".github/agents/script-runner.agent.md",
     ".github/agents/security-reviewer.agent.md",
+    ".github/agents/stage-assurance.agent.md",
     ".github/agents/test-strategist.agent.md",
     ".github/agents/test-worker.agent.md",
     ".github/agents/validation-worker.agent.md",
@@ -59,6 +63,7 @@
     ".github/skills/create-copilot-skill",
     ".github/skills/repository-script-catalogue",
     ".github/skills/rpir-lifecycle-core",
+    ".github/skills/rpir-stage-assurance",
     ".github/skills/safe-implementation",
     ".github/skills/test-design",
     ".github/skills/wiki-maintenance"
@@ -69,7 +74,13 @@
         "path": ".github/instructions/lifecycle-implementation-plans.instructions.md"
       },
       {
+        "path": ".github/instructions/lifecycle-implementation-reports.instructions.md"
+      },
+      {
         "path": ".github/instructions/lifecycle-research-briefs.instructions.md"
+      },
+      {
+        "path": ".github/instructions/lifecycle-review-reports.instructions.md"
       }
     ],
     "chatAgents": [
@@ -114,6 +125,9 @@
       },
       {
         "path": ".github/agents/security-reviewer.agent.md"
+      },
+      {
+        "path": ".github/agents/stage-assurance.agent.md"
       },
       {
         "path": ".github/agents/test-strategist.agent.md"
@@ -169,6 +183,9 @@
       },
       {
         "path": ".github/skills/rpir-lifecycle-core"
+      },
+      {
+        "path": ".github/skills/rpir-stage-assurance"
       },
       {
         "path": ".github/skills/safe-implementation"

@@ -24,6 +24,7 @@ const catalogueFieldOrder = [
   'Failure disposition'
 ];
 const expectedPackageScripts = {
+  'verify-copilot-contracts': 'node scripts/verify-copilot-contracts.cjs',
   'verify-vsix-packaging-guide': 'node scripts/verify-vsix-packaging-guide.cjs',
   package: "node -e \"const fs=require('fs');const cp=require('child_process');const p=JSON.parse(fs.readFileSync('package.json','utf8'));const bin=process.platform==='win32'?'node_modules/@vscode/vsce/vsce':'node_modules/.bin/vsce';const r=cp.spawnSync(process.execPath,[bin,'package','--allow-missing-repository','--out',`ukho.${p.name}-${p.version}.vsix`],{stdio:'inherit'});process.exit(r.status===null?1:r.status)\"",
   'verify-package': 'node scripts/verify-vsix-boundary.cjs'
@@ -33,6 +34,19 @@ const prohibitedEffects = [
 ];
 const stopBehavior = 'Stop on an error, prompt, unexpected network or script effect, non-zero result, timeout, mismatch, undeclared write, or missing prerequisite; investigate the underlying issue without substituting a command.';
 const expectedOperations = [
+  {
+    id: 'toolkit-verify-copilot-contracts',
+    classification: 'read-only',
+    packagingIdentity: 'none',
+    command: 'npm run verify-copilot-contracts',
+    cwd: '.',
+    arguments: [],
+    outputsOrWrites: [],
+    effects: ['Verifies fixed-root customization contracts and manifest parity without workspace mutation.'],
+    prerequisites: ['Repository root is the fixed working directory.'],
+    stopBehavior,
+    prohibitedEffects
+  },
   {
     id: 'toolkit-discover-copilot-artifacts',
     classification: 'read-only',
@@ -169,7 +183,7 @@ function readMetadata() {
 }
 
 function verifyMetadata(metadata, synchronizerOutputsOrWrites) {
-  if (!Array.isArray(metadata) || metadata.length !== expectedOperations.length) fail('Guide metadata must contain exactly five operations');
+  if (!Array.isArray(metadata) || metadata.length !== expectedOperations.length) fail('Guide metadata must contain exactly six operations');
   for (let index = 0; index < expectedOperations.length; index += 1) {
     const actual = metadata[index];
     const expected = {
@@ -236,7 +250,7 @@ function parseCatalogue() {
 }
 
 function verifyCatalogue(entries, expected) {
-  if (entries.length !== expected.length) fail('Root script catalogue must contain exactly five operations');
+  if (entries.length !== expected.length) fail('Root script catalogue must contain exactly six operations');
   const seen = new Set();
   for (const entry of entries) {
     if (seen.has(entry.headingId)) fail(`Root script catalogue has duplicate stable operation ID ${entry.headingId}`);
@@ -269,7 +283,7 @@ try {
   const synchronizerOutputsOrWrites = synchronizerWriteBoundary();
   verifyMetadata(readMetadata(), synchronizerOutputsOrWrites);
   verifyCatalogue(parseCatalogue(), catalogueExpectedOperations(manifest, synchronizerOutputsOrWrites));
-  console.log('VSIX packaging guide metadata matches the five Toolkit-specific packaging interfaces; it is not a global consumer operation-ID allow-list.');
+  console.log('VSIX packaging guide metadata matches the six Toolkit-specific packaging interfaces; it is not a global consumer operation-ID allow-list.');
 } catch (error) {
   console.error(`VSIX packaging guide Toolkit-interface verification failed: ${error.message}`);
   process.exitCode = 1;

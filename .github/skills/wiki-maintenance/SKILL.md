@@ -11,14 +11,17 @@ Use this Skill for repository-managed Markdown wiki work. It provides reusable d
 ## Inputs and boundaries
 
 - Start from the exact approved page, index, and navigation targets. Do not broaden the target set from nearby files or inferred reader needs.
+- Distinguish maintenance from creation. For a new Wiki, require the developer to explicitly select an exact repository-contained, non-lifecycle parent; do not infer a parent or default to `docs/`.
+- For creation, the exact Wiki root is `<selected-parent>/Wiki/`. The approved scope must name the complete page, index, and navigation inventory, and every created target must be contained within that root.
+- A selected parent that does not yet exist may be created only when the developer explicitly selected it. Do not create a parent, Wiki root, page, index, or navigation target in `docs/planning/`, `docs/delivery/`, or another lifecycle namespace.
 - Use the existing Research → Plan → Implement → Review process for substantive changes. Follow the [RPIR lifecycle guidance](../rpir-lifecycle-core/SKILL.md) and the [implementation validation checklist](../safe-implementation/validation-checklist.md); those resources remain authoritative.
 - Treat `docs/` content as repository-managed Markdown. Do not introduce hosted-wiki integration, authentication, publishing, remote effects, scripts, or command-based work.
 - Stop and report a gap when a material fact lacks a canonical repository source or a required target, audience, navigation path, or acceptance decision is unknown.
 
 ## Procedure
 
-1. **Discover.** Read the approved targets, their nearby index or navigation pages, existing inbound and outbound links, and the canonical sources cited by the content. Identify the intended audience and the reader path into and out of each page.
-2. **Bound the scope.** List the exact page and index files to change. Keep policy, lifecycle, packaging, and generated truth at their canonical locations; link to them rather than copying or reinterpreting their authority.
+1. **Discover.** Read the approved targets, their nearby index or navigation pages, existing inbound and outbound links, and the canonical sources cited by the content. Identify the intended audience and the reader path into and out of each page. For creation, first confirm the developer-selected parent, derive the exact `<selected-parent>/Wiki/` root, and stop for clarification rather than infer a location.
+2. **Bound the scope.** List the exact page and index files to change. For creation, list the complete page, index, and navigation inventory within the selected root; do not include lifecycle namespaces or targets outside that root. Keep policy, lifecycle, packaging, and generated truth at their canonical locations; link to them rather than copying or reinterpreting their authority.
 3. **Draft or update.** Start from the [wiki page template](templates/wiki-page.md). Keep the purpose and audience clear, distinguish prerequisites from procedure, and preserve the page's established terminology and reader flow.
 4. **Maintain navigation.** Update only named indexes, tables of contents, and related links within the approved scope. Prefer repository-relative links and check both directions: the page is reachable from its index, and its links lead to existing intended destinations.
 5. **Validate structure and facts.** Apply the [wiki validation checklist](references/wiki-validation-checklist.md). Check headings, links, source provenance, duplication, stale claims, accessibility, and next steps by manual inspection when automation is unavailable.
