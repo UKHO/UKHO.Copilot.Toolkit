@@ -35,7 +35,7 @@ For this Wiki initiative, the approved root and page inventory are:
 3. Link to the source with a repository-relative path; summarize only what readers need and do not reproduce artifact bodies or silently reinterpret policy.
 4. When a source is missing, contradictory, inaccessible, or materially uncertain, stop and report the gap rather than inventing a value.
 
-For the artifact inventory, compare every listed path and activation model with the current `package.json` arrays and the corresponding `.github` metadata. Recheck the distinction between source artifacts and manifest-contributed artifacts.
+For the artifact inventory, compare every listed path and activation model with the current `package.json` arrays and the corresponding `.github` metadata. Recheck the distinction between source artifacts and manifest-contributed artifacts. Keep repository Run Books under `docs/run-books/` as human-readable guidance outside the Wiki; a compliant Script Runner selection section remains a non-authorizing ordered-ID source.
 
 ### Relative navigation and page anatomy
 
@@ -69,7 +69,7 @@ No approved Markdown or link-check command is available for this scope. Automate
 ## Related links
 
 - [Artifact catalogue](artifact-catalogue.md) — current paths, purposes, activation models, and maintenance triggers.
-- [VSIX packaging guide](../vsix-packaging.md) — packaging-specific documentation, outside ordinary Wiki upkeep scope.
+- [VSIX packaging Run Book](../run-books/vsix-packaging.md) — packaging-specific human guidance and the bounded Runner selection source, outside ordinary Wiki upkeep scope.
 
 ## Next steps
 

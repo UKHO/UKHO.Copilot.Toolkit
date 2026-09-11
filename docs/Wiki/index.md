@@ -13,7 +13,7 @@
 
 ## Scope and exclusions
 
-This Wiki covers the repository's `.github` instructions, skills, prompts, agents, and related RPIR concepts. It excludes extension implementation, VSIX packaging, publishing, hosted-Wiki integration, authentication, commands, and external automation.
+This Wiki covers the repository's `.github` instructions, skills, prompts, agents, and related RPIR concepts. It excludes extension implementation, VSIX packaging procedures, publishing, hosted-Wiki integration, authentication, commands, and external automation; packaging guidance is maintained separately as a repository Run Book.
 
 ## Use the Toolkit
 
@@ -36,7 +36,7 @@ This Wiki covers the repository's `.github` instructions, skills, prompts, agent
 
 ## Related links
 
-- [VSIX packaging guide](../vsix-packaging.md) — Packaging-specific documentation kept separate from the Wiki scope.
+- [VSIX packaging Run Book](../run-books/vsix-packaging.md) — Repository-maintainer packaging guidance and its non-authorizing ordered Runner selection source, kept separate from the Wiki scope.
 - [Changelog](../../CHANGELOG.md) — Release history for the Toolkit.
 
 ## Next steps

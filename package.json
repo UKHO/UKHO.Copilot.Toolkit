@@ -1,5 +1,5 @@
 {
-  "name": "copilot-toolkit",
+  "name": "ukho-copilot-toolkit",
   "displayName": "UKHO Copilot Toolkit",
   "publisher": "ukho",
   "version": "1.0.0",
@@ -11,7 +11,7 @@
   "scripts": {
     "verify-copilot-contracts": "node scripts/verify-copilot-contracts.cjs",
     "verify-vsix-packaging-guide": "node scripts/verify-vsix-packaging-guide.cjs",
-    "package": "node -e \"const fs=require('fs');const cp=require('child_process');const p=JSON.parse(fs.readFileSync('package.json','utf8'));const bin=process.platform==='win32'?'node_modules/@vscode/vsce/vsce':'node_modules/.bin/vsce';const r=cp.spawnSync(process.execPath,[bin,'package','--allow-missing-repository','--out',`ukho.${p.name}-${p.version}.vsix`],{stdio:'inherit'});process.exit(r.status===null?1:r.status)\"",
+    "package": "node -e \"const fs=require('fs');const cp=require('child_process');const p=JSON.parse(fs.readFileSync('package.json','utf8'));const bin=process.platform==='win32'?'node_modules/@vscode/vsce/vsce':'node_modules/.bin/vsce';const r=cp.spawnSync(process.execPath,[bin,'package','--allow-missing-repository','--out',`${p.name}-${p.version}.vsix`],{stdio:'inherit'});process.exit(r.status===null?1:r.status)\"",
     "verify-package": "node scripts/verify-vsix-boundary.cjs"
   },
   "license": "MIT",
@@ -61,6 +61,7 @@
     ".github/skills/create-copilot-instruction",
     ".github/skills/create-copilot-prompt",
     ".github/skills/create-copilot-skill",
+    ".github/skills/create-runbook",
     ".github/skills/repository-script-catalogue",
     ".github/skills/rpir-lifecycle-core",
     ".github/skills/rpir-stage-assurance",
@@ -177,6 +178,9 @@
       },
       {
         "path": ".github/skills/create-copilot-skill"
+      },
+      {
+        "path": ".github/skills/create-runbook"
       },
       {
         "path": ".github/skills/repository-script-catalogue"

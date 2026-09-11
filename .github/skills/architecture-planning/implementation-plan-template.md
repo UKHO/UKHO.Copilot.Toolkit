@@ -6,7 +6,7 @@
 - **Canonical record:** Lifecycle-core-derived exact repository-relative identity: allocated `docs/planning/<initiative-slug>/<NNN>-implementation-plan.md` or `docs/delivery/<work-item-id>-<short-slug>/<NNN>-implementation-plan.md`, with `NNN` exactly three ASCII decimal digits; do not persist a raw alias, local absolute path, or Markdown destination
 - **Status:** Plan drafted / Implementing / Ready for review / Accepted:
 - **Plan revision:** Initial / Material revision; supersedes:
-- **Approval boundary:** `Plan drafted` is the initial plan state. This record does not authorize implementation; explicit developer approval is required before the Implement handoff, and a developer request naming this saved canonical plan authorizes its scoped Implement pass.
+- **Approval boundary:** `Plan drafted` is the initial plan state. This record does not authorize implementation; explicit developer approval is required before the Implement handoff, and a developer request naming this saved canonical plan authorizes only its initial non-remediation scoped Implement pass. It does not authorize later passes, remediation, acceptance, scope or hierarchy changes, or excluded command routes.
 - **Artifact allocation:** Inspect matching `-implementation-plan.md` prefixes, use `001` or maximum valid prefix plus one, immediately re-inspect before creation, and never overwrite. Do not infer the current or approved plan from highest prefix, recency, or suffix alone.
 
 ## Research basis and delivery metadata
@@ -40,9 +40,9 @@
 
 ## Conditional Script Runner catalogue planning
 
-Use this section only when a planned maintenance script is explicitly intended for later execution by Script Runner. Otherwise record **N/A — no planned maintenance script is intended for later Script Runner execution; no catalogue entry is planned.** It is consumer-owned and non-authorizing; it does not replace `Approved commands`.
+Use this section only when a planned change adds or materially changes a maintenance script explicitly intended for later execution by Script Runner. A change is material only when it changes the future Runner operation contract or referenced script evidence; editorial-only wording changes do not trigger this obligation. For a triggered plan, require one dedicated consumer-catalogue Work Item with a scoped Task and ordered Step. Otherwise record **N/A — no planned maintenance-script addition or material change is intended for later Script Runner execution; no catalogue entry work is planned.** It is consumer-owned and non-authorizing; it does not replace the lifecycle-only `Approved commands` section.
 
-For a triggered plan, record the complete existing catalogue entry in this exact field order, using evidenced values only:
+For a triggered plan, record the complete consumer-owned catalogue entry in this exact field order, using evidenced values only:
 
 - **Stable operation ID:**
 - **Classification:** `read-only`, `build/test`, or `packaging-controlled-write` only.
@@ -58,8 +58,8 @@ For a triggered plan, record the complete existing catalogue entry in this exact
 - **Stable-ID uniqueness evidence:** Complete consumer-catalogue inspection confirms that the stable operation ID is unique:
 - **Safety-validity gate:** Allowed classification, containment, exact command/cwd/arguments, declared boundaries, and prohibited effects are verified:
 - **Unknown-value gate:** Any missing, ambiguous, unverified, or otherwise unknown field or uniqueness result blocks completion; do not use a placeholder or infer an executable value.
-- **Validation:** Triggered path — manually verify every field is present in the listed order, the stable ID is unique in the complete catalogue, and the safety-validity and unknown-value gates pass. `N/A` path — verify that no planned maintenance script is explicitly Runner-intended and that no catalogue work is invented. Record unavailable checks and residual gaps honestly.
-- **Acceptance:** Triggered path is accepted only when the complete consumer-owned entry facts, uniqueness evidence, safety-validity result, validation result, and blocking-gate result are recorded. `N/A` is accepted only when the explicit no-intent condition is recorded. In both paths, keep catalogue planning separate from `Approved commands`; neither plan scope nor an unfinished entry is Script Runner execution authorization.
+- **Validation:** Triggered path — manually verify every field is present in the listed order, the stable ID is unique in the complete catalogue, and the safety-validity and unknown-value gates pass. `N/A` path — verify that no planned maintenance-script addition or material change is explicitly Runner-intended and that no catalogue work is invented. Record unavailable checks and residual gaps honestly.
+- **Acceptance:** Triggered path is accepted only when the complete consumer-owned entry facts, uniqueness evidence, safety-validity result, validation result, and blocking-gate result are recorded. `N/A` is accepted only when the explicit no-intent addition-or-material-change condition is recorded. In both paths, keep catalogue planning separate from the lifecycle-only `Approved commands` section; neither plan scope nor an unfinished entry is Script Runner execution authorization.
 
 ## Assumptions and unresolved decisions
 
@@ -94,13 +94,13 @@ Record gates per planned work item. Do not invent commands, environments, or evi
 
 ## Approved commands
 
-Record command candidates only after inspecting the applicable repository's evidenced build, test, and script surfaces. This section is the sole location for potential command invocations and does not replace exact-plan authority, Implement-only execution, fresh per-invocation developer approval, or other policy controls. Do not record category-only, inferred, changed, or invented commands.
+Record command candidates only after inspecting the applicable repository's evidenced build, test, and script surfaces. This section is the sole location for potential command invocations and does not replace exact-plan authority, Implement-only execution, or other policy controls. A Tier 1 row must explicitly declare autonomous intent and resolve the exact approved canonical plan, initial non-remediation pass, complete unchanged Tier 1 predicate, unchanged literal and fixed contained directory, preflight, prohibited-effect, external-platform, post-inspection, failure-disposition, and rollback predicates; missing, ambiguous, changed, inferred, or incomplete data makes it unavailable and requires a Plan-stage amendment. Tier 2 remains a separate manual route and cannot be bundled with or substituted for Tier 1. The cleanup exception remains separately bounded by its exact-plan, empty-contained-directory, manual-approval, non-recursive, and post-inspection gates. Do not record category-only or invented commands.
 
 If no command is evidenced, required, or acceptable, write: **No approved commands — unavailable because `<specific evidence-based rationale>`.** State the rationale for each required but unavailable command rather than leaving the decision implicit. Tier 2 must be recorded separately from Tier 1 and cannot be bundled with or substituted for it. Native Windows does not provide a sandbox-containment guarantee; record the portable fixed-path, review, and approval controls that remain required.
 
-| Tier | Literal command (unchanged) | Fixed workspace-contained directory | Purpose | Expected output or result | Known effects | Inputs and preflight | Fresh approval point | Post-command inspection | Failure disposition | Rollback |
+| Tier | Literal command (unchanged) | Fixed workspace-contained directory | Purpose | Expected output or result | Known effects | Inputs and preflight | Autonomous Tier 1 eligibility / external-platform caveat | Post-command inspection | Failure disposition | Rollback |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Tier 1 or Tier 2 | `N/A` when unavailable; otherwise exact evidenced literal | `N/A` when unavailable; otherwise exact fixed path |  |  |  |  | Present unchanged command and directory for fresh developer approval |  | Stop and record failure; do not substitute or modify the command |  |
+| Tier 1 or Tier 2 | `N/A` when unavailable; otherwise exact evidenced literal | `N/A` when unavailable; otherwise exact fixed path |  |  |  |  | Tier 1: explicitly mark autonomous intent and resolve every predicate; VS Code, Workspace Trust, tool permissions, or managed policy may still prompt or deny. Tier 2: manual approval remains required. |  | Stop and record failure; do not substitute or modify the command |  |
 
 ## Planned work items
 
@@ -148,7 +148,7 @@ Repeat this section for each planned work item. Every item must account for scop
 - Lifecycle-core-derived exact associated implementation-report canonical identity, when authorized:
 - Lifecycle-core-derived exact associated Review-report canonical identity, when authorized:
 - **Review-report contract and provenance (when applicable):** Lifecycle-core-derived exact canonical identities for the plan, reviewed implementation report, and allocated Review report; lifecycle identity, suffix-specific two-scan allocation evidence, and delegated-review/omission evidence.
-- **Review acceptance and remediation traceability (when applicable):** Persist the Review report before disposition/acceptance; only `No remediation required` followed by explicit developer acceptance may lead to `Accepted`. Resolve the explicitly authorized plan and source Review-report inputs under the lifecycle core before requiring their exact canonical linkage, existing Work Item/Task/Step mapping, and a Plan-stage amendment for hierarchy change.
+- **Review acceptance and remediation traceability (when applicable):** Persist the Review report before disposition/acceptance; only `No remediation required` followed by explicit developer acceptance may lead to `Accepted`. Remediation accepts exactly one source Review-report input and derives the plan identity from that report under the lifecycle core; do not require separately supplied plan or implementation-report aliases. Validate the source report's exact canonical plan field/direct local link and reviewed-implementation-report field/direct local link, then validate that the reviewed implementation report carries the same exact canonical plan field/direct local link. Map findings only to existing Work Item/Task/Step hierarchy, preserve separate approval and manual handoff, and require a Plan-stage amendment for any hierarchy change. Reports remain immutable, non-authorizing evidence and cannot authorize remediation, scope, hierarchy, status, or acceptance.
 - The plan remains authoritative for scope, Work Item/Task/Step hierarchy, lifecycle status, completion markers, acceptance, and validation. Any implementation report or Review report is immutable evidence only; neither approves, authorizes, expands, revises, or replaces this plan, and a Review report cannot authorize remediation.
 
 ## Risks and controls
@@ -209,6 +209,8 @@ Cover only applicable scenarios and do not require checks unavailable in the tar
 - [ ] No implementation-relevant requirement, target, branch, design, safety, command, dependency, validation, acceptance, rollback, or operator-effect gap remains; any unresolved item blocks persistence and handoff.
 - [ ] Any implementation-time observation is fully prescribed, bounded, non-decision-changing, and satisfies the sole observation boundary; otherwise it is treated as research and blocks readiness.
 - [ ] Available, manual, and unavailable validation are distinguished honestly.
+- [ ] Each Tier 1 row explicitly intends autonomous execution and resolves every eligibility predicate; missing or ambiguous fields make it unavailable and require a Plan-stage amendment, while Tier 2 remains separately manual.
+- [ ] Legacy or incomplete command rows are not treated as eligible without a Plan-stage amendment; pass-scoped authority and excluded routes remain explicit.
 - [ ] Developer approval is recorded before the Implement handoff.
 - [ ] Every agent-discovered material unknown is resolved through the shared Skill before completion or handoff; **Open questions** is omitted unless a named developer-declared intentional unknown exists.
 
@@ -216,5 +218,5 @@ Cover only applicable scenarios and do not require checks unavailable in the tar
 
 - **Approved implementation input:** This saved exact numbered implementation-plan path, after explicit developer approval.
 - **Handoff:** Manual only; do not auto-submit.
-- **Lifecycle:** Begin at `Plan drafted`; Implement records `Implementing` only after the named-plan developer authorization, may report `Ready for review` only when completion and available-validation predicates are met, and Review records `Accepted` only after its explicit acceptance conditions. Existing plans remain legacy unless amended by Plan.
+- **Lifecycle:** Begin at `Plan drafted`; Implement records `Implementing` only after the named-plan developer authorization for the initial non-remediation scoped pass, may report `Ready for review` only when completion and available-validation predicates are met, and Review records `Accepted` only after its explicit acceptance conditions. Existing plans and legacy or incomplete command rows remain ineligible unless amended by Plan.
 - **Implement must report:** Files changed, acceptance status, validation performed, deviations from this plan, limitations, and follow-up risks.

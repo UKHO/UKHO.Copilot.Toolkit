@@ -135,7 +135,7 @@ function readManifest() {
 }
 
 function expectedVsixPath(manifest) {
-  return path.join(root, `${manifest.publisher}.${manifest.name}-${manifest.version}.vsix`);
+  return path.join(root, `${manifest.name}-${manifest.version}.vsix`);
 }
 
 function archiveMembers(buffer) {

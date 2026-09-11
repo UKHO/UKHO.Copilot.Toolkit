@@ -13,7 +13,7 @@ on:
       - .github/prompts/**
       - .github/skills/**
       - .github/copilot-script-catalogue.md
-      - docs/vsix-packaging.md
+      - docs/run-books/vsix-packaging.md
       - scripts/discover-copilot-artifacts.cjs
       - scripts/sync-copilot-manifest.cjs
       - scripts/verify-vsix-boundary.cjs
@@ -32,7 +32,7 @@ on:
       - .github/prompts/**
       - .github/skills/**
       - .github/copilot-script-catalogue.md
-      - docs/vsix-packaging.md
+      - docs/run-books/vsix-packaging.md
       - scripts/discover-copilot-artifacts.cjs
       - scripts/sync-copilot-manifest.cjs
       - scripts/verify-vsix-boundary.cjs

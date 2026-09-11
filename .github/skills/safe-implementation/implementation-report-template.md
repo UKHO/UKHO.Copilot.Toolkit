@@ -7,6 +7,7 @@ This template is the sole schema owner for future durable implementation reports
 ## Lifecycle identity and allocation
 
 - **Canonical implementation plan:** `<forward-slash repository-relative exact path>`.
+- **Canonical implementation plan link:** `[<same exact canonical implementation-plan path>](<same exact canonical implementation-plan path>)` — a direct one-hop local Markdown link matching the canonical implementation-plan field.
 - **Canonical implementation report:** `<forward-slash repository-relative exact path>`.
 - **Lifecycle folder:** `<forward-slash repository-relative exact path>`.
 - **Report status:** `<implementation pass status and Review readiness>`.
@@ -50,6 +51,11 @@ This template is the sole schema owner for future durable implementation reports
 Use this section only for a remediation pass.
 
 - **Canonical source Review report:** `<forward-slash repository-relative exact path>`.
+- **Canonical source Review report link:** `[<same exact canonical source Review-report path>](<same exact canonical source Review-report path>)` — a direct one-hop local Markdown link matching the source Review-report field.
+- **Canonical implementation plan:** `<forward-slash repository-relative exact path>`.
+- **Canonical implementation plan link:** `[<same exact canonical implementation-plan path>](<same exact canonical implementation-plan path>)` — a direct one-hop local Markdown link matching the canonical implementation-plan field.
+- **Reviewed implementation report:** `<forward-slash repository-relative exact path>`.
+- **Reviewed implementation report link:** `[<same exact reviewed implementation-report path>](<same exact reviewed implementation-report path>)` — a direct one-hop local Markdown link matching the reviewed implementation-report field.
 - **Finding resolution or blocker:** `<each finding mapped only to an existing plan Work Item, Task, or Step>`.
 
 ## Next developer action

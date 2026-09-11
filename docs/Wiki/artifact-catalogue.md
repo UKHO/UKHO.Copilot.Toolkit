@@ -15,7 +15,7 @@
 
 ### Activation and packaging model
 
-The manifest registers the four lifecycle instruction files under `contributes.chatInstructions`, all listed agents under `contributes.chatAgents`, all four prompt files under `contributes.chatPromptFiles`, and all listed skills under `contributes.chatSkills`. The corresponding entries are also included by `package.json.files` (skills are included by directory). Activation remains governed by each artifact's metadata and Copilot surface:
+The manifest registers the four lifecycle instruction files under `contributes.chatInstructions`, all listed agents under `contributes.chatAgents`, all four prompt files under `contributes.chatPromptFiles`, and its declared skills under `contributes.chatSkills`. The corresponding entries are also included by `package.json.files` (skills are included by directory). Activation remains governed by each artifact's metadata and Copilot surface:
 
 - **Instructions** provide repository context automatically when their scope applies. The root instruction is always-on; the four lifecycle instructions use their declared `applyTo` patterns.
 - **Agents** are selected by a user or delegated by an explicitly allowed coordinator. Coordinator agents are user-invocable unless metadata says otherwise; worker agents in this catalogue declare `user-invocable: false` and are intended for delegation.
@@ -49,7 +49,7 @@ The manifest registers the four lifecycle instruction files under `contributes.c
 | Requirements and acceptance analysis | Delegated worker; `user-invocable: false` | `.github/agents/requirements-analyst.agent.md` | Review when requirements extraction or unresolved-decision handling changes. |
 | Evidence-based research coordinator | User-selected coordinator; delegates only its explicit worker allow-list | `.github/agents/research.agent.md` | Review when research evidence, source validation, or research handoff boundaries change. |
 | Independent correctness, security, and maintainability review coordinator | User-selected coordinator; delegates only its explicit worker allow-list | `.github/agents/review.agent.md` | Review when review evidence, remediation, acceptance, or handoff boundaries change. |
-| Script Runner catalogue operation executor | User-selected; selects one complete, safety-valid root-catalogue entry; VS Code Workspace Trust, permissions, and managed organization policy control approval behavior | `.github/agents/script-runner.agent.md` | Review when the Script Runner contract, allowed classifications, or catalogue controls change. |
+| Script Runner catalogue operation executor | User-selected; processes one or more ordered complete, safety-valid root-catalogue entries selected directly or from a compliant Run Book; VS Code Workspace Trust, permissions, and managed organization policy control approval behavior | `.github/agents/script-runner.agent.md` | Review when the Script Runner contract, Run Book selection grammar, allowed classifications, or catalogue controls change. |
 | Security and policy-boundary review | Delegated worker; `user-invocable: false` | `.github/agents/security-reviewer.agent.md` | Review when tool, delegation, data-exposure, or approval-boundary risks change. |
 | Draft completeness and authority-boundary assurance | Delegated worker; `user-invocable: false`; read/search only | `.github/agents/stage-assurance.agent.md` | Review when pre-persistence assurance, draft readiness, or worker boundaries change. |
 | Verification and validation strategy | Delegated worker; `user-invocable: false` | `.github/agents/test-strategist.agent.md` | Review when test scenarios or unavailable-check requirements change. |
@@ -83,6 +83,7 @@ All four prompt paths are registered under `package.json` → `contributes.chatP
 | Create and validate a focused custom instruction | User-invocable capability | `.github/skills/create-copilot-instruction/SKILL.md` | Review when instruction scope or discovery guidance changes. |
 | Create and validate a focused prompt file | User-invocable capability | `.github/skills/create-copilot-prompt/SKILL.md` | Review when prompt inputs, activation, or side-effect boundaries change. |
 | Create and validate a resource-backed skill | User-invocable capability | `.github/skills/create-copilot-skill/SKILL.md` | Review when skill structure, resources, or validation guidance changes. |
+| Create or update a human-readable repository Run Book | User-invocable capability; creates guidance only and cannot authorize Runner execution, commands, or catalogue mutation | `.github/skills/create-runbook/SKILL.md` | Review when Run Book anatomy, conditional Runner selection grammar, or non-authority boundaries change. |
 | Define and validate complete, safety-valid Script Runner catalogue operations | Internal/model-selected workflow capability; `user-invocable: false` | `.github/skills/repository-script-catalogue/SKILL.md` | Review when the ten-field catalogue-entry contract or execution classifications change. |
 | Apply lifecycle input, provenance, and phase boundaries | Internal/model-selected workflow capability; `user-invocable: false` | `.github/skills/rpir-lifecycle-core/SKILL.md` | Review when lifecycle authority, provenance, or confirmation boundaries change. |
 | Assess RPIR draft-stage assurance readiness | Internal/model-selected workflow capability; `user-invocable: false` | `.github/skills/rpir-stage-assurance/SKILL.md` | Review when completeness, traceability, authority, or handoff-readiness checks change. |
@@ -90,7 +91,7 @@ All four prompt paths are registered under `package.json` → `contributes.chatP
 | Design focused test and validation matrices | Internal/model-selected workflow capability; `user-invocable: false` | `.github/skills/test-design/SKILL.md` | Review when test scenarios or unavailable-check requirements change. |
 | Maintain repository-managed Wiki Markdown | User-invocable capability | `.github/skills/wiki-maintenance/SKILL.md` | Review when page anatomy, source validation, navigation, or RPIR maintenance guidance changes. |
 
-All 14 skill directories are registered under `package.json` → `contributes.chatSkills` and included by `package.json.files`.
+All 15 listed skill directories are discovered from `.github/skills`; the manifest synchronizer derives their `package.json` → `contributes.chatSkills` and `package.json.files` registration. This descriptive inventory is not execution, packaging, or policy authority.
 
 ## Canonical references
 

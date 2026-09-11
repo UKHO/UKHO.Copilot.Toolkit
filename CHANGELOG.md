@@ -8,6 +8,9 @@ All notable releases of the UKHO Copilot Toolkit are documented here. Versions f
 
 - Script Runner catalogue entries now use the ten-field schema. When adopting `1.0.0`, remove `Owner and immutable review evidence` from every existing entry; no replacement attestation is required.
 - The immutable-review-evidence and Runner-authored fresh-confirmation gates have been removed. VS Code and managed organization policy continue to control execution permissions and approvals.
+- Script Runner now accepts one or more explicitly ordered stable IDs supplied directly or from a developer-named compliant Run Book; malformed selection input, duplicate IDs, failed objective revalidation, prompts or denials, failures, mismatches, and undeclared effects stop the remaining sequence.
+- Repository Run Books now live under `docs/run-books/`; the VSIX packaging guide moved to `docs/run-books/vsix-packaging.md` and is the first Run Book selection source. Its narrative remains human guidance, not Runner input or execution authority.
+- The canonical package identity is now `ukho-copilot-toolkit`, and the VSIX filename changed from the publisher-prefixed legacy form to `ukho-copilot-toolkit-<version>.vsix` (`${name}-${version}.vsix`).
 
 ### Added
 

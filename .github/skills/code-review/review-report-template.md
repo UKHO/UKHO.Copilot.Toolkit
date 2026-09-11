@@ -8,7 +8,9 @@ This template is the sole schema owner for future durable Review reports. It app
 
 - **Lifecycle:** `<planning initiative or delivery Work Item identity>`.
 - **Canonical implementation plan:** `<forward-slash repository-relative exact path>`.
+- **Canonical implementation plan link:** `[<same exact canonical implementation-plan path>](<same exact canonical implementation-plan path>)` — a direct one-hop local Markdown link matching the canonical implementation-plan field.
 - **Reviewed implementation report:** `<forward-slash repository-relative exact path>`.
+- **Reviewed implementation report link:** `[<same exact reviewed implementation-report path>](<same exact reviewed implementation-report path>)` — a direct one-hop local Markdown link matching the reviewed implementation-report field.
 - **Canonical Review report:** `<forward-slash repository-relative exact path>`.
 - **Lifecycle folder:** `<forward-slash repository-relative exact path>`.
 - **Review pass:** `<pass identity and prior-review context>`.
