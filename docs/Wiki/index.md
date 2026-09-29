@@ -36,7 +36,7 @@ This Wiki covers the repository's `.github` instructions, skills, prompts, agent
 
 ## Related links
 
-- [VSIX packaging Run Book](../run-books/vsix-packaging.md) — Repository-maintainer packaging guidance and its non-authorizing ordered Runner selection source, kept separate from the Wiki scope.
+- [VSIX packaging Run Book](../run-books/vsix-packaging.md) — Repository-maintainer packaging guidance and verification metadata, kept separate from the Wiki scope.
 - [Changelog](../../CHANGELOG.md) — Release history for the Toolkit.
 
 ## Next steps

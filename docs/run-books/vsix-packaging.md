@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This Run Book gives **repository maintainers** the human process for reviewing the Toolkit's static VSIX packaging inputs and provides the ordered stable-ID selection source for the bounded autonomous VSIX flow. It is not consumer installation guidance; consumers should continue to use the root [`README.md`](../../README.md).
+This Run Book gives **repository maintainers** the human process for reviewing the Toolkit's static VSIX packaging inputs. It is not Script Runner command-selection input or consumer installation guidance; consumers should continue to use the root [`README.md`](../../README.md).
 
 ## Scope
 
@@ -45,11 +45,11 @@ The synchronizer retains unrelated `files` entries and unrelated manifest fields
 
 ## Human process
 
-Repository maintainers use every interface from the repository root: `c:\Repos\UKHO.Copilot.Toolkit`. The command examples in this section are human guidance only; Script Runner treats only the dedicated stable-ID list at the end of this Run Book as selection input.
+Repository maintainers use every interface from the repository root: `c:\Repos\UKHO.Copilot.Toolkit`. The command examples in this section are human guidance only, not Script Runner selection or execution authority.
 
 ### Toolkit packaging operation metadata
 
-The following constrained metadata records the six Toolkit-specific packaging interfaces maintained by this repository. These records are packaging documentation and verification inputs, not a global consumer operation-ID allow-list, the root consumer catalogue, or execution authorization. The root `.github/copilot-script-catalogue.md` is consumer-owned and remains separate from this metadata and from VSIX packaging; its complete, safety-valid entries use the ten ordered fields in the [repository script catalogue Skill](../../.github/skills/repository-script-catalogue/SKILL.md). VS Code Workspace Trust, permissions, and managed organization policy control approval behavior.
+The following constrained metadata records the six Toolkit-specific packaging interfaces maintained by this repository. Their IDs, classifications, prohibitions and other fields are **packaging verification data only**, never Script Runner command eligibility, an operation allow-list or execution authorization. VS Code Workspace Trust, permissions, and managed organization policy control approval behavior.
 
 <!-- vsix-packaging-operation-metadata:start -->
 ```json
@@ -139,8 +139,8 @@ The following constrained metadata records the six Toolkit-specific packaging in
 ## Preparation
 
 1. Inspect the relevant customization roots, current `package.json`, source scripts, workflow, and proposed change.
-2. Establish the current-state prerequisites declared by each selected operation. For synchronization, capture the complete sorted discovery inventory, then rerun the declared probe immediately before synchronization and require byte-for-byte equality. For packaging, require the immediately preceding requested manifest check and confirm the captured `package.json` bytes and discovery inventory remain byte-for-byte equal immediately before packaging.
-3. Confirm the fixed repository root, Workspace Trust, local package dependencies, and expected output prerequisites where the selected operation declares them.
+2. Establish the current-state prerequisites for the intended human process. For synchronization, capture the complete sorted discovery inventory, then rerun the probe immediately before synchronization and require byte-for-byte equality. For packaging, check the manifest first and confirm `package.json` and discovery inventory have not changed before packaging.
+3. Confirm the repository root, Workspace Trust, local package dependencies, and expected outputs before the applicable step.
 
 ## Ordered process
 
@@ -157,7 +157,7 @@ Inspect with discovery, check before sync, inspect any resulting manifest change
 
 ## Expected results
 
-The process verifies static contracts and the manifest boundary, synchronizes only the declared locations when needed, creates the version-derived VSIX, and checks its archive boundary. Script Runner validates and inspects each selected operation independently and stops the sequence at its first stop condition; the stable-ID list is an ordered selection source, not execution authority.
+The process verifies static contracts and the manifest boundary, synchronizes only the declared locations when needed, creates the version-derived VSIX, and checks its archive boundary. The JSON metadata is independently verified packaging documentation; it does not prescribe Script Runner commands.
 
 ## Diagnostics and failure disposition
 
@@ -170,7 +170,7 @@ A failure in discovery, manifest parsing, checking, synchronization, packaging, 
 - Do not distribute, publish, install, or release a VSIX as part of this process.
 - Do not treat synchronization as broad manifest rewriting: its mutation surface is limited to the five locations listed above.
 - Do not change `README.md` consumer guidance as part of this Run Book. The maintainer documentation remains separate from installation, support, and rollback instructions.
-- The Run Book and catalogue do not override Workspace Trust, VS Code permissions, or managed organization policy. Native Windows is not sandbox containment.
+- The Run Book does not override Workspace Trust, VS Code permissions, or managed organization policy. Native Windows is not sandbox containment.
 
 ## Validation and limitations
 
@@ -187,10 +187,3 @@ The workflow validates this constrained metadata before packaging on Ubuntu. It 
 - [`package.json`](../../package.json) — package identity and scripts.
 - [`README.md`](../../README.md) and [workflow](../../.github/workflows/package.yml) — consumer guidance and automation context.
 
-## Script Runner operations
-1. toolkit-verify-copilot-contracts
-2. toolkit-discover-copilot-artifacts
-3. toolkit-sync-copilot-manifest
-4. toolkit-check-copilot-manifest
-5. toolkit-package-vsix
-6. toolkit-verify-vsix-boundary

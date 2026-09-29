@@ -29,7 +29,7 @@ Plan completion is fail-closed for implementation-relevant gaps. The persisted p
 
 ### Manual boundaries still apply
 
-Developer approval is required before an approved plan enters implementation. Commands need fresh per-invocation confirmation of the unchanged approved literal and fixed directory. Review acceptance requires explicit developer acceptance after the applicable persisted review evidence; a review finding alone cannot authorize remediation. Any scope or hierarchy expansion requires a Plan-stage amendment.
+Developer approval of the exact saved plan is required before its initial scoped implementation pass. For ordinary task commands, a phase-scoped Script Runner goal and effective VS Code permission controls apply; no repository-authored fresh per-command confirmation or literal plan row is required. A platform prompt or denial remains authoritative. Review acceptance requires explicit developer acceptance after the applicable persisted review evidence; a review finding alone cannot authorize remediation. Any scope or hierarchy expansion requires a Plan-stage amendment. Implement's separate exact empty-directory cleanup still needs per-invocation developer approval.
 
 These controls are procedural boundaries, not claims of UI-origin attestation, filesystem atomicity, or automatic handoff. Wiki content explains the contract and does not authorize mutations, commands, status changes, remediation, or acceptance.
 

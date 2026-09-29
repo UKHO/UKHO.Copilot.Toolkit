@@ -6,6 +6,7 @@ All notable releases of the UKHO Copilot Toolkit are documented here. Versions f
 
 ### Breaking changes
 
+- Goal-directed Script Runner replaces catalogue IDs, fixed command rows, Tier eligibility and Run Book operation selection. Research, Plan, Implement and Review can delegate bounded goals; Runner chooses needed commands and cwd under phase scope and effective VS Code permissions. Consumers no longer need a Script Runner catalogue. Existing permission settings and workflows that rely on stable IDs require review; execution effects are not undone by a VSIX withdrawal.
 - Script Runner catalogue entries now use the ten-field schema. When adopting `1.0.0`, remove `Owner and immutable review evidence` from every existing entry; no replacement attestation is required.
 - The immutable-review-evidence and Runner-authored fresh-confirmation gates have been removed. VS Code and managed organization policy continue to control execution permissions and approvals.
 - Script Runner now accepts one or more explicitly ordered stable IDs supplied directly or from a developer-named compliant Run Book; malformed selection input, duplicate IDs, failed objective revalidation, prompts or denials, failures, mismatches, and undeclared effects stop the remaining sequence.

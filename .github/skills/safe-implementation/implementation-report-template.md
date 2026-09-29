@@ -36,7 +36,8 @@ This template is the sole schema owner for future durable implementation reports
 
 ## Execution evidence and reconciliation
 
-- **Commands:** `<sanitized approved-command or cleanup evidence; state None invoked when applicable>`.
+- **Delegated Runner goals and commands:** `<phase, selected opened root, approved goal/scope, each chosen command and cwd, platform prompt/outcome, exit state, sanitized output, tracked/untracked/generated artifacts and process/external effects, inspection limitations and deviations; state None invoked when applicable>`.
+- **Cleanup (separate direct-terminal exception):** `<exact plan-listed target, observed emptiness and containment, individual developer approval with auto-approval disabled, operation result and parent-path inspection; state None requested or invoked when applicable>`.
 - **Worker and assurance evidence:** `<delegation, direct-work, and Stage Assurance reconciliation evidence>`.
 - **Diff and preserved behavior:** `<scope/diff inspection and preserved-boundary evidence>`.
 

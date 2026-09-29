@@ -38,28 +38,9 @@
 - **Validation disclosure:** Validation that is genuinely unavailable may remain recorded as unavailable with its reason and residual gap; it does not satisfy an implementation-relevant validation, acceptance, safety, or rollback requirement. Context explicitly demonstrated to be irrelevant to implementation may also be disclosed without blocking readiness.
 - **Authority boundary:** Plan owns the initial scope and Work Item/Task/Step hierarchy. This readiness section does not authorize implementation, commands, remediation, acceptance, or automatic handoff.
 
-## Conditional Script Runner catalogue planning
+## Bounded Script Runner task goals and effects
 
-Use this section only when a planned change adds or materially changes a maintenance script explicitly intended for later execution by Script Runner. A change is material only when it changes the future Runner operation contract or referenced script evidence; editorial-only wording changes do not trigger this obligation. For a triggered plan, require one dedicated consumer-catalogue Work Item with a scoped Task and ordered Step. Otherwise record **N/A — no planned maintenance-script addition or material change is intended for later Script Runner execution; no catalogue entry work is planned.** It is consumer-owned and non-authorizing; it does not replace the lifecycle-only `Approved commands` section.
-
-For a triggered plan, record the complete consumer-owned catalogue entry in this exact field order, using evidenced values only:
-
-- **Stable operation ID:**
-- **Classification:** `read-only`, `build/test`, or `packaging-controlled-write` only.
-- **Packaging identity:**
-- **Exact literal command:**
-- **Fixed workspace-relative cwd:**
-- **Enumerated arguments:**
-- **Expected outputs/writes:**
-- **Prohibited effects:**
-- **Prerequisites:**
-- **Failure disposition:**
-
-- **Stable-ID uniqueness evidence:** Complete consumer-catalogue inspection confirms that the stable operation ID is unique:
-- **Safety-validity gate:** Allowed classification, containment, exact command/cwd/arguments, declared boundaries, and prohibited effects are verified:
-- **Unknown-value gate:** Any missing, ambiguous, unverified, or otherwise unknown field or uniqueness result blocks completion; do not use a placeholder or infer an executable value.
-- **Validation:** Triggered path — manually verify every field is present in the listed order, the stable ID is unique in the complete catalogue, and the safety-validity and unknown-value gates pass. `N/A` path — verify that no planned maintenance-script addition or material change is explicitly Runner-intended and that no catalogue work is invented. Record unavailable checks and residual gaps honestly.
-- **Acceptance:** Triggered path is accepted only when the complete consumer-owned entry facts, uniqueness evidence, safety-validity result, validation result, and blocking-gate result are recorded. `N/A` is accepted only when the explicit no-intent addition-or-material-change condition is recorded. In both paths, keep catalogue planning separate from the lifecycle-only `Approved commands` section; neither plan scope nor an unfinished entry is Script Runner execution authorization.
+For each applicable terminal-observation task, record its phase, self-contained goal, selected opened workspace root, authorized scope, expected observation and result, anticipated file/process/external effects, prerequisites, safety stops, validation, failure disposition and rollback. If none applies, record `N/A` with a reason. Do not require a catalogue, operation ID, literal command, fixed command row or Tier. Script Runner selects a task-relevant command and cwd if needed, subject to effective VS Code permissions; a planned goal does not authorize additional scope, lifecycle mutations, acceptance, or execution when the platform denies it. Research, Plan and Review must not intentionally edit project files through Runner; Implement remains limited to approved scope. Unknown effects or missing implementation decisions block readiness rather than becoming Runner choices.
 
 ## Assumptions and unresolved decisions
 
@@ -92,15 +73,9 @@ Record gates per planned work item. Do not invent commands, environments, or evi
 | Baseline |  | Approved, documented target-repository validation before item work. | Manual or structural inspection, with unavailable checks and gaps stated. | Baseline outcome or explicit gap is recorded before work begins. |
 | Pre-completion |  | Approved, documented target-repository validation after item work. | Manual or structural completion evidence, residual risks, and unavailable checks. | Outcome, owner, and residual gap are recorded before completion. |
 
-## Approved commands
+## Execution and validation observations
 
-Record command candidates only after inspecting the applicable repository's evidenced build, test, and script surfaces. This section is the sole location for potential command invocations and does not replace exact-plan authority, Implement-only execution, or other policy controls. A Tier 1 row must explicitly declare autonomous intent and resolve the exact approved canonical plan, initial non-remediation pass, complete unchanged Tier 1 predicate, unchanged literal and fixed contained directory, preflight, prohibited-effect, external-platform, post-inspection, failure-disposition, and rollback predicates; missing, ambiguous, changed, inferred, or incomplete data makes it unavailable and requires a Plan-stage amendment. Tier 2 remains a separate manual route and cannot be bundled with or substituted for Tier 1. The cleanup exception remains separately bounded by its exact-plan, empty-contained-directory, manual-approval, non-recursive, and post-inspection gates. Do not record category-only or invented commands.
-
-If no command is evidenced, required, or acceptable, write: **No approved commands — unavailable because `<specific evidence-based rationale>`.** State the rationale for each required but unavailable command rather than leaving the decision implicit. Tier 2 must be recorded separately from Tier 1 and cannot be bundled with or substituted for it. Native Windows does not provide a sandbox-containment guarantee; record the portable fixed-path, review, and approval controls that remain required.
-
-| Tier | Literal command (unchanged) | Fixed workspace-contained directory | Purpose | Expected output or result | Known effects | Inputs and preflight | Autonomous Tier 1 eligibility / external-platform caveat | Post-command inspection | Failure disposition | Rollback |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Tier 1 or Tier 2 | `N/A` when unavailable; otherwise exact evidenced literal | `N/A` when unavailable; otherwise exact fixed path |  |  |  |  | Tier 1: explicitly mark autonomous intent and resolve every predicate; VS Code, Workspace Trust, tool permissions, or managed policy may still prompt or deny. Tier 2: manual approval remains required. |  | Stop and record failure; do not substitute or modify the command |  |
+List evidenced candidate checks and bounded goals, not command authorization. For each, state the phase, selected opened root, scope, expected result, effects, preflight, inspection limits and denial/failure disposition. Distinguish available, unavailable and not-run checks. No arbitrary dependency installation or new implementation target is authorized by this section. Native Windows does not guarantee sandbox containment; preserve platform permissions and human review. The separate exact empty-directory cleanup exception still requires its named target, confirmed emptiness and containment, individual developer approval with terminal auto-approval disabled, non-recursion and parent-path inspection.
 
 ## Planned work items
 
@@ -209,8 +184,8 @@ Cover only applicable scenarios and do not require checks unavailable in the tar
 - [ ] No implementation-relevant requirement, target, branch, design, safety, command, dependency, validation, acceptance, rollback, or operator-effect gap remains; any unresolved item blocks persistence and handoff.
 - [ ] Any implementation-time observation is fully prescribed, bounded, non-decision-changing, and satisfies the sole observation boundary; otherwise it is treated as research and blocks readiness.
 - [ ] Available, manual, and unavailable validation are distinguished honestly.
-- [ ] Each Tier 1 row explicitly intends autonomous execution and resolves every eligibility predicate; missing or ambiguous fields make it unavailable and require a Plan-stage amendment, while Tier 2 remains separately manual.
-- [ ] Legacy or incomplete command rows are not treated as eligible without a Plan-stage amendment; pass-scoped authority and excluded routes remain explicit.
+- [ ] Applicable task goals and effects are phase-scoped, self-contained, and bounded by the selected opened root; unavailable checks and denied permissions are disclosed.
+- [ ] No catalogue ID, literal command row, or Tier is a prerequisite; pass-scoped authority and excluded routes remain explicit.
 - [ ] Developer approval is recorded before the Implement handoff.
 - [ ] Every agent-discovered material unknown is resolved through the shared Skill before completion or handoff; **Open questions** is omitted unless a named developer-declared intentional unknown exists.
 
@@ -218,5 +193,5 @@ Cover only applicable scenarios and do not require checks unavailable in the tar
 
 - **Approved implementation input:** This saved exact numbered implementation-plan path, after explicit developer approval.
 - **Handoff:** Manual only; do not auto-submit.
-- **Lifecycle:** Begin at `Plan drafted`; Implement records `Implementing` only after the named-plan developer authorization for the initial non-remediation scoped pass, may report `Ready for review` only when completion and available-validation predicates are met, and Review records `Accepted` only after its explicit acceptance conditions. Existing plans and legacy or incomplete command rows remain ineligible unless amended by Plan.
+- **Lifecycle:** Begin at `Plan drafted`; Implement records `Implementing` only after the named-plan developer authorization for the initial non-remediation scoped pass, may report `Ready for review` only when completion and available-validation predicates are met, and Review records `Accepted` only after its explicit acceptance conditions. Existing plans retain their own approved scope and constraints until amended by Plan.
 - **Implement must report:** Files changed, acceptance status, validation performed, deviations from this plan, limitations, and follow-up risks.

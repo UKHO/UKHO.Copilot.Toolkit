@@ -7,18 +7,6 @@ const { classes, discover, normalize, root } = require('./discover-copilot-artif
 const manifestPath = path.join(root, 'package.json');
 const runBookPath = 'docs/run-books/vsix-packaging.md';
 const legacyGuidePath = 'docs/vsix-packaging.md';
-const vsixRunBookSequence = [
-  'toolkit-verify-copilot-contracts',
-  'toolkit-discover-copilot-artifacts',
-  'toolkit-sync-copilot-manifest',
-  'toolkit-check-copilot-manifest',
-  'toolkit-package-vsix',
-  'toolkit-verify-vsix-boundary'
-];
-const legacyRunnerSelectionAnchors = [
-  'one stable operation ID supplied directly by the operator',
-  'prohibit aggregate operation'
-];
 const guideCatalogueCouplingIdentifiers = [
   'cataloguePath',
   'catalogueFieldOrder',
@@ -31,7 +19,7 @@ const reportPatterns = {
   '.github/instructions/lifecycle-implementation-reports.instructions.md': "docs/{planning,delivery}/**/[0-9][0-9][0-9]-implementation-report.md",
   '.github/instructions/lifecycle-review-reports.instructions.md': "docs/{planning,delivery}/**/[0-9][0-9][0-9]-review-report.md"
 };
-const planAgentsFrontmatter = "agents: ['Requirements Analyst', 'Architecture Analyst', 'Test Strategist', 'Domain Investigator', 'Feasibility Investigator', 'Stage Assurance']";
+const coordinators = ['research', 'plan', 'implement', 'review'];
 const stableContractAnchors = [
   ['.github/agents/research.agent.md', 'Research never sets `Completed`.'],
   ['.github/skills/rpir-lifecycle-core/SKILL.md', 'Explicit `/plan` admission and bounded Research closure'],
@@ -182,98 +170,34 @@ function checkVsixRunBook() {
     '## Diagnostics and failure disposition',
     '## Safety limits',
     '## Validation and limitations',
-    'The command examples in this section are human guidance only; Script Runner treats only the dedicated stable-ID list',
+    'The command examples in this section are human guidance only',
     'Native Windows is not sandbox containment.'
   ], 'moved human-readable Run Book');
-  const lines = text.split('\n');
-  const headings = lines.reduce((matches, line, index) => line === '## Script Runner operations' ? [...matches, index] : matches, []);
-  if (headings.length !== 1) fail(`${runBookPath} must contain exactly one Script Runner operations heading`);
-  const expectedItems = vsixRunBookSequence.map((id, index) => `${index + 1}. ${id}`);
-  const items = lines.slice(headings[0] + 1, headings[0] + 1 + expectedItems.length);
-  if (!equal(items, expectedItems)) fail(`${runBookPath} must contain the exact ordered VSIX Script Runner sequence`);
-  const following = lines.slice(headings[0] + 1 + expectedItems.length);
-  const endsAtFile = following.length === 0 || (following.length === 1 && following[0] === '');
-  if (!endsAtFile && !following[0].startsWith('## ')) fail(`${runBookPath} Script Runner operations section must end after its exact ordered list`);
-}
-
-function checkCatalogueOperation(id, requiredAnchors) {
-  const catalogue = readText('.github/copilot-script-catalogue.md');
-  const heading = `## Operation: \`${id}\``;
-  const start = catalogue.indexOf(heading);
-  if (start < 0) fail(`Consumer catalogue is missing ${id}`);
-  const end = catalogue.indexOf('\n## Operation: ', start + heading.length);
-  const operation = catalogue.slice(start, end < 0 ? undefined : end);
-  for (const anchor of requiredAnchors) {
-    if (!operation.includes(anchor)) fail(`${id} is missing objective prerequisite or boundary: ${anchor}`);
-  }
-  if (/\b(?:reviewed|understood|approved)\b/i.test(operation)) {
-    fail(`${id} must not retain a subjective review, understanding, or approval prerequisite`);
-  }
+  if (text.includes('## Script Runner operations')) fail(`${runBookPath} must remain human guidance, not Runner ID selection`);
 }
 
 function checkScriptRunnerAutonomyContracts() {
-  const runner = readText('.github/agents/script-runner.agent.md');
-  for (const legacy of legacyRunnerSelectionAnchors) {
-    if (runner.includes(legacy)) fail(`.github/agents/script-runner.agent.md must not retain legacy single-operation selection anchor: ${legacy}`);
+  const runnerPath = '.github/agents/script-runner.agent.md';
+  const runner = parseFrontmatter(runnerPath);
+  if (!equal(parseStringList(runner.values.tools, runnerPath), ['read', 'search', 'runInTerminal'])) fail('Script Runner must have read, search, terminal and no edit or nested agent tool');
+  if (Object.hasOwn(runner.values, 'agents')) fail('Script Runner must not delegate');
+  requireAnchors(runnerPath, ['goal', 'phase', 'cwd', 'with multiple', 'denial', 'tracked', 'untracked', 'generated', 'Native Windows'], 'bounded Runner goal and effect inspection');
+  for (const name of coordinators) {
+    const relative = `.github/agents/${name}.agent.md`;
+    const parsed = parseFrontmatter(relative);
+    if (!parseStringList(parsed.values.agents, relative).includes('Script Runner')) fail(`${relative} must name Script Runner as a delegate`);
+    requireAnchors(relative, ['Script Runner', 'goal', 'phase', 'scope'], 'phase-scoped Runner delegation');
   }
-  requireAnchors('.github/agents/script-runner.agent.md', [
-    'one or more stable catalogue operation IDs enumerated directly by the operator in the requested order, or one developer-named repository-contained Run Book',
-    'Scan the complete fixed-root catalogue only to establish that stable operation IDs are unique.',
-    'semantically validate only the complete selected entry and its referenced artifacts',
-    'Validate, execute, and inspect only the exact Skill-validated selected operations in their stated order.',
-    'Refuse duplicate requested IDs and never discover, infer, substitute, skip, retry, or dynamically add IDs, commands, arguments, dependencies, or follow-on operations.',
-    'A refusal, failed prerequisite, prompt or denial, failure, mismatch, undeclared effect, or inspection discrepancy stops the remaining sequence.',
-    'It does not provide a generic terminal route',
-    'lifecycle implementation, create or edit catalogues or scripts, delegate work, create reports, or bypass',
-    'Native Windows provides no sandbox-containment guarantee.'
-  ], 'direct-or-Run-Book ordered selection');
-  requireAnchors('.github/skills/repository-script-catalogue/SKILL.md', [
-    'Scan the complete fixed-root catalogue only to establish stable-operation-ID uniqueness; do not semantically validate, recertify, or require fresh operator confirmation for unrelated entries.',
-    'Require one or more stable IDs enumerated directly by the developer in order, or one developer-named repository-contained Run Book.',
-    'Validate, execute, and inspect selected entries only in their stated order.',
-    'Refuse duplicate requested IDs; do not discover, infer, substitute, skip, retry, or dynamically add an ID, command, argument, dependency, or follow-on operation.',
-    'Stop the remaining sequence and report any refusal, failed prerequisite, prompt or denial, error, unexpected network or script effect, non-zero result, timeout, mismatch, undeclared artifact, or other unexpected effect.',
-    'This Skill grants no edit, installation, generic `mutation` operation classification, lifecycle, report, delegation, or general terminal authority.',
-    'Native Windows provides no sandbox-containment guarantee'
-  ], 'selected-entry-only catalogue validation');
-  requireAnchors('.github/copilot-instructions.md', [
-    'The developer must enumerate one or more lowercase-kebab-case stable IDs in order directly, or name one repository-contained Run Book',
-    'Refuse blank lines, nested items, Markdown decoration or links, comments, commands, arguments, or any other content in that section',
-    'Do not discover, infer, substitute, skip, retry, or dynamically add an ID, command, argument, dependency, or follow-on operation; refuse duplicate requested IDs.',
-    'Scan the complete fixed-root catalogue only to establish stable-ID uniqueness.',
-    'Do not require repository-authored fresh operator confirmation, attestation, or semantic recertification of unrelated entries.',
-    'Semantically validate only each selected entry and its referenced artifacts',
-    'any refusal, invalid entry, failed prerequisite, prompt or denial, failure, mismatch, undeclared effect, or inspection discrepancy stops the remaining sequence.',
-    'Catalogue selection does not override Workspace Trust, VS Code permissions, or managed-policy prompts and denials'
-  ], 'Script Runner ordered-selection policy');
+  for (const relative of [runnerPath, '.github/copilot-instructions.md', '.github/skills/rpir-lifecycle-core/SKILL.md']) {
+    const text = readText(relative);
+    if (/stable catalogue operation IDs|complete unchanged Tier 1|## Script Runner operations/.test(text)) fail(`${relative} retains obsolete Runner eligibility`);
+  }
   requireAnchors('.github/skills/create-runbook/SKILL.md', [
     'name: create-runbook',
     '[Run Book template](templates/runbook.md)',
-    'It provides authoring guidance only; it cannot authorize Script Runner execution, commands, or catalogue mutation.'
+    'human-readable repository Run Book'
   ], 'Run Book Skill');
-  requireAnchors('.github/skills/create-runbook/templates/runbook.md', [
-    '## Script Runner selection grammar',
-    '## Script Runner operations',
-    'Each item must contain exactly one plain-text lowercase-kebab-case stable ID',
-    'Include the following section only when this Run Book has Script Runner intent; otherwise omit it entirely.',
-    'do not include blank lines, nested items, Markdown decoration or links, comments, commands, arguments, or any other content.'
-  ], 'Run Book template');
-  checkCatalogueOperation('toolkit-sync-copilot-manifest', [
-    '- Classification: `packaging-controlled-write`',
-    '- Packaging identity: `ukho-copilot-toolkit`',
-    'Readable, parseable package.json whose name is exactly ukho-copilot-toolkit.',
-    'Declared fixed toolkit-discover-copilot-artifacts probe captures complete sorted JSON inventory.',
-    'Immediately before sync, rerun that exact probe and require byte-for-byte equality',
-    'synchronizer\'s existing immediate discover() comparison/write remains a second check.'
-  ]);
-  checkCatalogueOperation('toolkit-package-vsix', [
-    '- Classification: `build/test`',
-    'Readable, parseable package.json whose name is ukho-copilot-toolkit.',
-    'Declared package script and fixed local @vscode/vsce executable exist.',
-    'Local package dependencies exist.',
-    'Immediately preceding successful requested toolkit-check-copilot-manifest operation with no requested intervening operation',
-    'Immediately before packaging, reread/reprobe and require byte-for-byte equality.'
-  ]);
+  requireAnchors('.github/skills/create-runbook/templates/runbook.md', ['## Purpose', '## Ordered process', '## Sources'], 'human Run Book template');
   const manifest = readManifest();
   if (manifest.name !== 'ukho-copilot-toolkit') fail('package.json must use the ukho-copilot-toolkit package identity');
   if (!manifest.scripts || !manifest.scripts.package?.includes('`${p.name}-${p.version}.vsix`')) fail('package.json package output must derive from name and version');
@@ -300,89 +224,21 @@ function checkAuthoredLifecycleContracts() {
     'The recorded developer approval for that exact canonical plan authorizes only its initial non-remediation scoped pass; preserve the separate scope, command, write, report, remediation, acceptance, and manual-handoff gates.'
   ], 'Implement coordinator handoff-only authority');
   requireAnchors('.github/copilot-instructions.md', [
-    'exact developer-named approved canonical plan',
-    'initial non-remediation pass',
-    'complete unchanged Tier 1 row',
+    'exact developer-named approved canonical plan', 'initial non-remediation',
     'VS Code and managed organization policy control permissions and approvals',
-    'Tier 2 is a separately approved dependency-installation invocation',
-    'never a worker, delegate, Research, Plan, Review, or nested agent',
-    'bounded terminal/cleanup controls remain unchanged'
-  ], 'exact-plan initial-pass Tier 1 authority and retained boundaries');
-  requireAnchors(core, [
-    'recorded exact-plan developer approval governs the initial scoped pass',
-    'complete unchanged Tier 1',
-    'Tier 2',
-    'remediation',
-    'cleanup',
-    'Script Runner',
-    'worker',
-    'Workspace Trust',
-    'managed policy'
-  ], 'exact-plan initial-pass Tier 1 authority and retained boundaries');
-  requireAnchors('.github/skills/safe-implementation/SKILL.md', [
-    'exact developer-named canonical plan',
-    'initial non-remediation pass',
-    'complete unchanged Tier 1',
-    'Tier 2 is a separate dependency-installation route',
-    'cleanup exception',
-    'Workspace Trust',
-    'managed policy'
-  ], 'exact-plan initial-pass Tier 1 authority and retained boundaries');
-  requireAnchors('.github/skills/safe-implementation/validation-checklist.md', [
-    'exact developer-named canonical plan',
-    'initial non-remediation pass',
-    'complete unchanged Tier 1',
-    'Tier 2 is separately checked',
-    'cleanup exception',
-    'Workspace Trust',
-    'managed policy'
-  ], 'exact-plan initial-pass Tier 1 authority and retained boundaries');
-  requireAnchors('.github/skills/architecture-planning/SKILL.md', [
-    'exact approved canonical plan',
-    'initial non-remediation pass',
-    'complete unchanged Tier 1',
-    'Tier 2 separation',
-    'Script Runner',
-    'cleanup',
-    'Workspace Trust',
-    'managed policy'
-  ], 'exact-plan initial-pass Tier 1 authority and retained boundaries');
-  requireAnchors('.github/skills/architecture-planning/implementation-plan-template.md', [
-    'exact approved canonical plan',
-    'initial non-remediation pass',
-    'complete unchanged Tier 1',
-    'Tier 2 must be recorded separately',
-    'Script Runner',
-    'cleanup',
-    'Workspace Trust',
-    'managed policy'
-  ], 'exact-plan initial-pass Tier 1 authority and retained boundaries');
-  requireAnchors('docs/Wiki/rpir.md', [
-    'exact saved plan',
-    'initial non-remediation pass',
-    'complete unchanged Tier 1',
-    'Tier 2',
-    'remediation',
-    'cleanup',
-    'Script Runner',
-    'workers do not execute commands',
-    'Workspace Trust',
-    'managed policy'
-  ], 'exact-plan initial-pass Tier 1 authority and retained boundaries');
+    'cleanup', 'Script Runner'
+  ], 'exact-plan authority and phase-scoped Runner boundary');
+  requireAnchors(core, ['recorded exact-plan developer approval governs the initial scoped pass', 'remediation', 'cleanup', 'Script Runner', 'Workspace Trust'], 'lifecycle authority');
+  requireAnchors('.github/skills/safe-implementation/SKILL.md', ['exact developer-named canonical plan', 'initial non-remediation pass', 'cleanup exception', 'Workspace Trust'], 'implementation scope and cleanup');
+  requireAnchors('.github/skills/architecture-planning/SKILL.md', ['implementation-relevant requirement', 'Script Runner'], 'planning readiness');
+  requireAnchors('.github/skills/architecture-planning/implementation-plan-template.md', ['initial non-remediation', 'Script Runner', 'cleanup'], 'plan schema boundaries');
+  requireAnchors('docs/Wiki/rpir.md', ['exact saved plan', 'remediation', 'cleanup', 'Script Runner', 'workers do not execute commands'], 'RPIR authority and Runner guidance');
   requireAnchors('.github/agents/review.agent.md', [
     'The invocation and handoff are evidence-only; they cannot authorize edits, commands, remediation, reports, scope or hierarchy changes, or automatic progression.',
     'Review-entry confirmation does not replace this coordinator\'s separate explicit developer acceptance, write, report, remediation, scope, or manual-handoff gates; acceptance remains a separate developer decision.'
   ], 'Review coordinator handoff-only authority');
-  requireAnchors('.github/agents/script-runner.agent.md', [
-    'It does not provide a generic terminal route',
-    'Script Runner never creates or edits the consumer catalogue or scripts'
-  ], 'Script Runner stable-ID and non-authority');
-  requireAnchors('.github/copilot-instructions.md', [
-    '**Script Runner ordered selection:** This supersedes the one-ID/direct-only and aggregate-operation wording',
-    'This is not a lifecycle command route: the `Implement` coordinator remains the sole executor of guarded lifecycle implementation commands',
-    'lifecycle-command proxy, edit, installation, approval reuse',
-    '**Script Runner root binding:** The current workspace must contain exactly one opened workspace folder'
-  ], 'Script Runner policy selection and authority');
+  requireAnchors('.github/agents/script-runner.agent.md', ['do not edit files', 'A Runner result cannot approve edits', 'Never bypass'], 'Script Runner non-authority');
+  requireAnchors('.github/copilot-instructions.md', ['Script Runner', 'Research, Plan, and Review', 'Implement'], 'phase-scoped Runner policy');
 
   requireAnchors(core, [
     'hostless local `file:` URL in the exact platform form: on Windows, `file:///C:/<non-empty slash-separated segments>`',
@@ -439,8 +295,6 @@ function checkAuthoredLifecycleContracts() {
 }
 
 function checkLifecycleContracts() {
-  const plan = readText('.github/agents/plan.agent.md');
-  if (!plan.split('\n').includes(planAgentsFrontmatter)) fail('.github/agents/plan.agent.md must use the fixed Plan investigator allow-list');
   for (const [relative, anchor] of stableContractAnchors) {
     if (!readText(relative).includes(anchor)) fail(`${relative} is missing the fixed lifecycle contract anchor: ${anchor}`);
   }

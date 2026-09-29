@@ -12,7 +12,6 @@ on:
       - .github/agents/**
       - .github/prompts/**
       - .github/skills/**
-      - .github/copilot-script-catalogue.md
       - docs/run-books/vsix-packaging.md
       - scripts/discover-copilot-artifacts.cjs
       - scripts/sync-copilot-manifest.cjs
@@ -31,7 +30,6 @@ on:
       - .github/agents/**
       - .github/prompts/**
       - .github/skills/**
-      - .github/copilot-script-catalogue.md
       - docs/run-books/vsix-packaging.md
       - scripts/discover-copilot-artifacts.cjs
       - scripts/sync-copilot-manifest.cjs
