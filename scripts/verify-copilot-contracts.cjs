@@ -20,32 +20,16 @@ const reportPatterns = {
   '.github/instructions/lifecycle-review-reports.instructions.md': "docs/{planning,delivery}/**/[0-9][0-9][0-9]-review-report.md"
 };
 const coordinators = ['research', 'plan', 'implement', 'review'];
-const stableContractAnchors = [
-  ['.github/agents/research.agent.md', 'Research never sets `Completed`.'],
-  ['.github/skills/rpir-lifecycle-core/SKILL.md', 'Explicit `/plan` admission and bounded Research closure'],
-  ['.github/skills/architecture-planning/SKILL.md', 'implementation-relevant requirement'],
-  ['.github/agents/implement.agent.md', 'Before the initial edit, and before any further affected edit'],
-  ['.github/agents/implementation-worker.agent.md', 'Do not run commands, expand scope'],
-  ['.github/skills/safe-implementation/SKILL.md', 'Before the initial edit, and before any further affected edit']
-];
-const phasePromptContracts = {
-  '.github/prompts/plan.prompt.md': {
-    name: 'Plan phase-entry',
-    anchors: ['${input:researchBriefPath:', 'This explicit `/plan` invocation and one validated predecessor—the exact canonical in-progress Research-brief evidence—are the handoff confirmation;', 'do not ask a duplicate phase-entry question', 'does not authorize implementation']
-  },
-  '.github/prompts/implement.prompt.md': {
-    name: 'Implement phase-entry',
-    anchors: ['${input:implementationPlanPath:', 'The invocation supplies one lifecycle-core-validated canonical implementation-plan route;', 'routing is not approval', 'The recorded developer approval for that exact canonical plan authorizes only its initial non-remediation scoped pass']
-  },
-  '.github/prompts/review.prompt.md': {
-    name: 'Review phase-entry',
-    anchors: ['${input:implementationReportPath:', 'The invocation and one validated predecessor—the exact canonical implementation-report evidence—are the handoff confirmation;', 'do not ask a duplicate phase-entry question', 'This confirmation does not authorize edits']
-  },
-  '.github/prompts/remediate-review.prompt.md': {
-    name: 'remediation phase-entry',
-    anchors: ['${input:reviewReportPath:', 'The invocation and one validated predecessor—the exact canonical source Review-report evidence—are the handoff confirmation;', 'do not ask a duplicate phase-entry question', 'This confirmation does not replace the separately approved remediation pass']
-  }
+const coordinatorTools = {
+  Research: ['read', 'search', 'web', 'edit', 'agent'],
+  Plan: ['read', 'search', 'edit', 'agent'],
+  Implement: ['read', 'search', 'edit', 'agent', 'runInTerminal'],
+  Review: ['read', 'search', 'edit', 'agent']
 };
+const promptRoutes = {
+  plan: 'Plan', implement: 'Implement', review: 'Review', 'remediate-review': 'Plan'
+};
+const handoffRoutes = { Research: 'Plan', Plan: 'Implement', Implement: 'Review', Review: 'Plan' };
 const workerTools = {
   'Architecture Analyst': ['read', 'search'], 'Codebase Investigator': ['read', 'search'],
   'Correctness Reviewer': ['read', 'search'], 'Domain Investigator': ['read', 'search', 'web'],
@@ -135,7 +119,7 @@ function checkManifestParity(manifest, inventory) {
 function checkHandoffs(relative, values, agentNames) {
   if (!manualHandoffCoordinators.has(values.name)) return;
   const blocks = [...readText(relative).matchAll(/- label: [^\n]+\n\s+agent: ([^\n]+)\n\s+prompt: [^\n]+\n\s+send: (\w+)/g)];
-  if (!blocks.length) fail(`${relative} must declare a manual handoff`);
+  if (blocks.length !== 1 || blocks[0][1] !== handoffRoutes[values.name]) fail(`${relative} must declare its single conditional stage handoff to ${handoffRoutes[values.name]}`);
   for (const block of blocks) {
     if (block[2] !== 'false') fail(`${relative} handoff to ${block[1]} must use send: false`);
     if (!agentNames.has(block[1])) fail(`${relative} handoff target is not a contributed agent: ${block[1]}`);
@@ -149,12 +133,11 @@ function requireAnchors(relative, anchors, contract) {
   }
 }
 
-function checkSingleReportPrompt(relative, inputName, typeAnchor, forbiddenInput) {
+function requireConcepts(relative, concepts) {
   const text = readText(relative);
-  const inputs = [...text.matchAll(/\$\{input:([A-Za-z][A-Za-z0-9]*):/g)].map((match) => match[1]);
-  if (!equal(inputs, [inputName])) fail(`${relative} must declare exactly one ${typeAnchor} input`);
-  if (!text.includes(typeAnchor) || !text.includes('lifecycle-core-eligible')) fail(`${relative} must type its single input as a lifecycle-core-eligible ${typeAnchor}`);
-  if (text.includes(`input:${forbiddenInput}:`)) fail(`${relative} must not retain the separate ${forbiddenInput} input or fallback`);
+  for (const [label, pattern] of Object.entries(concepts)) {
+    if (!pattern.test(text)) fail(`${relative} lacks authored ${label} guidance (static only)`);
+  }
 }
 
 function checkVsixRunBook() {
@@ -211,93 +194,72 @@ function checkScriptRunnerAutonomyContracts() {
 
 function checkAuthoredLifecycleContracts() {
   const core = '.github/skills/rpir-lifecycle-core/SKILL.md';
-  for (const [relative, contract] of Object.entries(phasePromptContracts)) {
-    requireAnchors(relative, contract.anchors, contract.name);
+  const lifecycle = {
+    'four intake channels': /attachment[\s\S]*HTTPS[\s\S]*past(?:e|ed)[\s\S]*local path/i,
+    'inspected version binding': /inspected content[\s\S]*version[\s\S]*fingerprint/i,
+    'kind and freshness checks': /expected kind[\s\S]*freshness/i,
+    'conflicting versions': /versions conflict[\s\S]*clarify/i,
+    'changed mutable version': /version changed[^\n]*re-inspect and rebind/i,
+    'wrong kind': /Verify expected kind[^\n]*subject[^\n]*freshness/i,
+    'blocked input cannot authorize effects': /blocked draft[^\n]*does not authorize dependent effects/i,
+    'ordinary HTTPS versus local alias': /HTTPS[\s\S]*redirect[\s\S]*unsafe[\s\S]*file:/i,
+    'file aliases cannot use the remote fetch route': /local `file:` alias[^\n]*local-path input[^\n]*never[^\n]*remote fetch/i,
+    'untrusted remote instructions': /Do not treat[^\n]*embedded instructions[^\n]*agent instructions/i,
+    'local traversal': /dot segments[\s\S]*percent encoding/i,
+    'raw alias validation': /validate the raw alias before path or URI normalization/i,
+    'local indirection containment': /lexical workspace containment[\s\S]*resolved-target containment/i,
+    'local junction escape': /junctions or reparse points/i,
+    'local field/link pairing': /canonical-path fields[\s\S]*matching direct[\s\S]*Markdown links/i,
+    'local status preimage': /complete exact-record preimage[^\n]*immediately compare/i,
+    'bounded status-only postimage': /Write only that status field\.[^\n]*Re-read the complete postimage[^\n]*one-field difference/i,
+    'report-first terminal status': /all-OK Review report[\s\S]*Ready for review[\s\S]*Accepted/i,
+    'collision second scan': /immediately re-inspect before creation and never overwrite/i,
+    'phase tool permission': /Workspace Trust[\s\S]*tool[\s\S]*permissions/i
+  };
+  requireConcepts(core, lifecycle);
+  const stageContracts = {
+    research: { 'working Research document': /subject[\s\S]*draft[\s\S]*iterate/i, 'Research cannot complete itself': /Research never sets `Completed`/ },
+    plan: { 'both predecessor kinds': /Research document[^\n]*Review report/i, 'supported mixed subset': /independently evidenced findings[^\n]*engineer chooses[^\n]*carry[^\n]*blocker/i, 'distinct plan': /distinct issue-scoped plan[^\n]*previous plan/i },
+    implement: { 'per-pass approval': /\/implement[\s\S]*approval[\s\S]*bounded[\s\S]*pass/i, 'readiness before edits': /Before the initial edit[\s\S]*stop and refuse/i, 'no previous-plan reuse': /Never reopen[\s\S]*previous plan/i },
+    review: { 'report-first acceptance': /all-OK report[\s\S]*ends RPIR[\s\S]*Accepted/i, 'mixed outcome': /mixed[\s\S]*supported[\s\S]*blockers/i, 'no direct implementation': /Never route a finding directly to Implement/i }
+  };
+  for (const [name, concepts] of Object.entries(stageContracts)) requireConcepts(`.github/agents/${name}.agent.md`, concepts);
+  const prompts = {
+    plan: { 'dual-kind input': /Research document[\s\S]*Review report/i, 'issue plan': /distinct issue-scoped plan/i },
+    implement: { 'per-pass authorization': /\/implement[\s\S]*approval[\s\S]*bounded/i, 'readiness': /executable readiness[\s\S]*scope/i },
+    review: { 'admission versus outcome': /Review admission[\s\S]*not final acceptance/i, 'conditional next step': /all-OK[\s\S]*issue-bearing[\s\S]*blocked/i },
+    'remediate-review': { 'compatibility only': /deprecated compatibility[\s\S]*same Review-origin intake as `\/plan`/i, 'new plan not direct edits': /distinct issue-scoped plan[\s\S]*not a reused old plan or direct implementation/i }
+  };
+  for (const [name, concepts] of Object.entries(prompts)) {
+    const relative = `.github/prompts/${name}.prompt.md`;
+    const text = readText(relative);
+    const inputs = [...text.matchAll(/\$\{input:([A-Za-z][A-Za-z0-9]*):([^}]+)\}/g)];
+    if (inputs.length !== 1 || !/attachment[^\n]*HTTPS URL[^\n]*paste[^\n]*local path/i.test(inputs[0][2])) fail(`${relative} must accept one actual four-channel predecessor document`);
+    if (name === 'plan' && !/Research document[^\n]*Review report/i.test(inputs[0][2])) fail(`${relative} must accept both Research and issue-bearing Review inputs`);
+    requireConcepts(relative, concepts);
   }
-
-  requireAnchors('.github/agents/plan.agent.md', [
-    'This confirmation does not authorize edits, commands, remediation, scope or hierarchy changes, acceptance, or automatic submission',
-    'separate explicit developer approval remains required before implementation.'
-  ], 'Plan coordinator handoff-only authority');
-  requireAnchors('.github/agents/implement.agent.md', [
-    'The invocation routes one canonical implementation plan and the handoff is evidence-only; routing and handoff cannot authorize edits, commands, remediation, reports, scope or hierarchy changes, or automatic progression.',
-    'The recorded developer approval for that exact canonical plan authorizes only its initial non-remediation scoped pass; preserve the separate scope, command, write, report, remediation, acceptance, and manual-handoff gates.'
-  ], 'Implement coordinator handoff-only authority');
-  requireAnchors('.github/copilot-instructions.md', [
-    'exact developer-named approved canonical plan', 'initial non-remediation',
-    'VS Code and managed organization policy control permissions and approvals',
-    'cleanup', 'Script Runner'
-  ], 'exact-plan authority and phase-scoped Runner boundary');
-  requireAnchors(core, ['recorded exact-plan developer approval governs the initial scoped pass', 'remediation', 'cleanup', 'Script Runner', 'Workspace Trust'], 'lifecycle authority');
-  requireAnchors('.github/skills/safe-implementation/SKILL.md', ['exact developer-named canonical plan', 'initial non-remediation pass', 'cleanup exception', 'Workspace Trust'], 'implementation scope and cleanup');
-  requireAnchors('.github/skills/architecture-planning/SKILL.md', ['implementation-relevant requirement', 'Script Runner'], 'planning readiness');
-  requireAnchors('.github/skills/architecture-planning/implementation-plan-template.md', ['initial non-remediation', 'Script Runner', 'cleanup'], 'plan schema boundaries');
-  requireAnchors('docs/Wiki/rpir.md', ['exact saved plan', 'remediation', 'cleanup', 'Script Runner', 'workers do not execute commands'], 'RPIR authority and Runner guidance');
-  requireAnchors('.github/agents/review.agent.md', [
-    'The invocation and handoff are evidence-only; they cannot authorize edits, commands, remediation, reports, scope or hierarchy changes, or automatic progression.',
-    'Review-entry confirmation does not replace this coordinator\'s separate explicit developer acceptance, write, report, remediation, scope, or manual-handoff gates; acceptance remains a separate developer decision.'
-  ], 'Review coordinator handoff-only authority');
-  requireAnchors('.github/agents/script-runner.agent.md', ['do not edit files', 'A Runner result cannot approve edits', 'Never bypass'], 'Script Runner non-authority');
-  requireAnchors('.github/copilot-instructions.md', ['Script Runner', 'Research, Plan, and Review', 'Implement'], 'phase-scoped Runner policy');
-
-  requireAnchors(core, [
-    'hostless local `file:` URL in the exact platform form: on Windows, `file:///C:/<non-empty slash-separated segments>`',
-    'on POSIX, `file:///<non-empty slash-separated segments>`',
-    'First validate the alias as written, before URI or path-parser normalization:',
-    'reject symbolic links, junctions, reparse points, or equivalent filesystem indirection that makes the resolved target escape the workspace',
-    'Reject with no repair or inference: multiple candidates; filename-only, empty, dangling, malformed, label-only, reference-style, or indirect-link values; mixed or duplicate separators; `.` or `..` segments or traversal; non-file URI schemes, fragments, encoded paths, redirects, UNC or network paths; external absolute paths; inaccessible paths; incompatible record types; wrong lifecycle folders; and inconsistent or missing required linkage.',
-    'do not select, allocate, amend, write, mutate, or hand off a record on rejection.',
-    'Do not select by prefix, suffix, recency, or `latest`,'
-  ], 'local-file grammar, rejection, and containment');
-
-  checkSingleReportPrompt('.github/prompts/review.prompt.md', 'implementationReportPath', 'implementation-report', 'implementationPlanPath');
-  checkSingleReportPrompt('.github/prompts/remediate-review.prompt.md', 'reviewReportPath', 'source Review-report', 'implementationPlanPath');
-  requireAnchors('.github/agents/review.agent.md', [
-    'exactly one implementation-report input for this review as a lifecycle-core-eligible bounded alias',
-    'confirm its expected type, accessibility, lifecycle folder, and exact direct canonical-plan linkage',
-    'Reject invalid input and allocate no Review report for that rejection.'
-  ], 'Review input cardinality, type, and validation');
-  requireAnchors('.github/agents/implement.agent.md', [
-    'exactly one source Review-report input as a lifecycle-core-eligible bounded alias',
-    'same-folder',
-    'Then validate its expected type, accessibility, lifecycle folder, and exact canonical linkage:',
-    'Do not infer a source report, plan, or reviewed report from a prefix, suffix, recency, or directory contents.'
-  ], 'remediation input cardinality, type, and chain');
-
-  requireAnchors('.github/skills/safe-implementation/implementation-report-template.md', [
-    '**Canonical implementation plan:**',
-    'a direct one-hop local Markdown link matching the canonical implementation-plan field',
-    '**Canonical source Review report:**',
-    '**Reviewed implementation report:**'
-  ], 'implementation-report field/link pairs');
-  requireAnchors('.github/skills/code-review/review-report-template.md', [
-    '**Canonical implementation plan:**',
-    '**Reviewed implementation report:**',
-    'a direct one-hop local Markdown link matching the canonical implementation-plan field',
-    'same-folder'
-  ], 'Review-report field/link pairs');
-
-  requireAnchors(core, [
-    'It does not authorize acceptance, remediation, report allocation, or status changes',
-    'No other report content, fallback, discovery, substitution, prefix, suffix, recency, or inferred relationship is permitted.',
-    'No other report content, fallback, discovery, substitution, prefix, suffix, recency, or inferred relationship is permitted.'
-  ], 'no-discovery and no-fallback');
-  requireAnchors('.github/copilot-instructions.md', [
-    'reports remain immutable, non-authorizing evidence',
-    'manual handoffs, `send: false`, Review\'s explicit developer acceptance',
-    'The implementation plan remains the sole authority for scope, Work Item/Task/Step hierarchy, lifecycle status, and completion markers.',
-    'Remediation requires a separately approved Implement pass naming the exact canonical plan and exact source Review-report path.'
-  ], 'authority and approval safeguards');
-  requireAnchors(core, [
-    'It does not authorize acceptance, remediation, report allocation, or status changes',
-    'Preserve manual `send: false` handoffs'
-  ], 'manual-handoff and non-authority safeguards');
+  requireConcepts('.github/skills/architecture-planning/implementation-plan-template.md', {
+    'source-neutral issue lineage': /Review-origin lineage[^\n]*reviewed implementation report[^\n]*previous plan[^\n]*original Research/i,
+    'fresh issue units': /new unchecked units[\s\S]*old plans/i
+  });
+  requireConcepts('.github/skills/architecture-planning/SKILL.md', {
+    'active material-gap resolution': /Resolve material planning gaps[^\n]*derive an evidenced solution or use `agent-question-resolution` to obtain the engineer's decision/
+  });
+  for (const relative of ['.github/skills/safe-implementation/implementation-report-template.md', '.github/skills/code-review/review-report-template.md']) {
+    requireConcepts(relative, {
+      'source-neutral record envelope': /envelope[\s\S]*channel\/locator[\s\S]*version/i,
+      'verified local field/link pair only': /local record pairs \(only when real\)[\s\S]*matching direct one-hop local Markdown link/i,
+      'non-authorizing evidence': /non-authorizing/i
+    });
+  }
+  requireConcepts('.github/copilot-instructions.md', {
+    'local write safety': /full.*preimage[\s\S]*status-only postimage/i,
+    'independent allocation': /matching-suffix inventory[\s\S]*Never overwrite/i,
+    'phase permission boundary': /Workspace Trust[\s\S]*managed-policy permission/i
+  });
 }
 
 function checkLifecycleContracts() {
-  for (const [relative, anchor] of stableContractAnchors) {
-    if (!readText(relative).includes(anchor)) fail(`${relative} is missing the fixed lifecycle contract anchor: ${anchor}`);
-  }
   checkAuthoredLifecycleContracts();
   checkScriptRunnerAutonomyContracts();
 }
@@ -319,12 +281,18 @@ function main() {
   }
   const agentNames = new Set(inventory.chatAgents.map((relative) => frontmatter.get(relative).values.name));
   for (const relative of inventory.chatPromptFiles) {
-    const target = frontmatter.get(relative).values.agent;
-    if (!target || !agentNames.has(target)) fail(`${relative} must target a contributed agent by exact name`);
+    const values = frontmatter.get(relative).values;
+    const name = path.basename(relative, '.prompt.md');
+    if (!agentNames.has(values.agent) || values.agent !== promptRoutes[name] || values.name !== name) fail(`${relative} must use its declared RPIR stage route`);
+    if (Object.hasOwn(values, 'tools')) {
+      const allowed = coordinatorTools[values.agent];
+      if (!parseStringList(values.tools, relative).every((tool) => allowed.includes(tool))) fail(`${relative} tools must not expand ${values.agent} capabilities`);
+    }
   }
   for (const relative of inventory.chatAgents) {
     const { values } = frontmatter.get(relative);
     checkHandoffs(relative, values, agentNames);
+    if (Object.hasOwn(coordinatorTools, values.name) && !equal(parseStringList(values.tools, relative), coordinatorTools[values.name])) fail(`${relative} coordinator tools exceed its stage contract`);
     if (Object.hasOwn(workerTools, values.name)) {
       if (values['user-invocable'] !== 'false') fail(`${relative} worker must declare user-invocable: false`);
       if (!equal(parseStringList(values.tools, relative), workerTools[values.name])) fail(`${relative} worker tools do not match its least-privilege contract`);

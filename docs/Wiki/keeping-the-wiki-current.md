@@ -1,4 +1,7 @@
-# Keeping the Wiki current
+---
+title: Keeping the Wiki current
+description: Bounded Wiki maintenance, source verification and navigation checks
+---
 
 ## Purpose and audience
 
@@ -33,7 +36,7 @@ For this Wiki initiative, the approved root and page inventory are:
 1. Identify the claim, navigation destination, or inventory entry that needs maintenance.
 2. Verify material facts against the owning canonical source: `.github/` policy and skills for operational rules, `package.json` for manifest and packaging inventory, and lifecycle records for their own authority and status.
 3. Link to the source with a repository-relative path; summarize only what readers need and do not reproduce artifact bodies or silently reinterpret policy.
-4. When a source is missing, contradictory, inaccessible, or materially uncertain, stop and report the gap rather than inventing a value.
+4. When a source is missing, contradictory, inaccessible, or materially uncertain, stop and report the gap rather than inventing a value. During a deliberate `.github` disablement, inspect the corresponding `.github-old` working source but keep canonical Wiki links pointing to the intended post-rename `.github` destination; resolve those links after reactivation.
 
 For the artifact inventory, compare every listed path and activation model with the current `package.json` arrays and the corresponding `.github` metadata. Recheck the distinction between source artifacts and manifest-contributed artifacts. Keep repository Run Books under `docs/run-books/` as human-readable guidance outside the Wiki, not Script Runner selection input.
 
@@ -73,6 +76,6 @@ No approved Markdown or link-check command is available for this scope. Automate
 
 ## Next steps
 
-- For a substantive change, obtain the applicable RPIR approval and use only the exact approved target set.
+- For a substantive change, follow the [RPIR handoff](rpir.md) with the inspected agreed document version and use only the exact approved target set; do not introduce a second routine approval question.
 - Re-read changed pages and manually resolve every changed link before handoff.
 - Report completed checks, unavailable automation, factual or navigation gaps, and any scope deviation; do not mark lifecycle plan checkboxes from this guidance page.

@@ -1,26 +1,26 @@
-# Review report template
-
-This template is the sole schema owner for future durable Review reports. It applies prospectively only; do not use it to revise, migrate, or validate historical reports.
+---
+description: "Template for an evidence-backed, conditional RPIR Review report"
+---
 
 # Review report: <short title>
+
+This template is the sole schema owner for future durable Review reports. It applies prospectively only; do not use it to revise, migrate, or validate historical reports.
 
 ## Lifecycle identity and allocation
 
 - **Lifecycle:** `<planning initiative or delivery Work Item identity>`.
-- **Canonical implementation plan:** `<forward-slash repository-relative exact path>`.
-- **Canonical implementation plan link:** `[<same exact canonical implementation-plan path>](<same exact canonical implementation-plan path>)` — a direct one-hop local Markdown link matching the canonical implementation-plan field.
-- **Reviewed implementation report:** `<forward-slash repository-relative exact path>`.
-- **Reviewed implementation report link:** `[<same exact reviewed implementation-report path>](<same exact reviewed implementation-report path>)` — a direct one-hop local Markdown link matching the reviewed implementation-report field.
-- **Canonical Review report:** `<forward-slash repository-relative exact path>`.
-- **Lifecycle folder:** `<forward-slash repository-relative exact path>`.
-- **Review pass:** `<pass identity and prior-review context>`.
-- **Allocation evidence:** `<first matching-suffix inventory, candidate calculation, immediate second inventory, and no-overwrite result>`.
-- **Disposition:** `<exactly one of: No remediation required; Remediation required; Blocked / clarification required>`.
-- **Authority boundary:** This immutable report is non-authorizing review evidence only. It cannot approve implementation, authorize remediation or acceptance, revise plan scope or hierarchy, change completion markers, or mutate plan status. The canonical plan remains authoritative. A later Review pass creates a new report and never revises this evidence.
+- **Review pass and working state:** `<stable pass/draft identity, Draft or Blocked, revision and unresolved evidence/decisions>`.
+- **Plan envelope:** `<kind, subject, original channel/locator, inspected version/fingerprint and initial Research or issue-plan lineage>`.
+- **Reviewed implementation report envelope:** `<kind, subject/pass, original channel/locator, inspected snapshot/version or fingerprint, and /review invocation agreeing it for admission>`.
+- **This Review envelope:** `<kind, subject/pass, output channel/locator and inspected snapshot/version or fingerprint; freeze an agreed historical version separately before further draft edits>`.
+- **Verified local record pairs (only when real):** `<exact canonical plan, reviewed report and Review report paths; matching direct one-hop local Markdown link for each relationship field; same-folder evidence>`; otherwise `N/A` with reason, never an invented link.
+- **Allocation evidence (numbered local only):** `<first matching-suffix inventory, candidate, immediate second inventory and no-overwrite result>`; otherwise `N/A` with reason.
+- **Disposition:** `<No remediation required / Remediation required / Blocked / clarification required; mixed actionable and blocked findings must identify both and cannot be all OK>`.
+- **Authority boundary:** This Review evidence is non-authorizing. A finalized historical version is immutable; it cannot approve implementation, expand scope, alter hierarchy or completion markers. Publishing a working draft starts nothing.
 
 ## Inputs and linkage
 
-- **Canonical input validation:** `<exact plan/report type, accessibility, same-folder, and direct-linkage evidence>`.
+- **Input validation:** `<actual inspected plan/report content, kind, subject, accessible source and version, verified direct ancestry and changed work/diff; verify same-folder field/link pairs only for real numbered local relationships>`.
 - **Plan authority:** The plan remains authoritative for scope, Work Item/Task/Step hierarchy, lifecycle status, completion markers, acceptance, and validation. The implementation report is immutable, non-authorizing execution evidence only.
 
 ## Delegation and evidence considered
@@ -45,14 +45,14 @@ This template is the sole schema owner for future durable Review reports. It app
 
 ## Findings
 
-`<No findings, or ordered and deduplicated findings. Each finding includes severity, exact file and section or symbol location, evidence, impact, smallest safe fix, and scope classification: in-scope existing plan unit, out-of-scope requiring Plan amendment, or blocked/unclear.>`
+`<No findings, or ordered and deduplicated findings. Each finding includes severity, exact file and section or symbol location, evidence, impact, smallest safe fix and classification: independently actionable or blocked/unclear. For mixed outcomes preserve both, and identify any independently supported subset eligible for engineer-chosen planning.>`
 
 ## Acceptance boundary and next action
 
-- Persist this completed report before any disposition handling or acceptance request.
-- Only `No remediation required` followed by explicit developer acceptance may change only the named canonical plan's `Status` to `Accepted`.
-- `Remediation required` and `Blocked / clarification required` leave plan status unchanged and cannot authorize remediation. A remediation pass requires separate developer approval and maps every finding only to existing plan hierarchy.
-- **Next developer action:** `<accept, clarify, or separately approve remediation>`.
+- Persist and verify an evidence-backed all-OK `No remediation required` historical report, its current plan and reviewed implementation lineage, completed applicable work/validation and absence of unresolved findings or blockers before RPIR finishes; `/review` entry alone is not an all-OK result.
+- After that report, an eligible current local plan may change only `Status: Ready for review` to `Accepted` after complete fresh preimage, canonical field/link and status-only postimage checks. For non-local/ineligible plans finish and record why no local write occurred; no duplicate acceptance question.
+- An actionable report offers only the engineer's optional later `/plan` with its inspected agreed version for a distinct issue-scoped plan, not edits to or reopening of this plan. For mixed findings, carry unresolved blockers and limit planning to an engineer-chosen supported subset. A solely blocked report requests clarification. Neither changes status to `Accepted` or authorizes edits.
+- **Next developer action:** `<none if all OK; optional /plan on an agreed supported issue report; clarify if solely blocked>`.
 
 ## Open questions
 

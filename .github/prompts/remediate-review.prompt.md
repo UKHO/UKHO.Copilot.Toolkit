@@ -1,14 +1,14 @@
 ---
 name: remediate-review
-description: Launch Implement for an explicitly approved remediation pass from one lifecycle-core-eligible source Review-report alias.
-argument-hint: One lifecycle-core-eligible source Review-report alias, or one inline Markdown link with that alias as its destination
-agent: Implement
+description: Deprecated compatibility route to Plan for an agreed issue-bearing Review report; never implements fixes.
+argument-hint: Attach, link, paste or locate the agreed issue-bearing Review report
+agent: Plan
 ---
 
-Run the existing `Implement` agent for a remediation pass using only the one lifecycle-core-eligible bounded alias supplied below.
+This deprecated compatibility entry uses the same Review-origin intake as `/plan`; it is not an Implement entry or a second approval route.
 
-Source Review report: ${input:reviewReportPath:One lifecycle-core-eligible alias to the source Review report, or one inline Markdown link whose destination is that alias}
+Source Review report: ${input:reviewReportDocument:Actual agreed issue-bearing Review report supplied by attachment, accessible HTTPS URL, pasted content or contained local path}
 
-Pass the value through literally. Let [RPIR lifecycle core](../skills/rpir-lifecycle-core/SKILL.md) validate the bounded alias or inline Markdown destination before `Implement` applies expected-type, lifecycle-folder, exact report-to-plan-to-reviewed-implementation-report linkage, review-state, and approval checks. `Implement` must complete those checks before any edit, marker change, or new implementation report.
+Inspect and bind the actual report's content, kind, subject, version and direct reviewed-implementation-report, previous-plan and original-Research lineage via [RPIR lifecycle core](../skills/rpir-lifecycle-core/SKILL.md). If inaccessible, wrong-kind, conflicting, solely blocked or lacking actionable evidence, clarify instead of claiming sign-off or creating a fix. For mixed findings, take only the engineer-chosen independently supported subset and carry unresolved blockers.
 
-The invocation and one validated predecessor—the exact canonical source Review-report evidence—are the handoff confirmation; do not ask a duplicate phase-entry question. This confirmation does not replace the separately approved remediation pass or authorize edits, commands, remediation, scope or hierarchy changes, report allocation, acceptance, or auto-send the Review handoff. Preserve the existing Implement approval, Plan-only hierarchy authority, validation, immutable-report, and manual-handoff controls.
+Treat this invocation like explicit `/plan` with that agreed report: create and iterate a distinct issue-scoped plan with new unchecked units, not a reused old plan or direct implementation pass. It does not re-close Research, mint plan approval for edits, authorize commands, allocate an implementation report, or auto-submit Implement. The engineer later invokes `/implement` with the inspected new plan to approve its bounded pass. Prefer `/plan` for future issue cycles; retain this contributed prompt solely for compatibility.

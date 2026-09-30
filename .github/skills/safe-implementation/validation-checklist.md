@@ -1,3 +1,7 @@
+---
+description: "Checklist for scoped RPIR implementation and honest validation"
+---
+
 # Safe implementation validation checklist
 
 ## Validation Worker read-only structural checks
@@ -13,17 +17,17 @@ Use this section only when acting as the delegated Validation Worker. Read and s
 
 - [ ] Every change is covered by the approved plan.
 - [ ] No unrelated files or formatting were changed.
-- [ ] Before initial implementation checks, the developer-supplied plan input is resolved under the lifecycle core to one eligible derived exact repository-relative canonical plan identity; ordinary initial `/implement` remains plan-only and separate approval/authorization checks follow resolution.
-- [ ] Before remediation checks, exactly one developer-supplied source Review-report input is resolved under the lifecycle core to one eligible derived exact repository-relative canonical identity; no separately supplied plan or implementation-report alias is admitted, and the plan identity is derived from that source report before exact canonical linkage checks.
-- [ ] Before remediation edits, the source Review report is accessible, immutable, same-folder, in a remediation-permitting state, and contains the exact canonical plan field with its matching direct local link and the exact canonical reviewed implementation-report field with its matching direct local link; the reviewed implementation report is accessible, immutable, same-folder, and contains the same exact canonical plan field with its matching direct local link. Missing, malformed, inaccessible, inferred, reused, wrong-folder, wrong-plan, mismatched, stale, or invalid-state input or evidence stops the pass before edits, markers, or report allocation.
-- [ ] Every remediation finding maps to existing Work Items, Tasks, and Steps; affected existing markers and parents are reopened for rework, and hierarchy expansion, removal, or restructuring stopped for Plan amendment.
-- [ ] A remediation implementation report links the exact source Review report and records each finding's resolution or remaining blocker before the manual Review handoff; it remains non-authorizing, does not replace approval, and does not authorize scope or hierarchy change.
-- [ ] The lifecycle-core-derived exact approved canonical plan identity and, when authorized, the exact immutable implementation-report canonical identity are recorded; neither is selected by latest/highest-prefix inference.
+- [ ] Before edits, one actual initial or new issue plan has been inspected and bound by kind, subject, original channel/locator, frozen content/version, invocation and direct lineage, regardless of supported transport. A `Draft` with unresolved implementation gaps or a `Blocked` plan cannot authorize affected edits; `/implement` with the inspected executable version approves only this plan's bounded pass, without another routine approval question.
+- [ ] A Review-origin pass uses its own distinct issue plan, not the source Review report or previous plan as edit authority. Verify source Review/version, reviewed implementation report/version, previous plan/version and original Research/version, selected independently supported findings and carried blockers; do not re-close Research or infer a fix for blocked work.
+- [ ] This issue plan's work units started unchecked and have their own scope, validation and acceptance. Completion updates only this plan's existing markers; the previous plan's hierarchy and finalized reports remain unchanged. Hierarchy or scope expansion stops affected work for Plan-stage amendment.
+- [ ] Actual numbered local relationships have matching exact canonical field/direct one-hop link pairs, expected types and same-folder checks. Non-local and non-numbered sources have truthful inspected-version envelopes, not fabricated local paths or links. Missing content, wrong-kind, stale/conflicting versions or mismatched real local pairs stop affected edits, markers and final reports.
+- [ ] This pass's implementation report records its plan/version, selected finding resolutions or blockers, and new-pass lineage before manual `/review` handoff. The report is non-authorizing; freeze the version inspected at `/review` separately from revisable drafts.
+- [ ] This plan's source-neutral inspected identity and report identity/version are recorded; numbered local canonical identities are recorded only if real, never selected by latest/highest-prefix inference.
 - [ ] Any implementation report uses a valid three-digit `implementation-report` identity allocated independently within the plan's lifecycle folder.
 - [ ] Report allocation inspected the matching-suffix inventory twice, re-inspected immediately before creation, and did not overwrite an existing target; malformed or inaccessible inventory stopped the operation.
-- [ ] The report is in the same folder as the exact approved plan, links to that exact plan path, was re-read after creation, and is not revised or overwritten.
+- [ ] An eligible numbered local report is in the selected contained folder of this pass's plan, with exact matching canonical field/link pairs, and is re-read after creation; an agreed finalized version is not revised or overwritten. Non-local outputs retain actual source/version without invented links.
 - [ ] The report contains the required identity, pass, hierarchy, changed-file, behavior, acceptance, validation, deviation, scope, evidence, risk, and next-action information.
-- [ ] The report explicitly remains non-authorizing execution evidence; the plan remains authoritative for scope, hierarchy, status, approval, handoff, and acceptance.
+- [ ] The report explicitly remains non-authorizing execution evidence; this pass's plan remains authoritative for scope, hierarchy, status and completion. `/review` with the inspected report version approves Review admission only, not acceptance or another pass.
 - [ ] Every agent-discovered material unknown was resolved through `agent-question-resolution` before completion or handoff.
 - [ ] **Open questions** is omitted unless it contains a specifically named question with explicit developer-declared intentional-open/unknown provenance; other material unknowns are not deferred there.
 - [ ] Frontmatter is valid and names are unique.

@@ -1,14 +1,14 @@
 ---
 name: implement
-description: Launch the existing Implement agent for one approved implementation plan without inferring scope or authorizing lifecycle actions.
-argument-hint: One lifecycle-core-eligible implementation-plan alias or one inline Markdown link with that alias as its destination
+description: Implement one inspected initial or issue-scoped plan for its bounded pass.
+argument-hint: Attach, link, paste or locate this pass's actual plan document
 agent: Implement
 ---
 
-Run the existing `Implement` agent for the canonical implementation-plan input provided below.
+Run the `Implement` agent for this pass's actual implementation plan:
 
-Implementation plan: ${input:implementationPlanPath:One lifecycle-core-eligible alias to the implementation plan, or one inline Markdown link whose destination is that alias}
+Implementation plan: ${input:implementationPlanDocument:Actual plan supplied by attachment, accessible HTTPS URL, pasted content or contained local path}
 
-Pass the supplied value verbatim. Let [RPIR lifecycle core](../skills/rpir-lifecycle-core/SKILL.md) validate the one bounded alias or inline Markdown destination before `Implement` applies its expected-type, lifecycle-folder, scope, report, and approval checks.
+Apply [RPIR lifecycle core](../skills/rpir-lifecycle-core/SKILL.md) to inspect and bind its content, kind, subject, version and lineage, not just its locator. A new issue pass must use its own new plan linked to its source Review, reviewed implementation report, prior plan and original Research; do not implement directly from the Review or reuse an earlier plan's approval. Clarify missing, conflicting or blocked evidence before affected edits.
 
-The invocation supplies one lifecycle-core-validated canonical implementation-plan route; routing is not approval and do not ask a duplicate phase-entry question. The recorded developer approval for that exact canonical plan authorizes only its initial non-remediation scoped pass. This confirmation and approval do not authorize remediation, scope or hierarchy changes, acceptance, report allocation, or auto-submit the Review handoff; preserve the existing Implement agent's validation, command, report, and manual-handoff controls.
+Invoking `/implement` with the inspected plan version is the engineer's approval for only that bounded initial or issue-resolution pass; do not ask a duplicate routine approval. Verify executable readiness, exact scope, local-write integrity and platform/effect permissions before work. Produce an iteratable identified implementation report; publication alone does not approve it for Review. Preserve the manual `send: false` Review handoff and do not auto-submit it.

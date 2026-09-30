@@ -1,4 +1,7 @@
-# Copilot Toolkit artifact catalogue
+---
+title: Copilot Toolkit artifact catalogue
+description: Inventory and activation boundaries for the Toolkit's Copilot customizations
+---
 
 ## Purpose and audience
 
@@ -19,7 +22,7 @@ The manifest registers the four lifecycle instruction files under `contributes.c
 
 - **Instructions** provide repository context automatically when their scope applies. The root instruction is always-on; the four lifecycle instructions use their declared `applyTo` patterns.
 - **Agents** are selected by a user or delegated by an explicitly allowed coordinator. Coordinator agents are user-invocable unless metadata says otherwise; worker agents in this catalogue declare `user-invocable: false` and are intended for delegation.
-- **Prompt files** are deliberate, user-invoked shortcuts and route to the agent named in their frontmatter.
+- **Prompt files** are deliberate, user-invoked Local shortcuts where prompt files are supported; Agent Host does not load them. A built-in `/plan` is not the Toolkit's RPIR Plan route. Verify an equivalent supported route before relying on these sign-offs in another harness.
 - **Skills** are model-selected when relevant or user-invoked when their metadata permits it. Skills marked `user-invocable: false` are internal workflow capabilities.
 - **Subagents and handoffs** are runtime mechanisms, not additional file categories. Their configuration is held by the relevant agent.
 
@@ -45,7 +48,7 @@ The manifest registers the four lifecycle instruction files under `contributes.c
 | Approved scoped implementation coordinator | User-selected coordinator; delegates only its explicit worker allow-list | `.github/agents/implement.agent.md` | Review when implementation approval, edit, command, report, or handoff boundaries change. |
 | One assigned implementation work package | Delegated worker; `user-invocable: false` | `.github/agents/implementation-worker.agent.md` | Review when worker scope, edit boundaries, or implementation reporting changes. |
 | Maintainability and long-term risk review | Delegated worker; `user-invocable: false` | `.github/agents/maintainability-reviewer.agent.md` | Review when documentation, duplication, discoverability, or maintenance criteria change. |
-| Approved research-to-plan coordinator | User-selected coordinator; delegates only its explicit allow-list, including `Domain Investigator` and `Feasibility Investigator` for bounded read-only evidence work | `.github/agents/plan.agent.md` | Review when plan authority, scope, allocation, investigator routing, or handoff boundaries change. |
+| Research- or Review-origin Plan coordinator | User-selected coordinator; inspects Research for an initial plan or an agreed actionable Review for a new issue plan; delegates only its explicit allow-list, including `Domain Investigator` and `Feasibility Investigator` for bounded read-only evidence work | `.github/agents/plan.agent.md` | Review when either Plan intake, scope, allocation, investigator routing, or handoff boundaries change. |
 | Requirements and acceptance analysis | Delegated worker; `user-invocable: false` | `.github/agents/requirements-analyst.agent.md` | Review when requirements extraction or unresolved-decision handling changes. |
 | Evidence-based research coordinator | User-selected coordinator; delegates only its explicit worker allow-list | `.github/agents/research.agent.md` | Review when research evidence, source validation, or research handoff boundaries change. |
 | Independent correctness, security, and maintainability review coordinator | User-selected coordinator; delegates only its explicit worker allow-list | `.github/agents/review.agent.md` | Review when review evidence, remediation, acceptance, or handoff boundaries change. |
@@ -58,18 +61,18 @@ The manifest registers the four lifecycle instruction files under `contributes.c
 
 All 18 agent paths are registered under `package.json` → `contributes.chatAgents` and included by `package.json.files`.
 
-For lifecycle maintenance, Research briefs remain iterative until valid explicit `/plan` admission closes the exact canonical input. Plan must resolve implementation-relevant evidence before saving an implementation-ready plan; Implement and its workers refuse research, invention, target selection, new commands or dependencies, and unplanned scope or hierarchy changes. These descriptions are consumer guidance only: the packaged agents, skills, instructions, repository policy, and fixed contract verifier remain the operational sources, and manual approvals and handoffs remain required.
+For lifecycle maintenance, Research starts from a subject and iterates an identified document; initial `/plan` with its inspected version completes and approves Research in that request. Later `/plan` with an engineer-agreed actionable Review version creates a distinct issue plan, without re-closing Research or approving edits. Working `Draft` or `Blocked` plans may be saved, but Implement cannot make affected edits until the agreed plan is executable. `/implement` with that version approves only its bounded pass; `/review` with its implementation report approves Review admission, not all-OK acceptance. These descriptions are consumer guidance only: the agents, skills, instructions and repository policy remain the operational sources. Static contracts cannot attest runtime sign-offs or permissions.
 
 ### Prompt files
 
 | Artifact purpose | Activation model | Canonical source path | Maintenance trigger |
 | --- | --- | --- | --- |
-| Launch the approved Implement coordinator | Manual prompt invocation; `agent: Implement` | `.github/prompts/implement.prompt.md` | Review when implementation inputs or approval boundaries change. |
-| Launch the Plan coordinator with an approved research brief | Manual prompt invocation; `agent: Plan` | `.github/prompts/plan.prompt.md` | Review when planning inputs or handoff boundaries change. |
-| Launch an approved Review remediation pass | Manual prompt invocation; `agent: Implement` | `.github/prompts/remediate-review.prompt.md` | Review when remediation linkage or approval requirements change. |
-| Launch the independent Review coordinator | Manual prompt invocation; `agent: Review` | `.github/prompts/review.prompt.md` | Review when review inputs, evidence, or acceptance boundaries change. |
+| Approve the inspected executable plan for one bounded initial or issue pass | Manual Local prompt invocation; `agent: Implement` | `.github/prompts/implement.prompt.md` | Review when plan intake, readiness or effect boundaries change. |
+| Plan from inspected Research or an agreed actionable Review report | Manual Local prompt invocation; `agent: Plan`; the same `/plan` handles initial and issue-scoped planning | `.github/prompts/plan.prompt.md` | Review when either predecessor kind, sign-off or handoff boundaries change. |
+| Redirect legacy Review remediation to new-plan intake | Deprecated compatibility-only Local prompt; `agent: Plan`; uses Review-origin `/plan` semantics, never directly implements fixes | `.github/prompts/remediate-review.prompt.md` | Retained as a contributed prompt; review before any separately approved removal. Prefer `/plan` for future issue cycles. |
+| Admit the inspected implementation report to independent Review | Manual Local prompt invocation; `agent: Review` | `.github/prompts/review.prompt.md` | Review when report intake, disposition or report-first terminal boundaries change. |
 
-All four prompt paths are registered under `package.json` → `contributes.chatPromptFiles` and included by `package.json.files`.
+All four prompt paths, including the deprecated compatibility route, remain registered under `package.json` → `contributes.chatPromptFiles` and included by `package.json.files`. A `send: false` handoff pre-fills a prompt; it is not a sign-off or automatic submission. Confirm actual prompt discovery and RPIR semantics in the supported Local harness; Agent Host needs a separately validated supported entry route.
 
 ### Skills
 

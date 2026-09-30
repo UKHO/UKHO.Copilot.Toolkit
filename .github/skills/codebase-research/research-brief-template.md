@@ -1,16 +1,23 @@
+---
+description: "Template for an iteratable, source-neutral RPIR Research brief"
+---
+
 # Research brief
 
-<!-- New lifecycle records use the exact allocated path `<NNN>-research-brief.md`. Omit Open questions unless the developer explicitly declares a named question intentionally open or unknown. -->
+<!-- Numbered local records use an allocated `<NNN>-research-brief.md` path; non-local drafts need no invented path. Omit Open questions unless the developer explicitly declares a named question intentionally open or unknown. -->
 
 ## Question and scope
 
 - Request:
 - Scope:
 - Success criteria:
-- Lifecycle identity and exact artifact path:
-- **Status:** In progress (set by Research) / Completed (reserved for valid explicit `/plan` admission of this exact canonical in-progress brief):
-- **Research revision:** Initial / Revision; supersedes or amendment provenance:
-- **Exact phase input:** Lifecycle-core-derived exact repository-relative canonical identity (do not persist the raw alias, local absolute path, or Markdown destination; a Markdown reference is evidence only):
+- Lifecycle identity and subject:
+- Working state: `Draft` / `Blocked`; unresolved decisions and evidence needed:
+- Local record status, if eligible: `In progress` during Research; `Completed` only after initial `/plan` inspects and signs off this exact version:
+- Research revision and stable draft identity; supersedes working revision:
+- Original source channel and locator (attachment, accessible HTTPS URL, paste, or contained local path):
+- Inspected content snapshot and version (digest or immutable revision where available; otherwise frozen substantive text and stable fingerprint):
+- Local canonical repository-relative record identity, only if verified (never derive it from a remote label or raw alias):
 
 ## Evidence
 
@@ -28,7 +35,7 @@
 
 ## Options and trade-offs
 
-1. **Option:** — **Evidence:** — **Trade-off:**
+1. **Option:** <option>; **Evidence:** <source>; **Trade-off:** <cost or risk>
 
 ## Risks and constraints
 
@@ -42,7 +49,9 @@
 
 ## Provenance and authority
 
-- Exact lifecycle folder and artifact path:
-- Direct provenance: Lifecycle-core-derived exact repository-relative canonical identity for each required source record, plus a direct validated one-hop renderable Markdown link from this record to the same record (the destination is evidence only):
+- Source envelope: kind `Research`, subject, original channel/locator, inspected snapshot/version, draft revision and direct source lineage:
+- Exact lifecycle folder and artifact path, when a numbered local record exists:
+- Direct provenance: For each real numbered local source record, record its verified canonical identity and matching direct one-hop renderable link; for other sources record the actual locator and inspected version without a fabricated local link:
 - Evidence sources and observed repository paths:
-- This record captures Research evidence only; it does not approve the Plan handoff or authorize implementation. Research-created and Research-amended records remain `Status: In progress`; completed records are immutable. Only valid explicit `/plan` admission of this exact canonical in-progress brief is the prospective closure route.
+- Historical sign-off: Only initial `/plan` with this inspected version completes and approves Research within that request. Freeze that version separately from a later revisable draft; record invocation and agreed version in the receiving plan. An eligible numbered local `In progress` record may receive a status-only `Completed` write after full preimage/postimage checks; otherwise record why no local status write occurred.
+- This working Research evidence neither approves the Plan handoff by publication nor authorizes implementation; never reopen or overwrite an agreed historical version.
