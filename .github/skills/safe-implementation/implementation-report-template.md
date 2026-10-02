@@ -8,20 +8,20 @@ This template is the sole schema owner for future durable implementation reports
 
 ## Lifecycle identity and allocation
 
-- **Report identity and working state:** `<subject, this pass, stable draft identity, Draft or Blocked, revision, unresolved decisions and Review readiness>`.
+- **Report identity and working revision:** `<subject, this pass, stable record identity, revision, unresolved decisions and evidence gaps>`.
 - **Plan envelope:** `<kind, subject, original channel/locator, inspected content/version or fingerprint, /implement invocation agreeing this executable version, and direct Research or Review-origin lineage>`.
 - **This report envelope:** `<kind, subject/pass, output channel/locator and inspected content snapshot/version or fingerprint>`.
 - **Verified local record pairs (only when real):** `<exact forward-slash canonical plan and report paths; matching direct one-hop local Markdown link for each canonical relationship field; same-folder evidence>`; otherwise record `N/A`, not an invented link.
 - **Allocation evidence (numbered local only):** `<matching-suffix first inventory, candidate, immediate second inventory and no-overwrite result>`; otherwise `N/A` with reason.
-- **Historical version:** `<freeze the inspected report version agreed at /review separately before any further draft revision; finalized snapshots are immutable>`.
-- **Authority boundary:** This report is non-authorizing execution evidence only. This pass's plan alone owns scope, hierarchy, status, completion markers and acceptance; publishing a draft is not Review admission.
+- **Historical version:** `<freeze the inspected report version agreed at /review separately before any further working-revision edits; finalized snapshots are immutable>`.
+- **Authority boundary:** This report is non-authorizing execution evidence only. This pass's plan alone owns scope, hierarchy, status, completion markers and acceptance; publication alone is not Review admission.
 
 ## Approved scope and completion
 
 - **Approved scope:** `<exact scope of this plan's /implement pass, not the previous plan's scope>`.
 - **Completed this-plan hierarchy:** `<completed Work Items, Tasks, and Steps>`.
 - **Remaining this-plan hierarchy:** `<remaining Work Items, Tasks, and Steps; state None when applicable>`.
-- **Hierarchy boundary:** `<confirm no hierarchy was added, removed, restructured, or expanded; otherwise record the Plan-stage blocker>`.
+- **Hierarchy boundary:** `<confirm no hierarchy was added, removed, restructured, or expanded; describe any discrepancy and return changed scope to Plan>`.
 
 ## Changed files and delivered behavior
 
@@ -29,7 +29,7 @@ This template is the sole schema owner for future durable implementation reports
 
 ## Acceptance and validation
 
-- **Acceptance readiness:** `<ready/not ready for Review; only an evidence-backed all-OK Review report can finish RPIR>`.
+- **Review evidence:** `<record completed and remaining work and evidence gaps honestly; an explicit /review invocation with this inspected report version admits Review but does not imply an all-OK result>`.
 - **Performed:** `<validation actually performed and outcome>`.
 - **Failed:** `<failed validation and disposition; state None when applicable>`.
 - **Unavailable:** `<unavailable validation and reason; state None when applicable>`.
@@ -57,8 +57,6 @@ For a Review-origin pass, record the new plan's source Review, its reviewed impl
 
 ## Next developer action
 
-`<manual /review with this report's inspected agreed version when ready; no extra routine approval or automatic handoff; otherwise name the blocked evidence or decision>`
+`<manual /review with this report's actual inspected version; no extra routine approval or automatic handoff; identify any unresolved evidence or decision without treating it as a phase veto>`
 
-## Open questions
-
-Include only a specifically named question that the developer expressly declared intentionally open or unknown, with that declaration's provenance.
+<!-- Add an Open questions section only for a specifically named question that the developer expressly declared intentionally open or unknown, with that declaration's provenance. -->

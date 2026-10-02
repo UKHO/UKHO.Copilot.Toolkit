@@ -13,7 +13,7 @@ Create a narrowly scoped custom agent whose role and capability boundary are exp
 1. Classify the request. Choose an agent only when role ownership, context isolation, distinct tools, delegation, or a phase handoff is needed. Recommend an instruction, Skill, or prompt otherwise.
 2. Default to repository scope under `.github/agents/`. Inspect existing customizations, `AGENTS.md`, `CLAUDE.md`, workflow documentation, and repository validation conventions.
 3. Define the role, phase objective, responsibilities, explicit exclusions, inputs, output contract, handoff target, approval requirements, and required tools. Ask for unknown validation commands before granting terminal access.
-4. Grant the smallest viable tool list. Read-only research, planning, and review roles should not receive edit or terminal access. Add `agent` only to coordinators that delegate, and use an explicit `agents` allow-list—never `agents: '*'`.
+4. Grant the smallest viable tool list. Observational research, planning, review, assurance and validation workers should not receive edit or terminal access by default. Distinguish those workers from bounded Research, Plan and Review coordinators that may need `edit` solely for their assigned local lifecycle drafts/reports and explicitly guarded status writes; this does not grant source edits. Implement receives only its separately approved pass scope. Add `agent` only to coordinators that delegate, and use an explicit `agents` allow-list, never `agents: '*'`.
 5. Set internal workers to `user-invocable: false`; do not enable nested worker delegation initially. Keep coordinator instructions focused on orchestration rather than copied repository standards.
 6. Define handoffs only when phases are logically sequenced. Target existing agents by exact name and use `send: false` where the developer must approve or inspect the next step, especially before edits or commands.
 7. Validate frontmatter, role boundaries, tool permissions, worker visibility, handoff targets, and one representative delegation or handoff.
@@ -27,7 +27,7 @@ Report the created path, role and exclusions, tools and delegation allow-list, o
 - File is under `.github/agents/` with valid YAML frontmatter and a distinct lowercase kebab-case filename ending in `.agent.md`.
 - Description states the role, task, expected outcome, and useful discovery vocabulary.
 - Responsibilities and exclusions do not duplicate another agent.
-- Tools are minimal; read-only roles have no `edit` or terminal capability.
+- Tools are minimal: observational workers have no `edit` or terminal capability by default, while any coordinator write grant is limited to its explicit record/status role and does not grant source edits.
 - Delegating agents include `agent` and an explicit `agents` allow-list.
 - Workers are non-user-invocable and do not delegate further unless explicitly justified.
 - Every handoff names an existing agent, is logically sequenced, and requires manual send where approval matters.

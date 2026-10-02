@@ -16,7 +16,7 @@ Use this Skill for repository-managed Markdown wiki work. It provides reusable d
 - A selected parent that does not yet exist may be created only when the developer explicitly selected it. Do not create a parent, Wiki root, page, index, or navigation target in `docs/planning/`, `docs/delivery/`, or another lifecycle namespace.
 - Use the existing Research → Plan → Implement → Review process for substantive changes. Follow the [RPIR lifecycle guidance](../rpir-lifecycle-core/SKILL.md) and the [implementation validation checklist](../safe-implementation/validation-checklist.md); those resources remain authoritative.
 - Treat `docs/` content as repository-managed Markdown. Do not introduce hosted-wiki integration, authentication, publishing, remote effects, scripts, or command-based work.
-- Stop and report a gap when a material fact lacks a canonical repository source or a required target, audience, navigation path, or acceptance decision is unknown.
+- Stop the affected claim or edit and report a gap when a material fact lacks a canonical repository source or a required target, audience, navigation path, or acceptance decision is unknown. Continue other safe, in-scope page work and the current RPIR phase where possible.
 
 ## Procedure
 
@@ -25,7 +25,7 @@ Use this Skill for repository-managed Markdown wiki work. It provides reusable d
 3. **Draft or update.** Start from the [wiki page template](templates/wiki-page.md). Keep the purpose and audience clear, distinguish prerequisites from procedure, and preserve the page's established terminology and reader flow.
 4. **Maintain navigation.** Update only named indexes, tables of contents, and related links within the approved scope. Prefer repository-relative links and check both directions: the page is reachable from its index, and its links lead to existing intended destinations.
 5. **Validate structure and facts.** Apply the [wiki validation checklist](references/wiki-validation-checklist.md). Check headings, links, source provenance, duplication, stale claims, accessibility, and next steps by manual inspection when automation is unavailable.
-6. **Report gaps.** Record unresolved factual, navigation, scope, or validation gaps separately from completed checks. Stop for Research or Plan clarification when the gap is material; do not fill it with an invented fact or an unapproved target.
+6. **Report gaps.** Record unresolved factual, navigation, scope, or validation gaps separately from completed checks. Use [agent-question-resolution](../agent-question-resolution/SKILL.md) for a material unknown, then resume the current work; clarification does not approve a lifecycle transition. Stop only the affected edit until its facts, target or authority are established. Do not fill a gap with an invented fact or an unapproved target.
 
 ## Deliverable
 
