@@ -2,6 +2,7 @@
 name: Script Runner
 description: Execute phase-scoped task goals for Research, Plan, Implement, or Review by selecting needed terminal commands and reporting inspected effects without editing or delegating.
 argument-hint: Phase, self-contained goal, expected observation, opened workspace folder, scope, anticipated effects, and required result
+user-invocable: false
 tools: ['read', 'search', 'runInTerminal']
 ---
 

@@ -18,6 +18,10 @@ description: "Template for an iteratable, source-neutral RPIR Research brief"
 - Original source channel and locator (attachment, accessible HTTPS URL, paste, or contained local path):
 - Inspected content snapshot and version (digest or immutable revision where available; otherwise frozen substantive text and stable fingerprint):
 - Local canonical repository-relative record identity, only if verified (never derive it from a remote label or raw alias):
+- Proposed exact subject-based lifecycle folder under an evidenced `docs/planning/` or `docs/delivery/` parent:
+- Engineer's explicit confirmation of that exact folder, or of the revised/engineer-selected alternative, before use or creation; a declined proposal is not used:
+- Fresh containment, identity, collision and effective-permission checks; folder created only if absent after confirmation:
+- Numbered physical Research record identity/version and full-file postimage/readback evidence; if confirmation, creation, save or readback fails, state that the phase output is unfinished:
 
 ## Evidence
 
@@ -51,6 +55,7 @@ description: "Template for an iteratable, source-neutral RPIR Research brief"
 
 - Source envelope: kind `Research`, subject, original channel/locator, inspected snapshot/version, draft revision and direct source lineage:
 - Exact lifecycle folder and artifact path, when a numbered local record exists:
+- Folder proposal and location decision evidence: `<exact proposed path, confirmation or declined/revised candidate, and confirmation before any use/creation>`; location confirmation is not phase-transition approval.
 - Direct provenance: For each real numbered local source record, record its verified canonical identity and matching direct one-hop renderable link; for other sources record the actual locator and inspected version without a fabricated local link:
 - Evidence sources and observed repository paths:
 - Historical sign-off: Only initial `/plan` with this inspected version completes and approves Research within that request. Freeze that version separately from later revisions; record invocation and agreed version in the receiving plan. An eligible numbered local `In progress` record may receive a status-only `Completed` write after full preimage/postimage checks; otherwise record why no local status write occurred.

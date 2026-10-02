@@ -19,6 +19,13 @@ Assess the supplied stage draft against the applicable approved inputs and exist
 - Claims, findings, completion statements, and validation results trace to supplied evidence.
 - Unavailable or not-run checks are not represented as successful evidence.
 
+## Confirmed folder and physical phase records
+
+- For Research, verify that the exact subject-based folder is under an evidenced `docs/planning/` or `docs/delivery/` parent and that the engineer explicitly confirmed that exact location (or a newly proposed alternative) through `agent-question-resolution` before any use or creation. A declined proposal is not used; confirmation is a location decision, not transition approval.
+- Verify Research's fresh containment, identity, collision and effective-permission checks, creation only if absent, and the numbered physical brief's identity and full-file postimage/readback. A rejected or unconfirmed folder is not used; a denied or unreadable save remains unfinished.
+- For Plan, Implement and Review, verify each actual contained numbered physical predecessor, direct canonical field/link pair, expected kind and same-folder lineage, plus the current phase's numbered output and full-file readback in the Research-confirmed folder. Attachments, URLs and pastes are locators only; do not accept a nonphysical/out-of-folder item or a second folder as canonical.
+- Report missing, denied, mismatched or unreadable evidence as an unfinished output and name dependent effects that must stop. These checks are advisory evidence only: they neither authorize persistence nor veto an engineer-approved transition.
+
 ## Authority boundaries
 
 - The plan remains authoritative for scope, hierarchy, status, and completion markers.

@@ -27,10 +27,7 @@
     "CHANGELOG.md",
     "LICENSE",
     "resources/ukho-icon.png",
-    ".github/instructions/lifecycle-implementation-plans.instructions.md",
-    ".github/instructions/lifecycle-implementation-reports.instructions.md",
-    ".github/instructions/lifecycle-research-briefs.instructions.md",
-    ".github/instructions/lifecycle-review-reports.instructions.md",
+    ".github/instructions/lifecycle-records.instructions.md",
     ".github/agents/architecture-analyst.agent.md",
     ".github/agents/codebase-investigator.agent.md",
     ".github/agents/correctness-reviewer.agent.md",
@@ -71,16 +68,7 @@
   "contributes": {
     "chatInstructions": [
       {
-        "path": ".github/instructions/lifecycle-implementation-plans.instructions.md"
-      },
-      {
-        "path": ".github/instructions/lifecycle-implementation-reports.instructions.md"
-      },
-      {
-        "path": ".github/instructions/lifecycle-research-briefs.instructions.md"
-      },
-      {
-        "path": ".github/instructions/lifecycle-review-reports.instructions.md"
+        "path": ".github/instructions/lifecycle-records.instructions.md"
       }
     ],
     "chatAgents": [
