@@ -210,15 +210,26 @@ function checkAuthoredLifecycleContracts() {
     'local field/link pairing': /exact canonical relationship fields and matching direct, renderable one-hop links/i,
     'local status preimage': /complete exact-file preimage, immediately compare it/i,
     'bounded status-only postimage': /write only the authorized field, then re-read the complete file and require exactly the permitted postimage difference/i,
+    'opened-root escape refusal': /If indirection is detected or the chain is inconclusive, establish the actual destination's containment against the opened root or refuse the dependent effect/i,
     'report-first terminal status': /all-OK Review report[\s\S]*Ready for review[\s\S]*Accepted/i,
-    'collision second scan': /Immediately re-inspect that inventory before creating the candidate and never overwrite an existing path/i,
+    'collision second scan': /Immediately re-inspect that inventory[\s\S]*never overwrite an existing path/i,
     'phase tool permission': /Workspace Trust[\s\S]*tool[\s\S]*permissions/i
   };
   requireConcepts(core, lifecycle);
   requireConcepts(core, {
     'Research-only confirmed folder proposal': /Research alone proposes the exact subject-based subfolder[\s\S]*Before creating or reusing that folder, Research uses[\s\S]*engineer's decision[\s\S]*A declined candidate is not used[\s\S]*may create only the confirmed folder/i,
     'successors inherit one Research-created folder': /Later phases inherit this verified folder and may not select, create or relocate another/i,
-    'physical same-folder record and readback': /actual contained numbered physical record in the confirmed Research folder[\s\S]*direct, renderable one-hop links[\s\S]*After saving any phase output, read back the full physical file/i
+    'successors require the existing folder and inspected physical predecessor': /Later phases inherit this verified folder and may not select, create or relocate another[\s\S]*actual contained numbered physical record in the confirmed Research folder[\s\S]*successors also require their inspected physical predecessor/i,
+    'physical same-folder record and readback': /actual contained numbered physical record in the confirmed Research folder[\s\S]*direct, renderable one-hop links[\s\S]*After saving any phase output, read back the full physical file/i,
+    'numbered output exact-suffix allocation, absent candidate, and full readback': /Inspect only existing files whose suffix exactly matches the requested artifact type[\s\S]*Immediately re-inspect that inventory, create only the absent exact candidate path, and never overwrite an existing path[\s\S]*After saving any phase output, read back the full physical file and verify its identity, content and direct same-folder relationship fields\/links/i,
+    'ordinary creation needs no interpreter or digest': /For ordinary paths, a current inspection of the complete existing ancestor chain showing no reparse point or other indirection supplies containment evidence without a named interpreter or digest/i,
+    'optional observation remains unknown and cannot bypass containment': /A failed optional observation ends that invocation with the fact still unknown[\s\S]*This distinction does not permit a write without verified containment/i
+  });
+  requireConcepts('.github/agents/research.agent.md', {
+    'Research creates its confirmed folder only when absent': /create the confirmed folder only if absent/i
+  });
+  requireConcepts('.github/agents/script-runner.agent.md', {
+    'Runner optional observation remains unknown and cannot bypass containment': /A failed optional observation ends this invocation with the fact still unknown[\s\S]*Do not retry or bypass through another role[\s\S]*proceed without required containment/i
   });
   requireConcepts(lifecycleInstruction, {
     'numbered lifecycle instruction and physical same-folder output': /eight numbered local record patterns[\s\S]*numbered physical predecessor[\s\S]*same folder[\s\S]*full-file output readback/i,
@@ -292,6 +303,7 @@ function checkAuthoredLifecycleContracts() {
   requireConcepts('.github/copilot-instructions.md', {
     'local write safety': /full.*preimage[\s\S]*status-only postimage/i,
     'independent allocation': /matching-suffix inventory[\s\S]*Never overwrite/i,
+    'ordinary create/readback needs no interpreter or digest': /This ordinary existence\/create\/readback procedure needs no named interpreter or digest/i,
     'phase permission boundary': /Workspace Trust[\s\S]*managed-policy permission/i
   });
 }

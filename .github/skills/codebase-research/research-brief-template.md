@@ -16,11 +16,11 @@ description: "Template for an iteratable, source-neutral RPIR Research brief"
 - Local record status, if eligible: `In progress` during Research; `Completed` only after initial `/plan` inspects and signs off this exact version:
 - Research revision and stable working-record identity; supersedes working revision:
 - Original source channel and locator (attachment, accessible HTTPS URL, paste, or contained local path):
-- Inspected content snapshot and version (digest or immutable revision where available; otherwise frozen substantive text and stable fingerprint):
+- Inspected content snapshot and version (digest or immutable revision where available; otherwise a frozen substantive snapshot with stable fingerprint; when a digest is unavailable, this snapshot and the verified full-file postimage/readback suffice):
 - Local canonical repository-relative record identity, only if verified (never derive it from a remote label or raw alias):
 - Proposed exact subject-based lifecycle folder under an evidenced `docs/planning/` or `docs/delivery/` parent:
 - Engineer's explicit confirmation of that exact folder, or of the revised/engineer-selected alternative, before use or creation; a declined proposal is not used:
-- Fresh containment, identity, collision and effective-permission checks; folder created only if absent after confirmation:
+- Fresh containment, identity, collision and effective-permission checks; record whether the confirmed folder is present or absent, and create it only if absent after confirmation. Required containment and permission evidence remain gates; an optional probe is not a creation prerequisite. If an optional observation is attempted and fails, that invocation ends with the fact unknown:
 - Numbered physical Research record identity/version and full-file postimage/readback evidence; if confirmation, creation, save or readback fails, state that the phase output is unfinished:
 
 ## Evidence
