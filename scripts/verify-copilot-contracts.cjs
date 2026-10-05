@@ -210,7 +210,8 @@ function checkAuthoredLifecycleContracts() {
     'local field/link pairing': /exact canonical relationship fields and matching direct, renderable one-hop links/i,
     'local status preimage': /complete exact-file preimage, immediately compare it/i,
     'bounded status-only postimage': /write only the authorized field, then re-read the complete file and require exactly the permitted postimage difference/i,
-    'opened-root escape refusal': /If indirection is detected or the chain is inconclusive, establish the actual destination's containment against the opened root or refuse the dependent effect/i,
+    'positive lexical and actual opened-root containment': /Containment evidence must establish lexical and actual destination containment within the opened root/i,
+    'indirection requires established actual containment or refusal': /If indirection is detected or the evidence is inconclusive, establish the actual destination's containment by other supportable evidence or refuse the dependent effect; unknown is not safe/i,
     'report-first terminal status': /all-OK Review report[\s\S]*Ready for review[\s\S]*Accepted/i,
     'collision second scan': /Immediately re-inspect that inventory[\s\S]*never overwrite an existing path/i,
     'phase tool permission': /Workspace Trust[\s\S]*tool[\s\S]*permissions/i
@@ -221,18 +222,23 @@ function checkAuthoredLifecycleContracts() {
     'successors inherit one Research-created folder': /Later phases inherit this verified folder and may not select, create or relocate another/i,
     'successors require the existing folder and inspected physical predecessor': /Later phases inherit this verified folder and may not select, create or relocate another[\s\S]*actual contained numbered physical record in the confirmed Research folder[\s\S]*successors also require their inspected physical predecessor/i,
     'physical same-folder record and readback': /actual contained numbered physical record in the confirmed Research folder[\s\S]*direct, renderable one-hop links[\s\S]*After saving any phase output, read back the full physical file/i,
-    'numbered output exact-suffix allocation, absent candidate, and full readback': /Inspect only existing files whose suffix exactly matches the requested artifact type[\s\S]*Immediately re-inspect that inventory, create only the absent exact candidate path, and never overwrite an existing path[\s\S]*After saving any phase output, read back the full physical file and verify its identity, content and direct same-folder relationship fields\/links/i,
-    'ordinary creation needs no interpreter or digest': /For ordinary paths, a current inspection of the complete existing ancestor chain showing no reparse point or other indirection supplies containment evidence without a named interpreter or digest/i,
-    'optional observation remains unknown and cannot bypass containment': /A failed optional observation ends that invocation with the fact still unknown[\s\S]*This distinction does not permit a write without verified containment/i
+    'effective tool and managed-policy permission': /Require applicable effective tool and managed-policy permission for the effect; a separate ACL estimate or optional probe is neither a permission grant nor a prerequisite/i,
+    'exact-suffix numbered allocation': /Inspect only existing files whose suffix exactly matches the requested artifact type/i,
+    'valid-prefix allocation starts at 001': /use `001` if none has a valid prefix, otherwise one greater than the maximum valid three-digit prefix/i,
+    'immediate second inventory and absent candidate no-overwrite': /Immediately re-inspect that inventory, create only the absent exact candidate path, and never overwrite an existing path/i,
+    'malformed, inaccessible, colliding, or uncertain allocation stops': /Stop on collision, malformed or inaccessible inventory, or uncertain allocation/i,
+    'full physical readback verifies identity content and lineage': /read back the full physical file and verify its identity, content and direct same-folder relationship fields\/links/i,
+    'optional and required observation effects remain distinct': /A failed optional observation ends that invocation and leaves its requested fact unestablished; an echo-only or otherwise inconclusive result is neither safety proof nor evidence by itself of a failed effect or an unknown relevant effect\. Still inspect required effects: denial, failed required work, unexpected change, or an unresolved relevant effect stops the affected work/i
   });
   requireConcepts('.github/agents/research.agent.md', {
     'Research creates its confirmed folder only when absent': /create the confirmed folder only if absent/i
   });
   requireConcepts('.github/agents/script-runner.agent.md', {
-    'Runner optional observation remains unknown and cannot bypass containment': /A failed optional observation ends this invocation with the fact still unknown[\s\S]*Do not retry or bypass through another role[\s\S]*proceed without required containment/i
+    'Runner optional observation remains unknown and cannot bypass containment': /A failed optional observation ends this invocation and leaves only its requested fact unestablished[\s\S]*Do not retry or bypass through another role[\s\S]*proceed without required containment/i,
+    'Runner separates optional observations from required failures and denied or unresolved effects': /A failed optional observation ends this invocation and leaves only its requested fact unestablished; an echo-only or otherwise inconclusive result is neither safety proof nor evidence by itself of a failed effect or unknown relevant effect\. Required effects must still be inspected: denial, failed required work, unexpected change, or an unresolved relevant effect stops the affected work/i
   });
   requireConcepts(lifecycleInstruction, {
-    'numbered lifecycle instruction and physical same-folder output': /eight numbered local record patterns[\s\S]*numbered physical predecessor[\s\S]*same folder[\s\S]*full-file output readback/i,
+    'numbered lifecycle instruction and physical same-folder output': /eight numbered local record patterns[\s\S]*numbered physical predecessor[\s\S]*same confirmed folder[\s\S]*read back the full physical file/i,
     'Research proposal confirmation and declined-candidate handling': /Research alone proposes one exact subject-based folder[\s\S]*engineer's confirmation of that exact location[\s\S]*before using or creating it[\s\S]*A declined proposal is not used/i,
     'instruction runtime caveat': /Instruction-pattern matching[\s\S]*runtime attachment have not been verified/i
   });
@@ -250,7 +256,7 @@ function checkAuthoredLifecycleContracts() {
       'physical predecessor is a locator until verified in same folder': /actual contained, numbered physical Markdown predecessor in the Research-created folder[\s\S]*direct same-folder ancestry/i,
       'own Plan is saved and read back in inherited folder': /only the verified Research-created folder[\s\S]*Allocate exactly one distinct[\s\S]*direct same-folder physical predecessor fields\/links[\s\S]*read back and verify the full physical file/i,
       'missing predecessor leaves Plan unfinished': /If a physical predecessor or required lineage cannot be verified[\s\S]*leave dependent canonical output unfinished/i,
-      'denied output or lost readback leaves Plan unfinished': /If the physical predecessor, allocation, permission or full readback is unavailable or fails[\s\S]*leave dependent canonical output unfinished/i
+      'denied output or lost readback leaves Plan unfinished': /If the physical predecessor,[\s\S]*allocation,[\s\S]*effective permission,[\s\S]*full readback is unavailable or fails[\s\S]*leave dependent canonical output unfinished/i
     },
     implement: {
       'per-pass approval': /\/implement[\s\S]*approval[\s\S]*bounded[\s\S]*pass/i,
@@ -266,7 +272,7 @@ function checkAuthoredLifecycleContracts() {
       'no direct implementation': /Never route a finding directly to Implement/i,
       'physical predecessor, Plan, and own same-folder output for every disposition': /actual contained, numbered physical implementation report in the Research-created folder[\s\S]*direct same-folder Plan lineage[\s\S]*then inspect that physical Plan[\s\S]*Save one numbered physical Review report in the verified implementation report's Research-created folder for every disposition[\s\S]*Read back the full physical report[\s\S]*before claiming Review phase finish/i,
       'missing physical report leaves Review incomplete': /Without the physical report and required Plan lineage[\s\S]*do not claim a canonical Review outcome or phase completion/i,
-      'denied output or lost readback leaves Review unfinished': /If a required predecessor, permission, allocation or full readback is unavailable or fails[\s\S]*leave Review unfinished/i,
+      'denied output or lost readback leaves Review unfinished': /If a required predecessor,[\s\S]*containment,[\s\S]*permission,[\s\S]*allocation or full readback is unavailable or fails[\s\S]*leave Review unfinished/i,
       'verified report precedes clean terminal outcome': /persist and verify the evidence-backed physical Review report and matching same-folder Plan\/implementation lineage before terminal handling[\s\S]*RPIR ends without a `\/plan` handoff/i,
       'verified report precedes issue handoff': /Every disposition requires the verified physical Review report before phase finish[\s\S]*only after its physical report is verified/i
     }
