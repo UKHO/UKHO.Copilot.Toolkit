@@ -8,19 +8,39 @@ user-invocable: true
 
 Create a narrowly scoped custom agent whose role and capability boundary are explicit and reviewable.
 
-## Workflow
+## Choose the artifact
 
-1. Classify the request. Choose an agent only when role ownership, context isolation, distinct tools, delegation, or a phase handoff is needed. Recommend an instruction, Skill, or prompt otherwise.
-2. Default to repository scope under `.github/agents/`. Inspect existing customizations, `AGENTS.md`, `CLAUDE.md`, workflow documentation, and repository validation conventions.
-3. Define the role, phase objective, responsibilities, explicit exclusions, inputs, output contract, handoff target, approval requirements, and required tools. Ask for unknown validation commands before granting terminal access.
-4. Grant the smallest viable tool list. Observational research, planning, review, assurance and validation workers should not receive edit or terminal access by default. Distinguish those workers from bounded Research, Plan and Review coordinators that may need `edit` solely for their assigned local lifecycle drafts/reports and explicitly guarded status writes; this does not grant source edits. Implement receives only its separately approved pass scope. Add `agent` only to coordinators that delegate, and use an explicit `agents` allow-list, never `agents: '*'`.
-5. Set internal workers to `user-invocable: false`; do not enable nested worker delegation initially. Keep coordinator instructions focused on orchestration rather than copied repository standards.
-6. Define handoffs only when phases are logically sequenced. Target existing agents by exact name and use `send: false` where the developer must approve or inspect the next step, especially before edits or commands.
-7. Validate frontmatter, role boundaries, tool permissions, worker visibility, handoff targets, and one representative delegation or handoff.
+Choose an agent only when role ownership, context isolation, distinct tools, delegation, or a phase handoff is needed. Recommend an instruction, Skill, or prompt otherwise.
+
+## Scope, role, and inputs
+
+- Default to repository scope under `.github/agents/`. Inspect existing customizations, `AGENTS.md`, `CLAUDE.md`, workflow documentation, and repository validation conventions before drafting.
+- State the role, phase objective, responsibilities, explicit exclusions, required inputs, expected output, any justified handoff target, approval requirements, and required tools. Ask for unknown validation commands before considering terminal access; do not invent a command.
+- Keep coordinator instructions focused on orchestration rather than copying repository standards owned elsewhere.
+
+## Least-privilege capabilities and delegation
+
+- **The author**, before granting a capability, must tie each requested tool to the agent's stated role and task. Grant only the smallest viable tool list supported by that need; if the need or permission is unknown, do not grant the capability until it is resolved.
+- **Observational research, planning, review, assurance, and validation workers** receive no `edit` or terminal access by default. They do not gain lifecycle-record, status, approval, acceptance, or handoff authority from their role description.
+- **Bounded Research, Plan, and Review coordinators** may need `edit` solely for their assigned local lifecycle drafts/reports and explicitly guarded status writes. That record-specific exception does not authorize source edits or grant authority to workers.
+- **Implement** receives only the scope of its separately approved pass; a role description or tool declaration does not expand that scope.
+- **Delegating coordinators** receive `agent` only when delegation is needed and use an explicit `agents` allow-list naming the intended agents. Never use `agents: '*'`. Workers are not granted nested delegation by default.
+- **Internal workers** use `user-invocable: false`. This visibility setting is not a substitute for least-privilege tools or an authority boundary.
+
+## Handoffs and approval stops
+
+- Define a handoff only when the phases are logically sequenced; identify an existing target by its exact agent name and verify the target and its role before configuring it.
+- Where a developer must inspect or approve the next step—especially before edits or commands—configure a manual handoff with `send: false`. Do not configure an automatic send for such a transition.
+- If the target, sequencing, or required approval is unknown, do not configure the handoff or imply that it is approved. Stop that configuration and resolve the uncertainty first.
+- A handoff declaration is not itself approval, permission, or authority for the receiving agent's effects.
 
 ## Expected output
 
-Report the created path, role and exclusions, tools and delegation allow-list, output contract, handoffs and approval behavior, validation performed, and unresolved assumptions.
+Report the created path, role and exclusions, required inputs, tools and delegation allow-list, output contract, any handoffs and their approval behavior, validation performed, and unresolved assumptions. Distinguish verified facts from assumptions; do not claim runtime behavior that was not checked.
+
+## Starter resource
+
+Use the [agent starter template](templates/agent.md) as an inert structure, adapting it to the specific role. It is not a contributed agent and grants no capability by itself.
 
 ## Validation checklist
 

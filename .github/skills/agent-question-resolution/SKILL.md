@@ -6,7 +6,17 @@ user-invocable: false
 
 # Agent question resolution
 
+## Trigger
+
 Use this Skill when a Research, Plan, Implement, or Review coordinator encounters an unknown that may require a user-facing clarification.
+
+## Inputs
+
+- The user request and conversation, applicable repository guidance, and relevant workspace evidence.
+- The remaining unknown, its material effect, and the evidence or decision needed to resolve it.
+- The active coordinator's existing read-only sources, available specialists, and declared delegation boundary.
+
+## Procedure
 
 1. Inspect the user request, conversation, applicable repository guidance, and relevant workspace evidence before asking. Use only the read-only sources and tools already available to the active agent.
 2. Distinguish observed facts, supported inferences, assumptions, and remaining unknowns. Do not ask merely because evidence has not yet been inspected.
@@ -18,4 +28,27 @@ Use this Skill when a Research, Plan, Implement, or Review coordinator encounter
 8. When genuine bounded candidates would help, use the [clarification message template](./templates/clarification-message.md). Offer only as many sequential lettered options as fit the decision, give each concise neutral pros and cons, and finish with the next letter as `Other — <free-text direction>`.
 9. When options would be artificial or the needed information is unbounded, ask one plain contextualized question instead.
 10. After an answer, acknowledge the selected direction, update the relevant assumption or constraint, and resume the current RPIR stage. An answer does not approve a Plan, Implement, or Review handoff.
-11. This Skill grants no tools and does not create files, change phase ownership, or authorize commands, hooks, credentials, trackers, browser access, arbitrary MCP services, integrations, or subagent delegation. The active coordinator may use only its already-declared suitable specialists under its existing delegation boundary.
+
+## Outputs
+
+- A concise evidence-based clarification identifying what is known, what remains unknown, the single affected decision or dependent effect, and what an answer will change; or a stated bounded default for a low-impact ambiguity.
+- After an answer, the acknowledged direction, updated assumption or constraint, and resumed current-stage work.
+
+## Limits
+
+- MUST inspect available evidence before asking and distinguish facts, inferences, assumptions, and unknowns.
+- MUST ask exactly one decision per user-facing message and wait for its answer before resolving another decision.
+- MUST NOT delegate an operator-owned decision or treat a specialist's facts or recommendation as authorization.
+- MUST NOT treat a clarification answer as approval of a Plan, Implement, or Review handoff.
+- MUST NOT use tools, sources, or delegation beyond those already available and declared for the active coordinator.
+- This Skill grants no tools and does not create files, change phase ownership, or authorize commands, hooks, credentials, trackers, browser access, arbitrary MCP services, integrations, or subagent delegation. The active coordinator may use only its already-declared suitable specialists under its existing delegation boundary.
+
+## Validation
+
+- Before asking, confirm that evidence inspection is complete, the unknown is material, and only one decision or dependent effect is blocked.
+- For low-impact ambiguity, state the bounded default and proceed; do not ask merely because evidence has not yet been inspected.
+- After an answer, confirm that the direction is acknowledged and current-stage work resumes without treating the answer as handoff approval.
+
+## Linked resource
+
+When genuine bounded candidates would help, use the [clarification message template](./templates/clarification-message.md). Offer sequential lettered options with concise neutral pros and cons, ending with `Other — <free-text direction>`; omit artificial options and use one contextualized question when needed information is unbounded.

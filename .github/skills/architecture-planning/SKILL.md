@@ -6,9 +6,20 @@ user-invocable: false
 
 # Architecture planning
 
+## Trigger
+
+Use this Skill to produce and iterate an evidence-based working plan for a feature, refactor, or customization workflow before edits.
+
+## Inputs
+
+- Approved requirements, the inspected Research document or agreed issue-bearing Review report, and relevant repository evidence.
+- For a Review-origin plan, its direct implementation-report, previous-plan, and original-Research lineage.
+
+## Procedure
+
 Use this skill to produce and iterate an evidence-based working plan without independently changing repository files. Investigate and disclose uncertainty; an agent readiness opinion does not veto an engineer-approved, inspected-version transition. The plan still defines the scope and effects that Implement may safely perform.
 
-## Delegated analyst boundary
+### Delegated analyst boundary
 
 When this skill is applied by a delegated analyst, perform only the applicable evidence-gathering and analysis steps below, then return a narrow planning-lens report. The report may identify requirements, affected locations, reusable patterns, options, trade-offs, risks, validation considerations, and unanswered questions with citations. It is non-persistent input to the Plan coordinator: do not complete a plan template, author or alter Work Item, Task, or Step hierarchy, allocate, select, create, persist, revise, or authorize lifecycle artifacts, handoffs, commands, cleanup, scope, hierarchy, or approvals. Only the Plan coordinator may synthesize, author, and persist the canonical implementation plan.
 
@@ -21,7 +32,7 @@ When this skill is applied by a delegated analyst, perform only the applicable e
 7. For any planned task that may need terminal observation, record the self-contained goal, phase, selected opened root, scope, expected observation and result, anticipated writes and external effects, safety stops, validation and failure disposition. Script Runner chooses task-relevant commands and cwd only when needed; no catalogue, literal command row or Tier is a prerequisite. Research, Plan and Review may observe but may not intentionally edit project files through Runner. Implement may intentionally change only approved scope. Neither a plan nor Runner output authorizes lifecycle edits, acceptance or a new work unit.
 8. Direct the owning Plan coordinator to persist an identified working plan when local persistence is appropriate, or deliver a complete identified non-local document. Keep the plan's current questions and evidence limits explicit while continuing planning work. Freeze the inspected version when later supplied to `/implement`; persistence alone never authorizes edits.
 
-## Resolve material planning gaps
+### Resolve material planning gaps
 
 Investigate material planning gaps and disclose what remains unresolved. Use [agent-question-resolution](../agent-question-resolution/SKILL.md) to route factual questions and obtain engineer decisions on material scope or policy choices. Continue the Plan document while answers or evidence are pending; an unresolved question does not veto an engineer-approved transition for the inspected version. An effect that depends on unresolved scope or authority remains ineligible until its own guard is satisfied.
 
@@ -35,8 +46,17 @@ The plan may retain unresolved questions and incomplete evidence while the Plan 
 
 For each proposed implementation effect, verify its requirements, target or deterministic target-selection rule, branch, operation/design, safety, applicable command/dependency, validation, acceptance, rollback and operator effect. Missing, ambiguous, unverified or unplanned information stops only the affected effect; record the gap and do not invent it or make Implement decide Plan-owned scope. Any observation intended to authorize an effect must already have bounded targets or selection rules, permitted branches, operations, stop conditions, safety gates, validation, acceptance, rollback and operator effects, and must not make an implementation decision. Disclose genuinely unavailable validation and relevant context honestly. Plan alone authors this plan's hierarchy; publication does not authorize edits.
 
+## Limits
+
 For Review-origin plans, record the inspected source Review/version, reviewed implementation report/version, prior Plan/version and original Research/version. Use canonical local field/link pairs only for actual numbered records; otherwise use the original source channel/locator and frozen version. The new Plan has its own unchecked hierarchy, scope, validation and acceptance; preserve mixed actionable and unclear findings without guessing fixes. Its new implementation and Review reports are immutable when finalized and non-authorizing. An evidence-backed persisted all-OK Review finishes RPIR; only then may an eligible current local Plan receive a status-only `Accepted` write after the lifecycle core checks. Findings or `/review` admission alone cannot do so.
+
+## Validation
 
 For a planned task that requires observational command work, use the template's bounded task-goal and effects section to define task purpose, selected root, phase-specific scope, expected result, allowed effects, preflight, inspection limits, denial and failure disposition, and rollback. This command-task preflight applies to observational command goals; it is not a universal prerequisite for coordinator-owned Markdown record saves. Each record save remains subject to its own effect-specific evidence, identity, scope, containment, effective permission, allocation, non-overwrite, and readback checks. If information needed for a particular effect is unknown, continue the Plan document and identify which dependent effect cannot proceed; do not invent a command or dependency or let a Runner or Implement decide Plan-owned scope. Platform trust, tool permissions and managed policy still govern the applicable effect; native Windows offers no sandbox guarantee.
 
 Mark unresolved decisions explicitly. Preserve the existing gates and the prohibition on invented commands, paths, frameworks, dependencies, and category-only commands. Do not create a parallel delivery plan or duplicate workflow. Persistence is owned by the Plan coordinator and does not authorize implementation.
+
+## Outputs
+
+- A narrow, cited planning-lens report for a delegated analyst; it is non-persistent input to the Plan coordinator.
+- A complete identified working implementation plan authored and persisted only by the Plan coordinator, with its unresolved questions and evidence limits explicit.

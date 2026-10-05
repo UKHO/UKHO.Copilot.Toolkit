@@ -6,7 +6,18 @@ applyTo: 'docs/planning/**/[0-9][0-9][0-9]-research-brief.md,docs/delivery/**/[0
 
 # RPIR lifecycle records
 
+## Applies to
+
+- **Intended files:** Numbered local Research briefs, implementation plans, implementation reports, and review reports in `docs/planning/` or `docs/delivery/` that match one of the eight exact `applyTo` patterns above.
+- **Does not apply to:** Other files, unnumbered documents, or non-local candidate records.
+
 Apply this instruction only to the eight numbered local record patterns in `applyTo`. The [RPIR lifecycle core](../skills/rpir-lifecycle-core/SKILL.md) is the canonical shared contract for source-neutral intake, lineage, transitions, allocation, and effect guards. The four links below identify the sole owners of their stage schemas.
+
+## Rule
+
+- **MUST:** Follow the canonical lifecycle core and the owning stage template; preserve the physical-record, direct-lineage, and effect checks below.
+- **SHOULD:** Use the stage-specific links and report only evidence and validation actually established.
+- **MUST NOT:** Treat a candidate, attachment, link, or runtime assumption as a substitute for the required physical record or as authority to bypass lifecycle guards.
 
 ## Shared workflow and effect contract
 

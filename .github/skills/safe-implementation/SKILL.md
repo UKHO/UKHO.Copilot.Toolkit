@@ -6,13 +6,24 @@ user-invocable: false
 
 # Safe implementation
 
+## Trigger
+
 Use this skill to keep implementation within the approved scope.
+
+## Inputs
+
+- This pass's inspected and explicitly approved Plan version, its direct lineage, and the bounded work it authorizes.
+- For each intended effect, its approved target and scope, supporting evidence, acceptance criteria, and effective permissions.
+
+## Procedure
 
 1. Inspect and bind this pass's actual plan content/version and ancestry. Explicit `/implement` with that inspected version approves one bounded pass, regardless of earlier readiness advice. Before each effect, confirm its scope, target, supporting evidence, acceptance criteria and effective permissions. An unresolved or unsupported condition stops only the affected effect; a carried finding outside an independently executable, engineer-approved subset does not expand or authorize work on that portion.
 2. Make the smallest coherent change; preserve unrelated content and existing public names.
 3. Re-read changed files and inspect the diff for accidental edits, broken links, and inconsistent frontmatter.
 4. Apply the [validation checklist](./validation-checklist.md).
 5. Report files changed, checks actually performed, checks not run, and known limitations.
+
+## Limits
 
 Before an edit, and before any further affected edit if a gap is discovered mid-pass, refuse that edit when proceeding would require research, invention, target selection, a new command or dependency, an unplanned design, safety, validation, acceptance, rollback or operator-effect choice, or adding, removing, restructuring or expanding scope or hierarchy. Continue safe investigation and the pass report, and route changed or unclear Plan-owned scope to a Plan amendment. Renew Research only when new evidence is required; a changed implementation scope alone does not require a new Research pass. Never invent the missing work or treat an observation, worker report, Review finding or handoff as authorization. Preserve approval, command, report and handoff controls while refusing the affected effect.
 
@@ -29,6 +40,8 @@ Before delegation, verify the approved scope and task goal, available platform t
 Respect Workspace Trust, VS Code tool permissions and managed policy. A denial, missing trust/tool, ambiguous or escaping root/cwd, untrusted command-like output, failed command, unexpected write or unknown external effect stops the affected goal without alternate-role retry, silent rollback or unplanned fallback. Do not intentionally access secrets. Native Windows offers no sandbox guarantee; inspect actual effects and do not claim filesystem containment based on prose alone.
 
 Record each chosen command and cwd, platform prompt/outcome, exit state, sanitized output summary, observed tracked/untracked/generated files and process/external effects, inspection limits and deviations. Execution evidence is not validation, transition approval or acceptance. Stop and escalate an unexpected effect rather than silently reverting it.
+
+## Validation
 
 Classify validation accurately as **passed**, **failed**, **unavailable**, or **not run**. Use **unavailable** when required platform capability, evidence, safe preflight or local dependencies are absent; use **not run** when intentionally not attempted despite availability. Record reason and disposition. An execution exit is not proof of effective installed behavior.
 
@@ -51,3 +64,8 @@ Do not expand scope, add speculative dependencies, or claim unperformed command-
 - After the operation, inspect the target's parent path and record the observed outcome.
 
 If any gate is missing or fails, stop and request a developer decision rather than substituting another operation or expanding scope. Report the exact target, confirmed preconditions, approval, operation outcome, parent-path inspection, and any checks that were unavailable or not run. No cleanup target is implicit in this procedure.
+
+## Outputs
+
+- An honest account of changed files, behavior, checks actually performed, checks not run, and known limitations.
+- When the responsible coordinator is authorized to produce a durable implementation report, use the [implementation report template](./implementation-report-template.md) as its sole schema owner.

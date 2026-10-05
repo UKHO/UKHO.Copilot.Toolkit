@@ -6,6 +6,8 @@ user-invocable: false
 
 # RPIR lifecycle core
 
+## Trigger
+
 Use this Skill as the canonical shared contract for source-neutral RPIR intake, inspected identity, direct lineage, transitions, and effect boundaries. It does not grant runtime permissions or atomicity. Repository policy and phase coordinators retain their role-specific write authority; stage methods and templates retain their distinct work and schemas.
 
 ## Inspect and bind one actual document

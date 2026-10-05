@@ -18,9 +18,20 @@ Create a manually invoked prompt for one focused local request with predictable 
 6. State a stop condition for missing information, unsafe side effects, unavailable agents, or failed validation. Prefer inspection and proposed changes before edits or commands.
 7. Validate frontmatter, variables, named-agent existence, tool compatibility, shared-instruction references, and one representative prompt invocation.
 
+## Prompt-specific constraints
+
+- A prompt MUST remain a deliberate shortcut for one focused job; it MUST NOT take ownership of a sustained role or phase workflow that belongs to an agent.
+- A prompt MUST omit the `tools` field by default. It MUST NOT use prompt-level tool overrides to broaden an agent's intended boundary; add an override only when independently justified, minimal, and compatible with the selected agent's boundary.
+- If a required input is missing, the selected agent is missing or unavailable, or a proposed side effect is unsafe or unclear, the prompt MUST stop and request the missing information or a safe, explicit decision. It MUST NOT guess or proceed with the affected action.
+- A prompt created here is a VS Code Local convenience. Authors MUST NOT claim Agent Host portability or equivalent prompt-selection and tool behavior without separate evidence.
+
 ## Expected output
 
 Report the created path, job, inputs and defaults, selected agent, tools and side effects, output contract, stop conditions, and validation performed.
+
+## Starter resource
+
+Use the original one-job starter at [templates/prompt.md](./templates/prompt.md). Adapt its sections to the request; the starter is a resource document, not a contributed prompt.
 
 ## Validation checklist
 

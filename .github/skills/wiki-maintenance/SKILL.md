@@ -6,6 +6,8 @@ user-invocable: true
 
 # Wiki maintenance
 
+## Trigger
+
 Use this Skill for repository-managed Markdown wiki work. It provides reusable documentation guidance; it does not own a role, approve work, or authorize edits.
 
 ## Inputs and boundaries
@@ -30,3 +32,8 @@ Use this Skill for repository-managed Markdown wiki work. It provides reusable d
 ## Deliverable
 
 Return the changed or proposed exact paths, audience and purpose, source references, navigation updates, checks performed, unavailable checks, and remaining gaps. Keep substantive edits within the approved RPIR scope.
+
+## Validation
+
+- Apply the [wiki validation checklist](references/wiki-validation-checklist.md) and inspect headings, links, source provenance, duplication, stale claims, accessibility, and next steps.
+- Check navigation in both directions and report unresolved factual, navigation, scope, or validation gaps separately from completed checks.
