@@ -58,8 +58,72 @@ try {
   const planDeniedOutputDiagnostic = `${plan} lacks authored denied output or lost readback leaves Plan unfinished guidance (static only)`;
   const implementDeniedOutputDiagnostic = `.github/agents/implement.agent.md lacks authored denied output or lost readback leaves Implement unfinished guidance (static only)`;
   const reviewDeniedOutputDiagnostic = `${review} lacks authored denied output or lost readback leaves Review unfinished guidance (static only)`;
+  const researchDecisionDiagnostic = '.github/skills/codebase-research/research-brief-template.md lacks authored Research decision-first schema and compact lifecycle closeout guidance (static only)';
+  const researchOutcomeDiagnostic = '.github/skills/codebase-research/research-brief-template.md lacks authored Research end section preserves initial no-predecessor and adverse-output outcomes guidance (static only)';
+  const planDecisionDiagnostic = '.github/skills/architecture-planning/implementation-plan-template.md lacks authored Plan outcome precedes its sole Work Item register and supporting detail guidance (static only)';
+  const planRegisterDiagnostic = '.github/skills/architecture-planning/implementation-plan-template.md lacks authored Plan preserves sole register and fresh ordered hierarchy guidance (static only)';
+  const implementDecisionDiagnostic = '.github/skills/safe-implementation/implementation-report-template.md lacks authored Implement report leads with pass, changed behavior, and this-plan completion guidance (static only)';
+  const implementStatesDiagnostic = '.github/skills/safe-implementation/implementation-report-template.md lacks authored Implement report distinguishes all four validation states guidance (static only)';
+  const reviewDecisionDiagnostic = '.github/skills/code-review/review-report-template.md lacks authored Review report leads with disposition before comparison and findings guidance (static only)';
+  const reviewMixedDiagnostic = '.github/skills/code-review/review-report-template.md lacks authored Review preserves mixed actionable and unclear classifications guidance (static only)';
+  const reviewAcceptanceDiagnostic = '.github/skills/code-review/review-report-template.md lacks authored Review conditional acceptance follows persisted report verification guidance (static only)';
   const staticContractLimitation = 'Authored-contract assertions provide static text evidence only; they do not prove runtime permissions, Workspace Trust, managed policy, URI parsing, filesystem behavior or indirection, instruction attachment, or installed-VSIX behavior.';
   check('staged authored routes and per-owner folder/predecessor/output contracts (Research, Plan, Implement, Review)', 0, undefined, staticContractLimitation);
+  check('positive equivalent wording: Research benefit label', 0, {
+    file: '.github/skills/codebase-research/research-brief-template.md',
+    from: '- Expected benefit:',
+    to: '- Expected impact:'
+  });
+  check('Research decision-first schema removed', 1, {
+    file: '.github/skills/codebase-research/research-brief-template.md',
+    from: '## Recommendation',
+    to: '## Supporting notes'
+  }, researchDecisionDiagnostic);
+  check('Research adverse outcome closeout removed', 1, {
+    file: '.github/skills/codebase-research/research-brief-template.md',
+    from: '- Adverse outcomes and refusals:',
+    to: '- Lifecycle notes:'
+  }, researchOutcomeDiagnostic);
+  check('Plan decision-first opening removed', 1, {
+    file: '.github/skills/architecture-planning/implementation-plan-template.md',
+    from: '## Outcome, boundaries, and chosen approach',
+    to: '## Supporting notes'
+  }, planDecisionDiagnostic);
+  check('Plan sole register and fresh hierarchy contract removed', 1, {
+    file: '.github/skills/architecture-planning/implementation-plan-template.md',
+    from: 'sole authoritative Work Item register',
+    to: 'Work Item list'
+  }, planRegisterDiagnostic);
+  check('Implement decision-first opening removed', 1, {
+    file: '.github/skills/safe-implementation/implementation-report-template.md',
+    from: '## Approved pass, delivered behavior, and completion',
+    to: '## Implementation details'
+  }, implementDecisionDiagnostic);
+  check('Implement Unavailable validation state erased', 1, {
+    file: '.github/skills/safe-implementation/implementation-report-template.md',
+    from: '- **Unavailable:**',
+    to: '- **Not available:**'
+  }, implementStatesDiagnostic);
+  check('Review disposition-first opening removed', 1, {
+    file: '.github/skills/code-review/review-report-template.md',
+    from: '## Disposition and basis',
+    to: '## Review summary'
+  }, reviewDecisionDiagnostic);
+  check('mixed Review classification contract erased', 1, {
+    file: '.github/skills/code-review/review-report-template.md',
+    from: 'mixed actionable and unclear findings must preserve both classifications and cannot be all OK',
+    to: 'mixed findings may omit one classification'
+  }, reviewMixedDiagnostic);
+  check('Review acceptance no longer follows verified report', 1, {
+    file: '.github/skills/code-review/review-report-template.md',
+    from: 'Only after persisting and verifying',
+    to: 'Before persisting and verifying'
+  }, reviewAcceptanceDiagnostic);
+  check('issue Plan loses original Research ancestry', 1, {
+    file: '.github/skills/architecture-planning/implementation-plan-template.md',
+    from: 'previous plan/version and original Research/version',
+    to: 'previous plan/version only'
+  }, `${'.github/skills/architecture-planning/implementation-plan-template.md'} lacks authored source-neutral issue lineage guidance (static only)`);
   const npm = process.platform === 'win32'
     ? spawnSync('npm run verify-copilot-contracts', { cwd: temp, encoding: 'utf8', shell: true })
     : spawnSync('npm', ['run', 'verify-copilot-contracts'], { cwd: temp, encoding: 'utf8' });

@@ -6,46 +6,40 @@ description: "Template for an iteratable RPIR implementation report"
 
 This template is the sole schema owner for future durable implementation reports. It applies prospectively only; do not use it to revise, migrate, or validate historical reports.
 
+## Approved pass, delivered behavior, and completion
+
+- **Approved pass:** `<exact inspected Plan identity/version or fingerprint, explicit /implement invocation, and approved scope for this pass—not the previous plan's scope>`.
+- **Changed files and delivered behavior:** `<each exact changed file and the behavior delivered>`; state `None` if no files changed.
+- **Completed this-plan units:** `<completed Work Items, Tasks, and Steps, identified by this Plan's IDs>`.
+- **Remaining this-plan units:** `<remaining Work Items, Tasks, and Steps, identified by this Plan's IDs; state None when applicable>`.
+
+## Validation outcomes
+
+- **Performed:** `<validation actually performed and its outcome; state None when applicable>`.
+- **Failed:** `<validation that failed, its outcome, and disposition; state None when applicable>`.
+- **Unavailable:** `<validation that could not be performed and why; state None when applicable>`.
+- **Not run:** `<available validation intentionally not attempted and why; state None when applicable>`.
+- **Review evidence:** `<record completed and remaining work and evidence gaps honestly; an explicit /review invocation with this inspected report version admits Review but does not imply an all-OK result>`.
+
 ## Lifecycle identity and allocation
 
 - **Report identity and working revision:** `<subject, this pass, stable record identity, revision, unresolved decisions and evidence gaps>`.
-- **Plan envelope:** `<kind, subject, original channel/locator, inspected content/version or fingerprint, /implement invocation agreeing this executable version, and direct Research or Review-origin lineage>`.
+- **Plan identity, direct relationship, and output evidence:** `<Plan kind, subject, original channel/locator, inspected content/version or fingerprint, explicit /implement invocation, and direct Research or Review-origin lineage; exact forward-slash canonical Plan/report paths and matching direct one-hop local Markdown links for real numbered records, with same-folder evidence; verified contained numbered Plan predecessor and Research-confirmed lifecycle-folder identity; evidence that the actual report destination is contained within the selected opened root; applicable VS Code/tool/managed-policy permission and authorized write outcome; this report's physical same-folder identity and complete-file readback/postimage evidence>`; use `N/A` rather than inventing links for non-local inputs. Record unavailable or inconclusive evidence. If the predecessor, required containment, applicable permission, authorized save or full readback is unavailable or mismatched, record the output as unfinished and do not claim a canonical handoff. Do not require a routine command or separate ACL probe merely to save the record.
 - **This report envelope:** `<kind, subject/pass, output channel/locator and inspected content snapshot/version or fingerprint>`.
-- **Verified local record pairs (only when real):** `<exact forward-slash canonical plan and report paths; matching direct one-hop local Markdown link for each canonical relationship field; same-folder evidence>`; otherwise record `N/A`, not an invented link.
-- **Physical predecessor and phase output:** `<verified contained numbered Plan predecessor, its matching direct field/link lineage and Research-confirmed lifecycle-folder identity; evidence that the actual report destination is contained within the selected opened root; applicable VS Code/tool/managed-policy permission and write outcome; this report's physical same-folder identity and complete-file readback/postimage evidence>`; otherwise record the unavailable or inconclusive evidence. If the predecessor, required containment, applicable permission, authorized save or full readback is unavailable or mismatched, record the output as unfinished and do not claim a canonical handoff. Do not require a routine command or separate ACL probe merely to save the record.
 - **Allocation evidence (numbered local only):** `<inventory of existing files with the exact `-implementation-report.md` suffix; candidate selected as 001 when no valid three-digit prefix exists, otherwise one greater than the maximum valid prefix; immediate second inventory of that exact suffix; confirmation the exact candidate path is absent and was not overwritten>`; otherwise `N/A` with reason. Stop on inaccessible or malformed inventory or a collision; do not infer allocation from another suffix.
 - **Historical version:** `<freeze the inspected report version agreed at /review separately before any further working-revision edits; finalized snapshots are immutable>`.
 - **Authority boundary:** This report is non-authorizing execution evidence only. This pass's plan alone owns scope, hierarchy, status, completion markers and acceptance; publication alone is not Review admission.
 
-## Approved scope and completion
-
-- **Approved scope:** `<exact scope of this plan's /implement pass, not the previous plan's scope>`.
-- **Completed this-plan hierarchy:** `<completed Work Items, Tasks, and Steps>`.
-- **Remaining this-plan hierarchy:** `<remaining Work Items, Tasks, and Steps; state None when applicable>`.
-- **Hierarchy boundary:** `<confirm no hierarchy was added, removed, restructured, or expanded; describe any discrepancy and return changed scope to Plan>`.
-
-## Changed files and delivered behavior
-
-- `<exact changed file>`: `<delivered behavior>`.
-
-## Acceptance and validation
-
-- **Review evidence:** `<record completed and remaining work and evidence gaps honestly; an explicit /review invocation with this inspected report version admits Review but does not imply an all-OK result>`.
-- **Performed:** `<validation actually performed and outcome>`.
-- **Failed:** `<failed validation and disposition; state None when applicable>`.
-- **Unavailable:** `<unavailable validation and reason; state None when applicable>`.
-- **Not run:** `<available but intentionally unattempted validation and reason; state None when applicable>`.
-
 ## Execution evidence and reconciliation
 
-- **Delegated Runner goals and commands:** `<phase, selected opened root, approved goal/scope, each chosen command and cwd, platform prompt/outcome, exit state, sanitized output, tracked/untracked/generated artifacts and process/external effects, inspection limitations and deviations; state None invoked when applicable>`.
+- **Delegated Runner goals and commands:** `<phase, selected opened root, approved goal/scope, each chosen command and cwd, platform permission/prompt outcome, exit state, sanitized output, tracked/untracked/generated artifacts and process/external effects, inspection limitations and deviations; state None invoked when applicable>`.
 - **Cleanup (separate direct-terminal exception):** `<exact plan-listed target, observed emptiness and containment, individual developer approval with auto-approval disabled, operation result and parent-path inspection; state None requested or invoked when applicable>`.
 - **Worker and assurance evidence:** `<delegation, direct-work, and Stage Assurance reconciliation evidence>`.
-- **Diff and preserved behavior:** `<scope/diff inspection and preserved-boundary evidence>`.
+- **Diff and preserved behavior:** `<scope/diff inspection, confirmation no hierarchy was added, removed, restructured, or expanded, and preserved-boundary evidence>`.
 
 ## Deviations, limitations, and risks
 
-- **Scope decisions and deviations:** `<approved deviation or None>`.
+- **Deviations and refused or unexpected effects:** `<approved deviations; refused effects; unexpected effects and disposition; state None when applicable, and refer to execution evidence rather than duplicating command logs>`.
 - **Limitations:** `<remaining validation or evidence limits>`.
 - **Residual risks:** `<known risks and controls>`.
 

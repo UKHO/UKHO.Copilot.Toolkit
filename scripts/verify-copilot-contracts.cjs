@@ -334,6 +334,44 @@ function checkAuthoredLifecycleContracts() {
       'non-authorizing evidence': /non-authorizing/i
     });
   }
+  requireConcepts('.github/skills/codebase-research/research-brief-template.md', {
+    'Research decision-first schema and compact lifecycle closeout': /^# Research brief[\s\S]*## Question, scope, and success[\s\S]*## Evidence[\s\S]*## Recommendation[\s\S]*## Lifecycle evidence, provenance, and outcomes/m,
+    'Research recommendation records benefit, alternatives, next-phase consequences, and decision-changing assumptions': /## Recommendation[\s\S]*Expected (?:benefit|impact)[\s\S]*Alternatives considered[\s\S]*Next-phase consequences[\s\S]*Assumptions that would change the recommendation/i,
+    'Research end section preserves initial no-predecessor and adverse-output outcomes': /## Lifecycle evidence, provenance, and outcomes[\s\S]*Research predecessor: None[\s\S]*Adverse outcomes and refusals[\s\S]*dependent phase output is unfinished/i
+  });
+  requireConcepts('.github/skills/architecture-planning/implementation-plan-template.md', {
+    'Plan outcome precedes its sole Work Item register and supporting detail': /^# Implementation plan[\s\S]*## Outcome, boundaries, and chosen approach[\s\S]*## Planned work items[\s\S]*## Supporting planning evidence and decisions[\s\S]*## Detailed work items/m,
+    'Plan preserves sole register and fresh ordered hierarchy': /sole authoritative Work Item register[\s\S]*sole register of scope[\s\S]*Work Item, Task, and Step checkboxes begin unchecked/i,
+    'Plan keeps item operations and acceptance adjacent once': /Immediately after each Work Item's hierarchy[\s\S]*Targets, operations, and requirements[\s\S]*Acceptance and validation/i,
+    'Plan consolidates identity and output verification at end': /## Identity, status, lineage, and output verification[\s\S]*Physical predecessor and current Plan output/i
+  });
+  requireConcepts('.github/skills/safe-implementation/implementation-report-template.md', {
+    'Implement report leads with pass, changed behavior, and this-plan completion': /^# Implementation report[\s\S]*## Approved pass, delivered behavior, and completion[\s\S]*Approved pass[\s\S]*Changed files and delivered behavior[\s\S]*Completed this-plan units[\s\S]*Remaining this-plan units/m,
+    'Implement report distinguishes all four validation states': /## Validation outcomes[\s\S]*Performed[\s\S]*Failed[\s\S]*Unavailable[\s\S]*Not run/m,
+    'Implement report consolidates direct Plan and output evidence': /## Lifecycle identity and allocation[\s\S]*Plan identity, direct relationship, and output evidence[\s\S]*complete-file readback/i
+  });
+  requireConcepts('.github/skills/code-review/review-report-template.md', {
+    'Review report leads with disposition before comparison and findings': /^# Review report[\s\S]*## Disposition and basis[\s\S]*## Comparison to approved plan[\s\S]*## Findings[\s\S]*## Record verification and next action/m,
+    'Review does not claim No findings without supporting evidence': /Use No findings only when the inspected Plan, implementation report, changed work\/diff and validation evidence support an all-OK result/i,
+    'Review preserves mixed actionable and unclear classifications': /Disposition:[^\n]*mixed actionable and unclear findings must preserve both classifications and cannot be all OK/i,
+    'Review conditional acceptance follows persisted report verification': /All-OK report-first action[\s\S]*Only after persisting and verifying[\s\S]*may an eligible current local Plan change only `Status: Ready for review` to `Accepted`[\s\S]*Do not state that this later write occurred unless its guarded result was actually observed/i
+  });
+  requireConcepts(lifecycleInstruction, {
+    'numbered record stages direct observed outcomes to one end section': /## Research brief[\s\S]*## Implementation plan[\s\S]*## Implementation report[\s\S]*## Review report[\s\S]*## Observed lifecycle outcomes[\s\S]*## Validation boundaries/i
+  });
+  requireConcepts('.github/agents/research.agent.md', {
+    'Research output leads with answer and recommendation and consolidates outcomes': /## Required output[\s\S]*Lead the Research brief with a concise answer and recommendation[\s\S]*final \*\*Lifecycle evidence, provenance, and outcomes\*\*/i
+  });
+  requireConcepts('.github/agents/plan.agent.md', {
+    'Plan output leads with bounded scope and sole hierarchy': /## Required output[\s\S]*Lead with the bounded selected scope, the sole authoritative Work Item register and its Work Item\/Task\/Step hierarchy/i
+  });
+  requireConcepts('.github/agents/implement.agent.md', {
+    'Implement output leads with actual changes and four validation states': /## Required output[\s\S]*Lead with this pass's actual changed files and delivered behavior[\s\S]*Performed[\s\S]*Failed[\s\S]*Unavailable[\s\S]*Not run/i
+  });
+  requireConcepts('.github/agents/review.agent.md', {
+    'Review output leads with disposition and comparison': /## Required output[\s\S]*Lead with the evidence-supported disposition and its basis[\s\S]*Compare the inspected implementation[\s\S]*prioritized findings/i,
+    'Review output separates report-first verification from conditional acceptance': /persisted Review report must be read back in full[\s\S]*Only after the final all-OK Review report is persisted and verified[\s\S]*eligible local current Plan receive the guarded status-only `Accepted` update/i
+  });
   requireConcepts('.github/copilot-instructions.md', {
     'local write safety': /full.*preimage[\s\S]*status-only postimage/i,
     'independent allocation': /matching-suffix inventory[\s\S]*Never overwrite/i,
