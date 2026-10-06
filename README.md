@@ -12,7 +12,7 @@ The packaged customization inventory is defined by the manifest and the shared d
 
 The extension is static customization content. It does not add executable extension code, webviews, network access, or automatic workspace automation. A named Script Runner can select task-relevant terminal commands when a Research, Plan, Implement, or Review coordinator delegates a bounded goal; VS Code Workspace Trust, permissions, and managed organization policy control whether and how execution is approved. Installing the extension does not automatically execute workspace commands or provide an OS security boundary.
 It does not include proof-of-concept material, lifecycle records, or other unapproved repository content.
-It does not copy customization files or create other files in consumer workspaces.
+Installation itself does not copy customization files or create files in consumer workspaces. A later, explicitly invoked Research phase may create a needed eligible lifecycle parent, a numbered topic folder, and its numbered physical brief in the selected consumer workspace, but only after the separate identity, containment, absence, and effective tool/managed-policy permission checks for those effects. This conditional Research behavior is not an installation effect or a claim of universal permission.
 
 ## Requirements
 
@@ -30,7 +30,7 @@ Marketplace publication is out of scope for this release and requires a separate
 4. Reload VS Code if prompted.
 5. Use the supplied agents, prompts, instructions, and skills through VS Code Copilot customization features. Instruction applicability remains dependent on the consumer workspace paths specified by those instructions.
 
-Install only VSIX files obtained through the approved private distribution process. Installation makes the packaged customizations available without copying them into the consumer workspace; it does not create lifecycle records, authorize lifecycle handoffs, approve work, or grant any other lifecycle authority there.
+Install only VSIX files obtained through the approved private distribution process. Installation makes the packaged customizations available without creating consumer-workspace files; it does not create lifecycle records, authorize lifecycle handoffs, approve work, or grant any other lifecycle authority there. Any later Research-created lifecycle folders or records depend on that invoked phase's independent guards and effective permissions.
 
 ### Script Runner
 

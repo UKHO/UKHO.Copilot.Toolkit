@@ -40,12 +40,15 @@ try {
   }
 
   const core = '.github/skills/rpir-lifecycle-core/SKILL.md';
+  const research = '.github/agents/research.agent.md';
+  const lifecycleInstruction = '.github/instructions/lifecycle-records.instructions.md';
   const plan = '.github/agents/plan.agent.md';
   const review = '.github/agents/review.agent.md';
   const runner = '.github/agents/script-runner.agent.md';
   const runnerVisibilityDiagnostic = 'Script Runner visibility must declare user-invocable: false';
   const coreContainmentDiagnostic = `${core} lacks authored indirection requires established actual containment or refusal guidance (static only)`;
   const coreExactSuffixDiagnostic = `${core} lacks authored exact-suffix numbered allocation guidance (static only)`;
+  const coreRecordPrefixDiagnostic = `${core} lacks authored record numbering is independent of the topic-folder prefix guidance (static only)`;
   const coreAllocationDiagnostic = `${core} lacks authored immediate second inventory and absent candidate no-overwrite guidance (static only)`;
   const coreAllocationStopDiagnostic = `${core} lacks authored malformed, inaccessible, colliding, or uncertain allocation stops guidance (static only)`;
   const coreOptionalRequiredDiagnostic = `${core} lacks authored optional and required observation effects remain distinct guidance (static only)`;
@@ -120,11 +123,156 @@ try {
   check('worker tool expands to terminal', 1, { file: '.github/agents/implementation-worker.agent.md', from: "tools: ['read', 'search', 'edit']", to: "tools: ['read', 'search', 'edit', 'runInTerminal']" });
   check('coordinator loses phase tool restrictions', 1, { file: plan, from: "tools: ['read', 'search', 'edit', 'agent']", to: "tools: ['read', 'search', 'edit', 'agent', 'runInTerminal']" });
   check('manifest contribution parity broken', 1, { file: 'package.json', from: '        "path": ".github/prompts/review.prompt.md"', to: '        "path": ".github/prompts/ghost.prompt.md"' });
-  check('Research omits exact folder proposal', 1, { file: '.github/agents/research.agent.md', from: 'propose one exact subject-based subfolder', to: 'propose one subject-based subfolder' });
-  check('Research omits engineer confirmation before use', 1, { file: '.github/agents/research.agent.md', from: 'ask the engineer whether that exact location is acceptable', to: 'inform the engineer of the selected location' });
-  check('Research uses a rejected or unsafe candidate', 1, { file: '.github/agents/research.agent.md', from: 'If declined or unsafe, do not use or create that candidate', to: 'If declined or unsafe, use or create that candidate' });
-  check('Research output omits folder creation when absent', 1, { file: '.github/agents/research.agent.md', from: 'create the confirmed folder only if absent', to: 'do not create the confirmed folder when absent' });
-  check('Research omits its physical brief', 1, { file: '.github/agents/research.agent.md', from: 'Save the numbered brief in that folder', to: 'Omit the numbered brief from that folder' });
+  check('positive equivalent wording: choose one evidence-based eligible parent', 0, {
+    file: research,
+    from: 'Select one eligible lifecycle parent from the request and inspected workspace evidence',
+    to: 'Choose one eligible lifecycle parent based on the request and inspected workspace evidence'
+  });
+  check('positive equivalent wording: reuse a safe existing parent without setup writes', 0, {
+    file: research,
+    from: 'Reuse a verified existing parent without writing',
+    to: 'Reuse an existing parent only after verifying it is safe, and do not write to it merely to establish it'
+  });
+  check('positive equivalent wording: create only one needed absent parent after separate checks', 0, {
+    file: research,
+    from: 'create one absent parent only when needed and only after its separate identity, containment, absence, permission, creation and readback checks',
+    to: 'create at most one parent, and only if it is absent and needed, after separate identity, containment, absence, permission, creation and readback checks'
+  });
+  check('positive equivalent wording: no speculative or multiple parent', 0, {
+    file: research,
+    from: 'an unnecessary, speculative, second, or ambiguous',
+    to: 'a speculative, multiple, or unneeded'
+  });
+  check('positive equivalent wording: Unicode slug normalization', 0, {
+    file: research,
+    from: 'lowercase, retain ASCII `a-z0-9` groups separated by single hyphens',
+    to: 'lower-case, retain ASCII `a-z0-9` groups separated by single hyphens'
+  });
+  check('positive equivalent wording: exact topic-folder grammar', 0, {
+    file: research,
+    from: 'only when the exact grammar',
+    to: 'only if the exact grammar'
+  });
+  check('positive equivalent wording: maximum-present-plus-one sequence, no gaps or overflow', 0, {
+    file: research,
+    from: 'Allocate `001` if there is no valid numbered folder, otherwise maximum prefix present plus one for this parent; never fill gaps or exceed `999`.',
+    to: 'Use `001` when there is no valid numbered folder, otherwise take the greatest existing prefix plus one per parent; do not fill gaps or exceed `999`.'
+  });
+  check('positive equivalent wording: immediately repeat the full child inventory', 0, {
+    file: research,
+    from: 'Immediately re-inspect the complete immediate-child inventory',
+    to: 'Immediately repeat the complete immediate-child inventory'
+  });
+  check('positive equivalent wording: independent exact-suffix brief numbering', 0, {
+    file: research,
+    from: 'inspect only files with exact `-research-brief.md` suffix; independently allocate `001` or one greater than the maximum valid three-digit record prefix for that suffix',
+    to: 'inspect only files whose suffix is exactly `-research-brief.md`; allocate the brief sequence independently, starting at `001` or one after that suffix\'s greatest valid three-digit prefix'
+  });
+  check('positive equivalent wording: full physical brief readback verifies its relationship fields', 0, {
+    file: research,
+    from: 'read back the full physical brief and verify identity, content and applicable direct relationship fields/links',
+    to: 'read back the entire physical brief to confirm identity, content and applicable direct relationship fields/links'
+  });
+  check('positive equivalent wording: historical unnumbered folder remains valid', 0, {
+    file: lifecycleInstruction,
+    from: 'Preserve a historically confirmed existing lifecycle folder as valid legacy lineage without new confirmation, renaming, or migration.',
+    to: 'A historically confirmed legacy lifecycle folder remains valid without requiring confirmation, renaming it, or migrating it.'
+  });
+  check('positive equivalent wording: successors remain in the inherited folder', 0, {
+    file: lifecycleInstruction,
+    from: 'Later phases inherit the actual verified folder and never select, create, or reconstruct a parent or child.',
+    to: 'Later phases continue in the actual verified folder and do not choose, create, or rebuild a parent or child.'
+  });
+  check('Research parent selection removed', 1, {
+    file: research,
+    from: 'Select one eligible lifecycle parent from the request and inspected workspace evidence',
+    to: 'Select a lifecycle folder'
+  });
+  check('Research parent-only exception bypassed with multiple-parent permission', 1, {
+    file: research,
+    from: 'MUST NOT create an unnecessary, speculative, second, or ambiguous parent',
+    to: 'MUST NOT create an unnecessary parent'
+  });
+  check('Research existing-parent reuse performs a setup write', 1, {
+    file: research,
+    from: 'Reuse a verified existing parent without writing',
+    to: 'Reuse a verified existing parent after writing to establish it'
+  });
+  check('Research absent-parent branch omits permission and readback checks', 1, {
+    file: research,
+    from: 'permission, creation and readback checks',
+    to: 'creation checks'
+  });
+  check('Research restores routine generated-folder name approval', 1, {
+    file: research,
+    from: 'do not ask for routine approval of the generated topic-folder name',
+    to: 'ask for routine approval of the generated topic-folder name'
+  });
+  check('Research slug omits Unicode normalization', 1, {
+    file: research,
+    from: 'Derive the subject slug using Unicode NFKD normalization',
+    to: 'Derive the subject slug using basic text cleanup'
+  });
+  check('Research accepts approximate rather than exact numbered-folder grammar', 1, {
+    file: research,
+    from: 'only when the exact grammar `^[0-9]{3}-[a-z0-9]+(?:-[a-z0-9]+)*$` is met',
+    to: 'with an approximate numeric-folder grammar'
+  });
+  check('Research fills numbering gaps', 1, {
+    file: research,
+    from: 'never fill gaps or exceed `999`',
+    to: 'fill gaps or exceed `999`'
+  });
+  check('Research allows topic-folder sequence overflow past 999', 1, {
+    file: research,
+    from: 'or exceed `999`',
+    to: 'or allocate beyond `999`'
+  });
+  check('Research skips immediate second child inventory', 1, {
+    file: research,
+    from: 'Immediately re-inspect the complete immediate-child inventory',
+    to: 'Rely on the earlier immediate-child inventory'
+  });
+  check('Research treats conflicting child entries as harmless', 1, {
+    file: research,
+    from: 'case-equivalent names, invalid numbered-looking entries, duplicate prefixes, colliding files, inaccessible entries, or uncertain same-subject/legacy identity as conflicts',
+    to: 'case-equivalent names, invalid numbered-looking entries, duplicate prefixes, colliding files, inaccessible entries, or uncertain same-subject/legacy identity as harmless'
+  });
+  check('Research denial no longer leaves output unfinished', 1, {
+    file: research,
+    from: 'Denial, ambiguity, conflict, malformed/inaccessible inventory, uncertain containment/identity, or failed readback leaves affected output unfinished',
+    to: 'Approval, ambiguity, conflict, malformed/inaccessible inventory, uncertain containment/identity, or failed readback leaves affected output unfinished'
+  });
+  check('Research allocates brief records without exact-suffix filtering', 1, {
+    file: research,
+    from: 'inspect only files with exact `-research-brief.md` suffix',
+    to: 'inspect all files regardless of suffix'
+  });
+  check('Research derives brief numbering from its topic-folder prefix', 1, {
+    file: research,
+    from: 'independently allocate `001` or one greater than the maximum valid three-digit record prefix for that suffix',
+    to: 'allocate the topic-folder prefix for the brief'
+  });
+  check('shared record allocation derives numbering from the topic-folder prefix', 1, {
+    file: core,
+    from: 'never derive a record number from the folder prefix',
+    to: 'derive a record number from the folder prefix'
+  }, coreRecordPrefixDiagnostic);
+  check('Research omits physical brief identity and relationship readback', 1, {
+    file: research,
+    from: 'read back the full physical brief and verify identity, content and applicable direct relationship fields/links',
+    to: 'skip physical brief verification'
+  });
+  check('successor contract permits reconstructing a parent or child', 1, {
+    file: lifecycleInstruction,
+    from: 'never select, create, or reconstruct a parent or child',
+    to: 'may select, create, or reconstruct a parent or child'
+  });
+  check('historical unnumbered folder now requires confirmation or migration', 1, {
+    file: lifecycleInstruction,
+    from: 'Preserve a historically confirmed existing lifecycle folder as valid legacy lineage without new confirmation, renaming, or migration.',
+    to: 'Replace historically confirmed existing lifecycle folders after requiring confirmation and migration.'
+  });
   check('pasted or remote locator treated as canonical Plan predecessor', 1, { file: '.github/agents/plan.agent.md', from: 'actual contained, numbered physical Markdown predecessor in the Research-created folder', to: 'canonical predecessor without physical verification' });
   check('Plan missing physical predecessor treated as canonical', 1, { file: '.github/agents/plan.agent.md', from: 'If a physical predecessor or required lineage cannot be verified', to: 'If a physical predecessor or required lineage is verified' });
   check('Plan accepts predecessor with wrong folder lineage', 1, { file: '.github/agents/plan.agent.md', from: 'freshness and direct same-folder ancestry', to: 'freshness and direct ancestry' }, planLineageDiagnostic);
@@ -138,9 +286,7 @@ try {
   check('Review accepts predecessor from wrong folder', 1, { file: '.github/agents/review.agent.md', from: 'actual contained, numbered physical implementation report in the Research-created folder', to: 'actual contained, numbered physical implementation report in another folder' });
   check('Review denied output treated as successful', 1, { file: '.github/agents/review.agent.md', from: 'containment, permission, allocation or full readback is unavailable or fails', to: 'containment, allocation or full readback is unavailable or fails' }, reviewDeniedOutputDiagnostic);
   check('Review lost output readback treated as successful', 1, { file: '.github/agents/review.agent.md', from: 'allocation or full readback is unavailable or fails', to: 'allocation or report verification is unavailable or fails' }, reviewDeniedOutputDiagnostic);
-  check('later phase creates or relocates a second folder', 1, { file: '.github/skills/rpir-lifecycle-core/SKILL.md', from: 'Later phases inherit this verified folder and may not select, create or relocate another.', to: 'Later phases inherit this verified folder and may select, create or relocate another.' });
-  check('denied or failed Research write falsely reported complete', 1, { file: '.github/agents/research.agent.md', from: 'If confirmation, permission, allocation or full readback is missing or fails, leave the draft unfinished', to: 'If confirmation, permission, allocation or full readback is missing or fails, claim the draft complete' });
-  check('Research loses full physical readback', 1, { file: '.github/agents/research.agent.md', from: 'read back the full physical file, verifying its identity, content', to: 'skip the full physical file readback, verifying its identity, content' });
+  check('later phase creates or relocates a second folder', 1, { file: core, from: 'Later phases inherit the verified folder and may not select, create, or relocate another.', to: 'Later phases inherit the verified folder and may select, create, or relocate another.' });
   check('clean Review hands off before verified report', 1, { file: '.github/agents/review.agent.md', from: 'before terminal handling', to: 'after terminal handling' });
   check('issue Review hands off before verified report', 1, { file: '.github/agents/review.agent.md', from: 'only after its physical report is verified', to: 'before its physical report is verified' });
 } finally {
