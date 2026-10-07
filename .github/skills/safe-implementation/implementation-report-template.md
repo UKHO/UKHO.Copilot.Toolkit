@@ -13,6 +13,14 @@ This template is the sole schema owner for future durable implementation reports
 - **Completed this-plan units:** `<completed Work Items, Tasks, and Steps, identified by this Plan's IDs>`.
 - **Remaining this-plan units:** `<remaining Work Items, Tasks, and Steps, identified by this Plan's IDs; state None when applicable>`.
 
+## Principal artifact and recovery outcomes
+
+- **Plan-promised principal artifact:** `<the principal artifact and outcome required by the approved Plan, including its specified identity or destination>`.
+- **Produced principal artifact:** `<what was actually produced, with evidence of its existence, identity and destination; state None if absent. If absent, explain why it could not safely be delivered. A saved report is not a substitute for the promised artifact>`.
+- **Diagnosis:** `<evidence-based cause investigation for any failed or incomplete requirement; state None when no diagnosis was needed>`.
+- **Remedy:** `<Plan-covered remedy performed and its outcome, or why no remedy could safely be performed; state None when no remedy was needed>`.
+- **Revalidation:** `<required revalidation and its outcome after a remedy; do not describe a requirement as passed unless it passed; state None when no revalidation was needed>`.
+
 ## Validation outcomes
 
 - **Performed:** `<validation actually performed and its outcome; state None when applicable>`.

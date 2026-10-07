@@ -46,17 +46,23 @@ try {
   const review = '.github/agents/review.agent.md';
   const runner = '.github/agents/script-runner.agent.md';
   const runnerVisibilityDiagnostic = 'Script Runner visibility must declare user-invocable: false';
-  const coreContainmentDiagnostic = `${core} lacks authored indirection requires established actual containment or refusal guidance (static only)`;
-  const coreExactSuffixDiagnostic = `${core} lacks authored exact-suffix numbered allocation guidance (static only)`;
+  const coreContainmentDiagnostic = `${core} lacks authored local record-effect permission and non-waiver of actual containment guidance in its owning paragraph (static only)`;
+  const coreExactSuffixDiagnostic = `${core} lacks authored independent exact-suffix numbered allocation guidance (static only)`;
   const coreRecordPrefixDiagnostic = `${core} lacks authored record numbering is independent of the topic-folder prefix guidance (static only)`;
   const coreAllocationDiagnostic = `${core} lacks authored immediate second inventory and absent candidate no-overwrite guidance (static only)`;
   const coreAllocationStopDiagnostic = `${core} lacks authored malformed, inaccessible, colliding, or uncertain allocation stops guidance (static only)`;
-  const coreOptionalRequiredDiagnostic = `${core} lacks authored optional and required observation effects remain distinct guidance (static only)`;
+  const coreOptionalRequiredDiagnostic = `${core} lacks authored optional observation remains unestablished and hard effects stop guidance (static only)`;
   const coreReadbackDiagnostic = `${core} lacks authored full physical readback verifies identity content and lineage guidance (static only)`;
   const corePreimageDiagnostic = `${core} lacks authored local status preimage guidance (static only)`;
   const planLineageDiagnostic = `.github/agents/plan.agent.md lacks authored physical predecessor is a locator until verified in same folder guidance (static only)`;
   const planDeniedOutputDiagnostic = `${plan} lacks authored denied output or lost readback leaves Plan unfinished guidance (static only)`;
   const implementDeniedOutputDiagnostic = `.github/agents/implement.agent.md lacks authored denied output or lost readback leaves Implement unfinished guidance (static only)`;
+  const implementOpeningExceptionDiagnostic = '.github/agents/implement.agent.md lacks authored Implement opening pre-test read-only observation exception guidance in its owning paragraph (static only)';
+  const implementOpeningConditionDiagnostic = '.github/agents/implement.agent.md lacks authored Implement opening unchanged-scope safe-effects and fresh-permission condition guidance in its owning paragraph (static only)';
+  const implementExclusionsExceptionDiagnostic = '.github/agents/implement.agent.md lacks authored Implement first Exclusions bullet pre-test read-only observation exception guidance in its owning paragraph (static only)';
+  const implementExclusionsConditionDiagnostic = '.github/agents/implement.agent.md lacks authored Implement first Exclusions bullet unchanged-scope safe-effects and fresh-permission condition guidance in its owning paragraph (static only)';
+  const safeImplementationExceptionDiagnostic = '.github/skills/safe-implementation/SKILL.md lacks authored safe-implementation Limits pre-test read-only observation exception guidance in its owning paragraph (static only)';
+  const safeImplementationTestedFailureDiagnostic = '.github/skills/safe-implementation/SKILL.md lacks authored safe-implementation Limits tested-failure stop and dependency gate guidance in its owning paragraph (static only)';
   const reviewDeniedOutputDiagnostic = `${review} lacks authored denied output or lost readback leaves Review unfinished guidance (static only)`;
   const researchDecisionDiagnostic = '.github/skills/codebase-research/research-brief-template.md lacks authored Research decision-first schema and compact lifecycle closeout guidance (static only)';
   const researchOutcomeDiagnostic = '.github/skills/codebase-research/research-brief-template.md lacks authored Research end section preserves initial no-predecessor and adverse-output outcomes guidance (static only)';
@@ -150,8 +156,8 @@ try {
   console.log('PASS positive: read-only manifest check in staged copy');
   check('positive equivalent safe containment wording retains actual opened-root outcome', 0, {
     file: core,
-    from: 'A current inspection of the complete existing ancestor chain showing no reparse point or other indirection is one permitted way to establish this for ordinary paths; it is not the only prescribed evidence method.',
-    to: 'For ordinary paths, inspecting the existing ancestor chain for reparse points or other indirection is an accepted evidence method, but not the exclusive method.'
+    from: 'Establish lexical and resolved workspace containment from available evidence before reading or writing.',
+    to: 'Verify lexical and resolved workspace containment from available evidence before reading or writing.'
   });
   check('non-semantic English rewording', 0, { file: plan, from: 'Continuously develop an iteratable, reviewable plan', to: 'Continuously develop a revisable plan' });
   check('Script Runner visibility metadata removed', 1, { file: runner, from: 'user-invocable: false\n', to: '' }, runnerVisibilityDiagnostic);
@@ -172,7 +178,11 @@ try {
   check('ordinary HTTPS confused with local file alias', 1, { file: core, from: 'A `file:` alias is local-path input, never a remote-fetch route.', to: 'All URLs are local paths.' });
   check('traversal grammar removed', 1, { file: core, from: 'Reject traversal, duplicate or mixed separators, encoded aliases', to: 'Allow traversal, duplicate or mixed separators, encoded aliases' });
   check('raw local alias normalized before validation', 1, { file: core, from: 'validate the raw alias before normalization', to: 'normalize local paths without checking their original alias' });
-  check('unsafe indirection escape no longer refuses the dependent effect', 1, { file: core, from: 'or refuse the dependent effect', to: 'or proceed with the dependent effect' }, coreContainmentDiagnostic);
+  check('unsafe indirection escape no longer refuses the dependent effect', 1, {
+    file: core,
+    from: 'evidenced indirection or escape, denial, or an inconclusive fact required to establish the destination or permission refuses the affected effect',
+    to: 'evidenced indirection or escape, denial, or an inconclusive fact required to establish the destination or permission permits the affected effect'
+  }, coreContainmentDiagnostic);
   check('local field/link parity removed', 1, { file: core, from: 'exact canonical relationship fields and matching direct, renderable one-hop links', to: 'unverified path labels' });
   check('stale full-file preimage rule removed', 1, { file: core, from: 'capture the complete exact-file preimage, immediately compare it', to: 'skip the complete exact-file preimage and comparison' }, corePreimageDiagnostic);
   check('bounded status-only postimage removed', 1, { file: core, from: 'then re-read the complete file and require exactly the permitted postimage difference', to: 'then skip rereading the complete file and accept any postimage difference' });
@@ -182,17 +192,22 @@ try {
     to: 'omit the full physical readback and identity, content and direct same-folder relationship verification'
   }, coreReadbackDiagnostic);
   check('optional observation failure treated as safety proof', 1, { file: core, from: 'neither safety proof nor evidence by itself', to: 'is safety proof and evidence by itself' }, coreOptionalRequiredDiagnostic);
-  check('denial and failed required work no longer stop', 1, {
+  check('failed required work no longer stops', 1, {
     file: core,
-    from: 'denial, failed required work, unexpected change, or an unresolved relevant effect stops the affected work',
-    to: 'unexpected change or an unresolved relevant effect stops the affected work'
+    from: 'denial, failed required work, unexpected change, or unresolved relevant effect stops the affected work',
+    to: 'denial, unexpected change, or unresolved relevant effect stops the affected work'
+  }, coreOptionalRequiredDiagnostic);
+  check('denial no longer stops', 1, {
+    file: core,
+    from: 'Still inspect required effects: denial, failed required work, unexpected change, or unresolved relevant effect stops the affected work',
+    to: 'Still inspect required effects: failed required work, unexpected change, or unresolved relevant effect stops the affected work'
   }, coreOptionalRequiredDiagnostic);
   check('exact-suffix allocation requirement removed', 1, {
     file: core,
     from: 'Inspect only existing files whose suffix exactly matches the requested artifact type',
     to: 'Inspect existing files regardless of suffix'
   }, coreExactSuffixDiagnostic);
-  check('second allocation inventory removed', 1, { file: core, from: 'Immediately re-inspect that inventory', to: 'Do not re-inspect that inventory' }, coreAllocationDiagnostic);
+  check('second allocation inventory removed', 1, { file: core, from: 'Immediately re-inspect that same exact-suffix inventory', to: 'Do not re-inspect that same exact-suffix inventory' }, coreAllocationDiagnostic);
   check('allocation no-overwrite requirement removed', 1, { file: core, from: 'never overwrite an existing path', to: 'overwrite an existing path' }, coreAllocationDiagnostic);
   check('malformed allocation inventory no longer stops', 1, { file: core, from: 'malformed or inaccessible inventory', to: 'valid or inaccessible inventory' }, coreAllocationStopDiagnostic);
   check('colliding allocation no longer stops', 1, { file: core, from: 'Stop on collision', to: 'Continue on collision' }, coreAllocationStopDiagnostic);
@@ -215,8 +230,8 @@ try {
   });
   check('positive equivalent wording: create only one needed absent parent after separate checks', 0, {
     file: research,
-    from: 'create one absent parent only when needed and only after its separate identity, containment, absence, permission, creation and readback checks',
-    to: 'create at most one parent, and only if it is absent and needed, after separate identity, containment, absence, permission, creation and readback checks'
+    from: 'create one absent parent only when needed and only after its separate identity, actual-containment, exact-absence and effective-permission checks, then verify its creation',
+    to: 'create one absent parent only when it is needed and only after its separate identity, actual-containment, exact-absence and effective-permission checks, then verify its creation'
   });
   check('positive equivalent wording: no speculative or multiple parent', 0, {
     file: research,
@@ -278,11 +293,11 @@ try {
     from: 'Reuse a verified existing parent without writing',
     to: 'Reuse a verified existing parent after writing to establish it'
   });
-  check('Research absent-parent branch omits permission and readback checks', 1, {
+  check('Research absent-parent branch omits permission and creation verification', 1, {
     file: research,
-    from: 'permission, creation and readback checks',
-    to: 'creation checks'
-  });
+    from: 'effective-permission checks, then verify its creation',
+    to: 'checks, then skip verifying its creation'
+  }, '.github/agents/research.agent.md lacks authored Research creates only one needed absent parent with separate checks guidance (static only)');
   check('Research restores routine generated-folder name approval', 1, {
     file: research,
     from: 'do not ask for routine approval of the generated topic-folder name',
@@ -320,9 +335,9 @@ try {
   });
   check('Research denial no longer leaves output unfinished', 1, {
     file: research,
-    from: 'Denial, ambiguity, conflict, malformed/inaccessible inventory, uncertain containment/identity, or failed readback leaves affected output unfinished',
-    to: 'Approval, ambiguity, conflict, malformed/inaccessible inventory, uncertain containment/identity, or failed readback leaves affected output unfinished'
-  });
+    from: 'Denial, ambiguity, conflict, malformed or inaccessible inventory, uncertain containment or identity, or failed readback leaves the affected output unfinished',
+    to: 'Approval, ambiguity, conflict, malformed or inaccessible inventory, uncertain containment or identity, or failed readback leaves the affected output unfinished'
+  }, '.github/agents/research.agent.md lacks authored Research output reports parent, child, and record evidence separately guidance (static only)');
   check('Research allocates brief records without exact-suffix filtering', 1, {
     file: research,
     from: 'inspect only files with exact `-research-brief.md` suffix',
@@ -369,6 +384,106 @@ try {
   check('later phase creates or relocates a second folder', 1, { file: core, from: 'Later phases inherit the verified folder and may not select, create, or relocate another.', to: 'Later phases inherit the verified folder and may select, create, or relocate another.' });
   check('clean Review hands off before verified report', 1, { file: '.github/agents/review.agent.md', from: 'before terminal handling', to: 'after terminal handling' });
   check('issue Review hands off before verified report', 1, { file: '.github/agents/review.agent.md', from: 'only after its physical report is verified', to: 'before its physical report is verified' });
+  check('ordinary lifecycle record save without a Runner prerequisite', 0, {
+    file: core,
+    from: 'does not require a standalone terminal or reparse-point probe, ACL probe, global Git scan, or process probe',
+    to: 'requires no separate terminal or reparse-point probe, ACL probe, global Git scan, or process probe'
+  });
+  check('ordinary lifecycle record collision still refuses creation', 1, {
+    file: core,
+    from: 'Stop on collision, malformed or inaccessible inventory, denial, or uncertain allocation',
+    to: 'Continue on collision, malformed or inaccessible inventory, denial, or uncertain allocation'
+  }, coreAllocationStopDiagnostic);
+  check('ordinary lifecycle record escape still refuses creation', 1, {
+    file: core,
+    from: 'evidenced indirection or escape, denial, or an inconclusive fact required to establish the destination or permission refuses the affected effect',
+    to: 'evidenced indirection or escape, denial, or an inconclusive fact required to establish the destination or permission permits the affected effect'
+  }, coreContainmentDiagnostic);
+  check('untested invocation no longer permits corrected read-only observation', 1, {
+    file: runner,
+    from: 'If a read-only invocation failed before testing the requirement, a corrected or alternate read-only observation may be made only',
+    to: 'If a read-only invocation failed before testing the requirement, a corrected or alternate consequential operation may be made only'
+  }, '.github/agents/script-runner.agent.md lacks authored Runner corrects an untested invocation only as a read-only observation under unchanged scope guidance (static only)');
+  check('positive untested read-only invocation may be corrected within unchanged scope', 0, {
+    file: runner,
+    from: 'a corrected or alternate read-only observation may be made only',
+    to: 'a corrected or replacement read-only observation may be made only'
+  });
+  check('Implement opening loses only its guarded read-only pre-test exception', 1, {
+    file: '.github/agents/implement.agent.md',
+    from: 'separately sourced corrected or replacement read-only observation through Script Runner when an invocation failed before testing its requirement',
+    to: 'separately sourced corrected or replacement observation through Script Runner when an invocation failed before testing its requirement'
+  }, implementOpeningExceptionDiagnostic);
+  check('Implement first Exclusions bullet loses only its guarded read-only pre-test exception', 1, {
+    file: '.github/agents/implement.agent.md',
+    from: 'separately sourced corrected or replacement read-only observation through Script Runner after an invocation failed before testing its requirement',
+    to: 'separately sourced corrected or replacement observation through Script Runner after an invocation failed before testing its requirement'
+  }, implementExclusionsExceptionDiagnostic);
+  check('safe-implementation Limits loses only its guarded read-only pre-test exception', 1, {
+    file: '.github/skills/safe-implementation/SKILL.md',
+    from: 'separately sourced corrected or replacement read-only observation through Script Runner when an invocation failed before testing its requirement',
+    to: 'separately sourced corrected or replacement observation through Script Runner when an invocation failed before testing its requirement'
+  }, safeImplementationExceptionDiagnostic);
+  check('Implement opening loses only known-safe effect reconciliation and fresh permission', 1, {
+    file: '.github/agents/implement.agent.md',
+    from: 'after reconciling effects as known safe and obtaining fresh independent effective permission',
+    to: 'after reconciling effects'
+  }, implementOpeningConditionDiagnostic);
+  check('Implement first Exclusions bullet loses only unchanged-scope safe-effects and fresh permission', 1, {
+    file: '.github/agents/implement.agent.md',
+    from: 'under the unchanged phase, selected root, goal and scope, after known-safe effect reconciliation and fresh independent effective permission',
+    to: 'under a documented approach'
+  }, implementExclusionsConditionDiagnostic);
+  check('safe-implementation Limits loses only its tested-failure gate', 1, {
+    file: '.github/skills/safe-implementation/SKILL.md',
+    from: 'When a requirement was actually tested and failed, it remains failed and dependent work stays gated until a specifically Plan-covered remedy is applied and the requirement passes revalidation.',
+    to: ''
+  }, safeImplementationTestedFailureDiagnostic);
+  check('tested failure cannot use a repair outside the approved Plan', 1, {
+    file: '.github/agents/implement.agent.md',
+    from: 'explicitly Plan-covered safe repair within the existing targets and acceptance criteria',
+    to: 'unplanned safe repair within the existing targets and acceptance criteria'
+  }, '.github/agents/implement.agent.md lacks authored Implement diagnoses tested failure and applies only a Plan-covered remedy guidance (static only)');
+  check('tested failure requires revalidation before dependent action', 1, {
+    file: '.github/agents/implement.agent.md',
+    from: 'then revalidate before the dependent action',
+    to: 'then proceed before the dependent action'
+  }, '.github/agents/implement.agent.md lacks authored Implement revalidates a repaired prerequisite before dependent action guidance (static only)');
+  check('new implementation scope requires an amended approved Plan', 1, {
+    file: '.github/agents/implement.agent.md',
+    from: 'requires a prompt Plan amendment and a newly inspected, explicitly approved Plan version',
+    to: 'does not require a prompt Plan amendment or a newly inspected, explicitly approved Plan version'
+  }, '.github/agents/implement.agent.md lacks authored Implement escalates new scope to a newly approved Plan guidance (static only)');
+  check('Runner denial remains a hard stop', 1, {
+    file: runner,
+    from: 'A missing capability, denial or permission outcome that does not permit execution',
+    to: 'A missing capability or permission outcome that does not permit execution'
+  }, '.github/agents/script-runner.agent.md lacks authored Runner keeps denial and unknown effects as hard stops without bypass guidance (static only)');
+  check('Runner unresolved effects remain a hard stop', 1, {
+    file: runner,
+    from: 'or unresolved relevant effect stops the affected work',
+    to: 'or permitted relevant effect stops the affected work'
+  }, '.github/agents/script-runner.agent.md lacks authored Runner keeps denial and unknown effects as hard stops without bypass guidance (static only)');
+  check('future archive target absence and protected bytes remain guarded', 1, {
+    file: '.github/copilot-instructions.md',
+    from: 'target-absence, actual containment, protected-byte, effective-permission and effects checks',
+    to: 'actual containment, protected-byte, effective-permission and effects checks'
+  }, '.github/copilot-instructions.md lacks authored future archive retains target-absence containment protected-byte permission and effects checks guidance (static only)');
+  check('failed consequential archive operation is never replayed', 1, {
+    file: '.github/copilot-instructions.md',
+    from: 'Never replay a failed consequential build, write, archive or package operation.',
+    to: 'Never replay a failed consequential build, write or package operation.'
+  }, '.github/copilot-instructions.md lacks authored future archive operation is not replayed after failure guidance (static only)');
+  check('duplicate routine RPIR approval remains removed', 1, {
+    file: '.github/agents/implement.agent.md',
+    from: 'do not ask for a second routine approval',
+    to: 'ask for a second routine approval'
+  }, '.github/agents/implement.agent.md lacks authored Implement does not require duplicate routine RPIR approval guidance (static only)');
+  check('separate package-owner confirmation remains required', 1, {
+    file: '.github/copilot-instructions.md',
+    from: 'requires owner confirmation',
+    to: 'does not require owner confirmation'
+  }, '.github/copilot-instructions.md lacks authored separate package-owner confirmation and distinct-output gate remains guidance (static only)');
 } finally {
   fs.rmSync(temp, { recursive: true, force: true });
 }

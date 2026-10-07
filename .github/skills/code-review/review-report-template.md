@@ -14,6 +14,7 @@ This template is the sole schema owner for future durable Review reports. It app
 ## Comparison to approved plan
 
 - **Inputs and linkage:** `<actual inspected Plan/report content, kind, subject, accessible source and version, verified direct ancestry and actual changed work/diff; verify same-folder field/link pairs only for real numbered local relationships; record evidence gaps and continue investigation without claiming unsupported all-OK>`.
+- **Principal output:** `<identify the Plan's principal output and compare it with actual changed work and verified output presence/content/location; a saved implementation report alone does not establish delivery. If the output is absent or incomplete, record the evidence and why it could not be safely delivered; absence precludes all-OK>`.
 - **Scope:** `<compare actual changed work/diff with the approved Plan scope>`.
 - **Acceptance criteria:** `<compare actual evidence and results with each applicable Plan acceptance criterion>`.
 - **Risks and validation strategy:** `<compare actual validation evidence and residual risks with the Plan strategy; distinguish unsupported, failed, unavailable and not-run checks>`.

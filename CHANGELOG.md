@@ -4,25 +4,16 @@ All notable releases of the UKHO Copilot Toolkit are documented here. Versions f
 
 ## Unreleased
 
+### 1.1.0 review candidate
+
+- The intended `1.1.0` VSIX is a review candidate only: it is not a released version and is not approved for distribution. This engineer-selected minor version carries breaking changes, contrary to the README's convention that breaking changes increment the major version.
+
 ### Breaking changes
 
-- Goal-directed Script Runner replaces catalogue IDs, fixed command rows, Tier eligibility and Run Book operation selection. Research, Plan, Implement and Review can delegate bounded goals; Runner chooses needed commands and cwd under phase scope and effective VS Code permissions. Consumers no longer need a Script Runner catalogue. Existing permission settings and workflows that rely on stable IDs require review; execution effects are not undone by a VSIX withdrawal.
-- Script Runner catalogue entries now use the ten-field schema. When adopting `1.0.0`, remove `Owner and immutable review evidence` from every existing entry; no replacement attestation is required.
-- The immutable-review-evidence and Runner-authored fresh-confirmation gates have been removed. VS Code and managed organization policy continue to control execution permissions and approvals.
-- Script Runner now accepts one or more explicitly ordered stable IDs supplied directly or from a developer-named compliant Run Book; malformed selection input, duplicate IDs, failed objective revalidation, prompts or denials, failures, mismatches, and undeclared effects stop the remaining sequence.
-- Repository Run Books now live under `docs/run-books/`; the VSIX packaging guide moved to `docs/run-books/vsix-packaging.md` and is the first Run Book selection source. Its narrative remains human guidance, not Runner input or execution authority.
-- The canonical package identity is now `ukho-copilot-toolkit`, and the VSIX filename changed from the publisher-prefixed legacy form to `ukho-copilot-toolkit-<version>.vsix` (`${name}-${version}.vsix`).
-
-### Added
-
-- Script Runner and its repository script catalogue Skill for safety-valid consumer `read-only` and `build/test` operations.
-- Consumer guidance for catalogue ownership, Workspace Trust, operation exclusions, and native-Windows limitations.
-- A packaging-only `packaging-controlled-write` catalogue class for the bounded manifest synchronizer write set, retaining packaging identity, post-run diff inspection, and fail-closed refusal of all other writes or effects.
-- Discovery-authoritative package-inventory wording to avoid manually maintained count drift.
-
-### Safety controls retained
-
-- Fixed single-root catalogue selection, static safety validation, declared write limits, secret-free context, prohibited-effect checks, and post-run artifact inspection remain required. Native Windows is not sandbox containment.
+- The goal-directed Script Runner migration replaces catalogue IDs, fixed command rows, and Run Book operation selection. Research, Plan, Implement, and Review coordinators delegate bounded goals; Runner inspects relevant local evidence and selects task-relevant command(s) and a working directory under the phase scope and effective VS Code tool permissions and managed policy. Workspace Trust and actual permissions apply; denial or unavailable required trust, permission, or effect inspection stops the affected work.
+- Run Books provide human guidance; they are not Runner command-selection input or execution authority. Packaging metadata in the VSIX Run Book documents human packaging interfaces and does not determine Runner eligibility.
+- Review existing terminal permissions and workflows that rely on catalogue IDs or fixed command rows before adopting an approved VSIX. Removing or withdrawing an extension cannot undo commands already run or files they changed. Native Windows is not sandbox containment.
+- The canonical version-derived package name is `${name}-${version}.vsix`; for this candidate it is `ukho-copilot-toolkit-1.1.0.vsix`.
 
 ## [0.1.0] — 2026-08-21
 

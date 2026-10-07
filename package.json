@@ -2,7 +2,7 @@
   "name": "ukho-copilot-toolkit",
   "displayName": "UKHO Copilot Toolkit",
   "publisher": "ukho",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Static UKHO GitHub Copilot customization artifacts for VS Code.",
   "icon": "resources/ukho-icon.png",
   "vsce": {
