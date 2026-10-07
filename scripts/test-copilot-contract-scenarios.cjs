@@ -69,6 +69,22 @@ try {
   const reviewAcceptanceDiagnostic = '.github/skills/code-review/review-report-template.md lacks authored Review conditional acceptance follows persisted report verification guidance (static only)';
   const staticContractLimitation = 'Authored-contract assertions provide static text evidence only; they do not prove runtime permissions, Workspace Trust, managed policy, URI parsing, filesystem behavior or indirection, instruction attachment, or installed-VSIX behavior.';
   check('staged authored routes and per-owner folder/predecessor/output contracts (Research, Plan, Implement, Review)', 0, undefined, staticContractLimitation);
+  check('positive Research confirmation and clarification authored policy', 0, undefined, staticContractLimitation);
+  check('Research pre-investigation summary confirmation removed', 1, {
+    file: research,
+    from: 'Wait for an explicit engineer response before deeper investigation',
+    to: 'Proceed to deeper investigation without waiting for an engineer response'
+  }, 'Research confirm/correct checkpoint before deeper investigation');
+  check('Research clarification template lettered/open route replaced with bare question', 1, {
+    file: '.github/skills/agent-question-resolution/templates/clarification-message.md',
+    from: 'For every engineer-facing Research question, including a synthesized-summary confirmation, use the decision context above and provide lettered response choices; do not leave the question bare.',
+    to: 'For Research, ask the question directly without providing response choices.'
+  }, 'Research template lettered open-response and confirm/correct route');
+  check('non-Research plain contextual question route removed', 1, {
+    file: '.github/skills/agent-question-resolution/templates/clarification-message.md',
+    from: "For Plan, Implement, or Review, when options would be artificial, preserve the plain contextualized-question route and invite the answer in the developer's own words. Do not force those stages into Research's lettered-choice format.",
+    to: "For Plan, Implement, or Review, use Research's lettered-choice format even when options would be artificial."
+  }, 'non-Research plain contextualized-question route');
   check('positive equivalent wording: Research benefit label', 0, {
     file: '.github/skills/codebase-research/research-brief-template.md',
     from: '- Expected benefit:',

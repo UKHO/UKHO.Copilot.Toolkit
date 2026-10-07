@@ -378,6 +378,18 @@ function checkAuthoredLifecycleContracts() {
     'ordinary create/readback needs no interpreter or digest': /This ordinary existence\/create\/readback procedure needs no named interpreter or digest/i,
     'phase permission boundary': /Workspace Trust[\s\S]*managed-policy permission/i
   });
+  requireConcepts('.github/agents/research.agent.md', {
+    'Research confirm/correct checkpoint before deeper investigation': /Once discovery is sufficient—or immediately when no discovery question is needed[\s\S]*synthesize the understanding for the engineer to confirm or correct[\s\S]*Wait for an explicit engineer response before deeper investigation[\s\S]*even when the request was already detailed/i
+  });
+  requireConcepts('.github/skills/agent-question-resolution/SKILL.md', {
+    'Research every-question lettered and open-response route': /For Research,[\s\S]*every engineer-facing question[\s\S]*including a synthesized-understanding confirmation[\s\S]*offer sequential lettered, issue-appropriate choices[\s\S]*clearly open-direction or uncertainty response[\s\S]*Do not ask a bare Research question/i
+  });
+  requireConcepts('.github/skills/agent-question-resolution/templates/clarification-message.md', {
+    'Research template lettered open-response and confirm/correct route': /### Research questions[\s\S]*For every engineer-facing Research question,[\s\S]*provide lettered response choices[\s\S]*honest lettered open-direction and\/or uncertainty response[\s\S]*For a summary checkpoint[\s\S]*lettered choice to confirm[\s\S]*lettered choice to correct[\s\S]*own words[\s\S]*lettered unsure\/add-context choice/i
+  });
+  requireConcepts('.github/skills/agent-question-resolution/templates/clarification-message.md', {
+    'non-Research plain contextualized-question route': /For Plan, Implement, or Review,[\s\S]*preserve the plain contextualized-question route[\s\S]*Do not force those stages into Research's lettered-choice format/i
+  });
 }
 
 function checkLifecycleContracts() {
