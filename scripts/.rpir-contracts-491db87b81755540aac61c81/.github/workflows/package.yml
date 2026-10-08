@@ -1,0 +1,96 @@
+name: Package Toolkit
+
+on:
+  push:
+    paths:
+      - package.json
+      - package-lock.json
+      - resources/**
+      - README.md
+      - CHANGELOG.md
+      - .github/instructions/**
+      - .github/copilot-instructions.md
+      - .github/agents/**
+      - .github/prompts/**
+      - .github/skills/**
+      - docs/run-books/vsix-packaging.md
+      - scripts/discover-copilot-artifacts.cjs
+      - scripts/sync-copilot-manifest.cjs
+      - scripts/verify-vsix-boundary.cjs
+      - scripts/verify-copilot-contracts.cjs
+      - scripts/test-copilot-contract-scenarios.cjs
+      - scripts/verify-vsix-packaging-guide.cjs
+      - .github/workflows/package.yml
+  pull_request:
+    paths:
+      - package.json
+      - package-lock.json
+      - resources/**
+      - README.md
+      - CHANGELOG.md
+      - .github/instructions/**
+      - .github/copilot-instructions.md
+      - .github/agents/**
+      - .github/prompts/**
+      - .github/skills/**
+      - docs/run-books/vsix-packaging.md
+      - scripts/discover-copilot-artifacts.cjs
+      - scripts/sync-copilot-manifest.cjs
+      - scripts/verify-vsix-boundary.cjs
+      - scripts/verify-copilot-contracts.cjs
+      - scripts/test-copilot-contract-scenarios.cjs
+      - scripts/verify-vsix-packaging-guide.cjs
+      - .github/workflows/package.yml
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Check out Toolkit
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+      - name: Verify Copilot customization contracts
+        run: node scripts/verify-copilot-contracts.cjs
+  scenarios:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Toolkit
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+      - name: Verify Copilot contract scenarios
+        run: node scripts/test-copilot-contract-scenarios.cjs
+  guide:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Toolkit
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+      - name: Verify VSIX packaging guide
+        run: node scripts/verify-vsix-packaging-guide.cjs
+  package:
+    if: false # Release hold: future owner confirmation and distinct output strategy required.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Toolkit
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+      - name: Package Toolkit (disabled)
+        run: npm run package
