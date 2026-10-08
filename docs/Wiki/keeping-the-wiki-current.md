@@ -5,21 +5,21 @@ description: Bounded Wiki maintenance, source verification and navigation checks
 
 ## Purpose and audience
 
-**Purpose:** Provide a bounded, repeatable way to maintain the repository-managed Markdown Wiki without creating a competing policy source, widening the target set, or introducing automation.
+**Purpose:** Provide a source-backed way to maintain the repository-managed Markdown Wiki without creating a competing policy source or silently broadening the approved outcome.
 
 **Audience:** Toolkit maintainers and reviewers making substantive changes to the approved Wiki pages. Readers should be familiar with repository-relative Markdown links and the Research → Plan → Implement → Review (RPIR) lifecycle.
 
 ## Prerequisites
 
-- Start with the exact approved page targets and the relevant canonical sources.
+- Start with the approved documentation outcome, intended pages and relevant canonical sources; check nearby links for necessary in-outcome repairs.
 - Read the [Wiki maintenance skill](../../.github/skills/wiki-maintenance/SKILL.md), [Wiki page template](../../.github/skills/wiki-maintenance/templates/wiki-page.md), and [Wiki validation checklist](../../.github/skills/wiki-maintenance/references/wiki-validation-checklist.md).
 - Treat `.github/` policy, lifecycle records, manifest data, and artifact metadata as canonical sources rather than copying their bodies into Wiki pages.
 
 ## Content
 
-### Exact targets and scope
+### Existing pages and scope
 
-For this Wiki initiative, the approved root and page inventory are:
+The existing root and page inventory are:
 
 - `docs/Wiki/index.md`
 - `docs/Wiki/choose-an-artifact.md`
@@ -29,14 +29,14 @@ For this Wiki initiative, the approved root and page inventory are:
 - `docs/Wiki/artifact-catalogue.md`
 - `docs/Wiki/keeping-the-wiki-current.md`
 
-`README.md` is the sole approved inbound navigation target outside `docs/Wiki/`. Future Wiki creation requires an explicit developer-selected repository-contained non-lifecycle parent, with the exact root derived as `<selected-parent>/Wiki/` and the page, index, and navigation inventory named in approved scope. Do not infer a location or add pages, indexes, customization artifacts, maintenance scripts, hosted-Wiki integration, commands, or packaging changes outside that approved root and inventory. A target or hierarchy change requires a Plan-stage amendment before implementation.
+`README.md` provides inbound navigation outside `docs/Wiki/`. For an approved maintenance outcome, an anticipated page list is not an automatic exhaustive whitelist: inspect and repair necessary related existing pages, index entries and links within that outcome, preserving unrelated work and reporting actual changes. New requirements, materially changed reader behavior or additional external effects need an engineer decision. Future **new Wiki creation** requires an explicit engineer-selected repository-contained non-lifecycle parent, with the exact root derived as `<selected-parent>/Wiki/` and pages, index and navigation intent in the approved scope. Never infer a parent, create a lifecycle-namespaced Wiki or silently start hosted-Wiki integration, commands or packaging work.
 
 ### Canonical sources and source verification
 
 1. Identify the claim, navigation destination, or inventory entry that needs maintenance.
 2. Verify material facts against the owning canonical source: `.github/` policy and skills for operational rules, `package.json` for manifest and packaging inventory, and lifecycle records for their own authority and status.
 3. Link to the source with a repository-relative path; summarize only what readers need and do not reproduce artifact bodies or silently reinterpret policy.
-4. When a source is missing, contradictory, inaccessible, or materially uncertain, stop and report the gap rather than inventing a value. During a deliberate `.github` disablement, inspect the corresponding `.github-old` working source but keep canonical Wiki links pointing to the intended post-rename `.github` destination; resolve those links after reactivation.
+4. When a source is missing, contradictory, inaccessible or materially uncertain, investigate the gap and ask about an engineer-owned decision rather than inventing a value; continue unaffected safe maintenance. During a deliberate `.github` disablement, inspect the corresponding `.github-old` working source but keep canonical Wiki links pointing to the intended post-rename `.github` destination; resolve those links after reactivation.
 
 For the artifact inventory, compare every listed path and activation model with the current `package.json` arrays and the corresponding `.github` metadata. Recheck the distinction between source artifacts and manifest-contributed artifacts. Keep repository Run Books under `docs/run-books/` as human-readable guidance outside the Wiki, not Script Runner selection input.
 
@@ -53,14 +53,14 @@ Use [RPIR](rpir.md) for the phase and handoff summary, and [Lifecycle evidence a
 
 Before completion, manually:
 
-1. confirm every changed file is an exact approved target;
+1. confirm each changed file supports the approved documentation outcome and explain necessary related-page or navigation repairs;
 2. inspect headings, prerequisites, lists, tables, accessibility, and required page sections;
 3. resolve every changed relative link to an existing intended file or section;
 4. trace inbound and outbound reader paths without dead ends;
 5. compare each material claim with its canonical source and check for duplication, contradiction, or staleness;
-6. inspect the final changed-file set and confirm no script, tool, command, customization, package, or remote integration was added.
+6. inspect the final changed-file set for unapproved new scope, scripts, tools, package or remote integration.
 
-No approved Markdown or link-check command is available for this scope. Automated Markdown, link, rendered-site, installed-behavior, and hosted-Wiki checks are therefore unavailable; do not substitute the VSIX packaging scripts or claim command-based validation.
+Use manual inspection when automated checks are unavailable; permitted local validation can use an actually available capability without a mandatory Runner route. Report which Markdown, link, rendered-site, installed-behavior and hosted-Wiki checks were performed, failed, unavailable or not run. Neither the VSIX packaging scripts nor static checks prove installed or hosted-Wiki behavior.
 
 ## Canonical references
 
@@ -76,6 +76,6 @@ No approved Markdown or link-check command is available for this scope. Automate
 
 ## Next steps
 
-- For a substantive change, follow the [RPIR handoff](rpir.md) with the inspected agreed document version and use only the exact approved target set; do not introduce a second routine approval question.
+- For a substantive change, follow the [RPIR handoff](rpir.md) with the inspected agreed document version; make necessary in-outcome maintenance/link repairs without inventing a new Wiki or material scope.
 - Re-read changed pages and manually resolve every changed link before handoff.
-- Report completed checks, unavailable automation, factual or navigation gaps, and any scope deviation; do not mark lifecycle plan checkboxes from this guidance page.
+- Report performed, failed, unavailable and not-run checks, factual or navigation gaps and material scope questions; this guidance page cannot mark lifecycle plan checkboxes.
