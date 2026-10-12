@@ -87,8 +87,8 @@ function readManifest() {
   } catch (error) {
     fail(`Cannot parse package.json: ${error.message}`);
   }
-  if (typeof manifest.name !== 'string' || !manifest.name || typeof manifest.version !== 'string' || !manifest.version) {
-    fail('package.json name and version are required');
+  if (typeof manifest.name !== 'string' || !manifest.name || typeof manifest.publisher !== 'string' || !manifest.publisher || typeof manifest.version !== 'string' || !manifest.version) {
+    fail('package.json name, publisher and version are required');
   }
   const discovered = discover(root);
   const contributions = [];
@@ -131,7 +131,8 @@ function readManifest() {
       if (!boundary.has(relative)) fail(`${name} path is outside the package files boundary: ${relative}`);
     }
   }
-  return { manifest, boundary, contributions };
+  const changelog = fs.readFileSync(sourcePath('CHANGELOG.md'), 'utf8');
+  return { manifest, boundary, contributions, changelog };
 }
 
 function expectedVsixPath(manifest) {
@@ -174,7 +175,7 @@ function crc32(buffer) {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
-function readArchiveMember(buffer, target) {
+function readArchiveMember(buffer, target, maxOutputLength = 16 * 1024 * 1024) {
   const signature = Buffer.from('PK\x05\x06', 'binary');
   const eocd = buffer.lastIndexOf(signature);
   if (eocd < 0 || eocd + 22 > buffer.length) fail('VSIX has no valid ZIP end-of-central-directory record');
@@ -187,7 +188,7 @@ function readArchiveMember(buffer, target) {
   let cursor = centralOffset;
   let entry;
   for (let index = 0; index < count; index += 1) {
-    if (cursor + 46 > eocd || buffer.readUInt32LE(cursor) !== 0x02014b50) fail('Invalid ZIP central-directory entry while reading packaged README.md');
+    if (cursor + 46 > eocd || buffer.readUInt32LE(cursor) !== 0x02014b50) fail(`Invalid ZIP central-directory entry while reading ${target}`);
     const flags = buffer.readUInt16LE(cursor + 8);
     const method = buffer.readUInt16LE(cursor + 10);
     const crc = buffer.readUInt32LE(cursor + 16);
@@ -197,20 +198,22 @@ function readArchiveMember(buffer, target) {
     const extraLength = buffer.readUInt16LE(cursor + 30);
     const commentLength = buffer.readUInt16LE(cursor + 32);
     const end = cursor + 46 + nameLength + extraLength + commentLength;
-    if (end > eocd) fail('Invalid ZIP central-directory entry bounds while reading packaged README.md');
+    if (end > eocd) fail(`Invalid ZIP central-directory entry bounds while reading ${target}`);
     const rawName = buffer.toString('utf8', cursor + 46, cursor + 46 + nameLength);
     if (normalize(rawName) === target) {
       if (entry) fail(`Duplicate archive member: ${target}`);
-      entry = { flags, method, crc, compressedSize, uncompressedSize, localOffset: buffer.readUInt32LE(cursor + 42) };
+      entry = { flags, method, crc, compressedSize, uncompressedSize, localOffset: buffer.readUInt32LE(cursor + 42), rawName };
     }
     cursor = end;
   }
   if (!entry) fail(`Missing archive member: ${target}`);
   if ((entry.flags & 1) !== 0 || entry.compressedSize === 0xffffffff || entry.uncompressedSize === 0xffffffff || entry.localOffset === 0xffffffff) fail(`Unsupported ZIP entry for ${target}`);
-  if (entry.uncompressedSize > 16 * 1024 * 1024) fail(`Packaged README.md is too large: ${entry.uncompressedSize} bytes`);
+  if (entry.uncompressedSize > maxOutputLength) fail(`Packaged ${target} is too large: ${entry.uncompressedSize} bytes`);
   if (entry.localOffset + 30 > centralOffset || buffer.readUInt32LE(entry.localOffset) !== 0x04034b50) fail(`Invalid ZIP local-file header for ${target}`);
   const localNameLength = buffer.readUInt16LE(entry.localOffset + 26);
   const localExtraLength = buffer.readUInt16LE(entry.localOffset + 28);
+  const localName = buffer.toString('utf8', entry.localOffset + 30, entry.localOffset + 30 + localNameLength);
+  if (localName !== entry.rawName) fail(`ZIP local and central member names differ for ${target}`);
   const dataStart = entry.localOffset + 30 + localNameLength + localExtraLength;
   const dataEnd = dataStart + entry.compressedSize;
   if (dataStart < entry.localOffset || dataEnd > centralOffset || dataEnd > buffer.length) fail(`Invalid ZIP data bounds for ${target}`);
@@ -238,26 +241,92 @@ function verifyPackagedReadme(buffer) {
   if (readme.split(expectedLink).length !== 2 || readme.includes(relativeLink)) fail('Packaged extension/readme.md has an invalid CHANGELOG.md link');
 }
 
-function verifyArchive(boundary, expectedVsix) {
-  if (!fs.existsSync(expectedVsix)) fail(`Expected Toolkit VSIX is unavailable: ${path.basename(expectedVsix)}`);
+function parseVsixIdentity(xml) {
+  const withoutComments = xml.replace(/<!--[\s\S]*?-->/g, '');
+  const identities = [...withoutComments.matchAll(/<Identity\b([^>]*)\/?>/g)];
+  if (identities.length !== 1) fail(`Expected one VSIX Identity element, found ${identities.length}`);
+  const attributeText = identities[0][1].replace(/\/\s*$/, '');
+  const attributes = Object.create(null);
+  const attributePattern = /([A-Za-z_:][A-Za-z0-9_.:-]*)\s*=\s*"([^"]*)"/y;
+  let cursor = 0;
+  while (cursor < attributeText.length) {
+    if (/\s/.test(attributeText[cursor])) {
+      cursor += 1;
+      continue;
+    }
+    attributePattern.lastIndex = cursor;
+    const match = attributePattern.exec(attributeText);
+    if (!match) fail('Invalid VSIX Identity attributes');
+    if (Object.hasOwn(attributes, match[1])) fail(`Duplicate VSIX Identity attribute: ${match[1]}`);
+    attributes[match[1]] = match[2];
+    cursor = attributePattern.lastIndex;
+  }
+  return attributes;
+}
+
+function verifyPackagedIdentity(buffer, manifest) {
+  let packagedManifest;
+  try {
+    packagedManifest = JSON.parse(readArchiveMember(buffer, 'extension/package.json'));
+  } catch (error) {
+    if (error instanceof SyntaxError) fail(`Packaged extension/package.json is not valid JSON: ${error.message}`);
+    throw error;
+  }
+  for (const property of ['name', 'publisher', 'version']) {
+    if (packagedManifest[property] !== manifest[property]) {
+      fail(`Packaged extension/package.json ${property} does not match package.json`);
+    }
+  }
+
+  const identity = parseVsixIdentity(readArchiveMember(buffer, 'extension.vsixmanifest'));
+  const expectedIdentity = { Id: manifest.name, Publisher: manifest.publisher, Version: manifest.version };
+  for (const [property, expected] of Object.entries(expectedIdentity)) {
+    if (identity[property] !== expected) fail(`Packaged extension.vsixmanifest Identity ${property} does not match package.json`);
+  }
+}
+
+function verifyPackagedChangelog(buffer, manifest, sourceChangelog) {
+  const packagedChangelog = readArchiveMember(buffer, 'extension/changelog.md');
+  const candidateHeading = `### ${manifest.version} review candidate`;
+  const candidateFilename = `${manifest.name}-${manifest.version}.vsix`;
+  if (!sourceChangelog.includes(candidateHeading) || !sourceChangelog.includes(candidateFilename)) {
+    fail(`Source CHANGELOG.md is missing the ${manifest.version} candidate narrative`);
+  }
+  if (packagedChangelog !== sourceChangelog) fail('Packaged extension/changelog.md does not match source CHANGELOG.md');
+}
+
+function verifyArchiveContents(buffer, boundary, manifest, sourceChangelog) {
   const expected = new Set(['[Content_Types].xml', 'extension.vsixmanifest']);
   for (const file of boundary) expected.add(archiveName(file));
-  const archive = fs.readFileSync(expectedVsix);
-  const actual = archiveMembers(archive);
+  const actual = archiveMembers(buffer);
   const missing = [...expected].filter((member) => !actual.has(member));
   const unexpected = [...actual].filter((member) => !expected.has(member));
   if (missing.length || unexpected.length) {
     fail(`VSIX boundary mismatch; missing: ${missing.join(', ') || 'none'}; unexpected: ${unexpected.join(', ') || 'none'}`);
   }
-  verifyPackagedReadme(archive);
+  verifyPackagedReadme(buffer);
+  verifyPackagedIdentity(buffer, manifest);
+  verifyPackagedChangelog(buffer, manifest, sourceChangelog);
 }
 
-try {
-  const { manifest, boundary, contributions } = readManifest();
-  const expectedVsix = expectedVsixPath(manifest);
-  verifyArchive(boundary, expectedVsix);
-  console.log(`Verified ${contributions.length} contributions and ${boundary.size} source files in ${path.basename(expectedVsix)}.`);
-} catch (error) {
-  console.error(`VSIX boundary verification failed: ${error.message}`);
-  process.exitCode = 1;
+function verifyArchive(boundary, expectedVsix, manifest, sourceChangelog) {
+  if (!fs.existsSync(expectedVsix)) fail(`Expected Toolkit VSIX is unavailable: ${path.basename(expectedVsix)}`);
+  const archive = fs.readFileSync(expectedVsix);
+  verifyArchiveContents(archive, boundary, manifest, sourceChangelog);
 }
+
+function main() {
+  try {
+    const { manifest, boundary, contributions, changelog } = readManifest();
+    const expectedVsix = expectedVsixPath(manifest);
+    verifyArchive(boundary, expectedVsix, manifest, changelog);
+    console.log(`Verified ${contributions.length} contributions and ${boundary.size} source files in ${path.basename(expectedVsix)}.`);
+  } catch (error) {
+    console.error(`VSIX boundary verification failed: ${error.message}`);
+    process.exitCode = 1;
+  }
+}
+
+if (require.main === module) main();
+
+module.exports = { archiveMembers, parseVsixIdentity, readArchiveMember, verifyArchiveContents };

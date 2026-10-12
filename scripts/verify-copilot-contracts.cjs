@@ -256,6 +256,21 @@ function authoredChecks(manifestUnavailable) {
     ['RECORD-002', '.github/skills/safe-implementation/SKILL.md', () => invariant(section('.github/skills/safe-implementation/SKILL.md', 'Execution, validation and record evidence'),
       [/A failed save is not persisted evidence/, /fresh numbered report/],
       [/\b(?:may|can|must) (?:claim|report) (?:an? )?(?:failed|unperformed) save (?:as )?persisted/i])],
+    ['PLAN-HIERARCHY-001', '.github/skills/architecture-planning/implementation-plan-template.md', () => {
+      const template = '.github/skills/architecture-planning/implementation-plan-template.md';
+      const work = section(template, 'Planned work');
+      const details = section(template, 'Detailed work items');
+      const tables = [...work.matchAll(/(?:^\|.*\|\n?)+/gm)];
+      return tables.length === 1 &&
+        invariant(work, [/one authoritative Work Item register/i, /\| Completion and ID \|/i, /\[ \] Work Item 1/, /Research\/requirements evidence/i, /observable acceptance/i,
+          /track execution progress only/i, /never validation pass, approval, or Review acceptance/i],
+          [/Tasks? or Steps? only when useful/i, /checkboxes? (?:are|is) approval/i, /approval gate/i]) &&
+        invariant(details, [/### Work Item 1\b/, /\[ \] \*\*Task 1\.1:/, /\[ \] \*\*Step 1\.1\.1:/,
+          /(?:IDs and detail sections must match the register|item identifiers and their detail sections correspond to the register)/i,
+          /meaningful/i, /minimum count beyond meaningful traceability/i, /dependencies where applicable/i,
+          /item-level acceptance/i, /validation/i, /not a prediction of every debugging command/i],
+          [/mandatory minimum count/i]);
+    }],
     ['PLANNING-001', '.github/skills/architecture-planning/SKILL.md', () => {
       const owner = '.github/skills/architecture-planning/SKILL.md';
       return invariant(section(owner, 'Procedure'), [/persist and read back a contained, numbered physical working Plan/, /A non-local draft or locator is not a substitute/]) &&

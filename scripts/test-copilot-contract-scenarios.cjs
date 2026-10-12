@@ -100,6 +100,7 @@ const owners = {
   'RECOVERY-002': '.github/copilot-instructions.md', 'PERMISSION-001': '.github/agents/script-runner.agent.md',
   'RECORD-002': '.github/skills/safe-implementation/SKILL.md',
   'PLANNING-001': '.github/skills/architecture-planning/SKILL.md',
+  'PLAN-HIERARCHY-001': '.github/skills/architecture-planning/implementation-plan-template.md',
   'WORKER-001': '.github/agents/implementation-worker.agent.md',
   'STATUS-001': '.github/prompts/plan.prompt.md',
   'FRAGMENT-001': '.github/agents/validation-worker.agent.md',
@@ -217,6 +218,7 @@ function lineageDamage(label, relative, from, to) {
 const pass = ['PASS', 'PASS', 'PASS'];
 const authoredFail = ['PASS', 'FAIL', 'PASS'];
 const core = '.github/skills/rpir-lifecycle-core/SKILL.md';
+const planTemplate = '.github/skills/architecture-planning/implementation-plan-template.md';
 const policy = '.github/copilot-instructions.md';
 const runner = '.github/agents/script-runner.agent.md';
 const review = '.github/agents/review.agent.md';
@@ -267,6 +269,15 @@ try {
   assert.deepEqual(alternate.summaries, pass);
   assert.equal(alternate.status, 0);
   diagnosticSet(alternate, [], 'healthy alternate invocation');
+  expect('equivalent plan hierarchy wording', [[planTemplate,
+    'IDs and detail sections must match the register', 'Item identifiers and their detail sections correspond to the register']], pass);
+  expect('missing unchecked Plan Task marker', [[planTemplate,
+    '- [ ] **Task 1.1: `<meaningful outcome>`**', '- **Task 1.1: `<meaningful outcome>`**']], authoredFail, ['FAIL PLAN-HIERARCHY-001']);
+  expect('missing unchecked Plan Step marker', [[planTemplate,
+    '1. [ ] **Step 1.1.1:**', '1. **Step 1.1.1:**']], authoredFail, ['FAIL PLAN-HIERARCHY-001']);
+  expect('Plan checkbox becomes approval gate', [[planTemplate,
+    'track execution progress only, never validation pass, approval, or Review acceptance.',
+    'track execution progress only and indicate Plan approval, never validation pass or Review acceptance.']], authoredFail, ['FAIL PLAN-HIERARCHY-001']);
   expect('equivalent local recovery wording', [[core, 'On a collision, re-read the inventory and select an absent next number', 'On a collision, re-read the inventory and choose an absent next number']], pass);
   expect('equivalent availability wording', [[runner, 'An unavailable tool, actual Restricted Mode/managed-policy denial', 'A tool that is not available, actual Restricted Mode/managed-policy denial']], pass);
   expect('repair replaces blanket retry', [[policy, 'rerun relevant checks', 'never replay a failed consequential build, write or package operation']], authoredFail, ['FAIL RECOVERY-001']);

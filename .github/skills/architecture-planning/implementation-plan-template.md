@@ -12,11 +12,26 @@ description: "Template for an initial or material Review-origin RPIR implementat
 
 ## Planned work
 
-Keep one authoritative register mapping work outcomes to Research/requirements evidence. Use Tasks or Steps only when useful for sequencing or separately verifiable outcomes; optional completion markers are bookkeeping, not approval or acceptance.
+Use one authoritative Work Item register mapping each intended outcome to Research/requirements evidence and observable acceptance. Begin with unchecked completion markers; they track execution progress only, never validation pass, approval, or Review acceptance.
 
-| Work item | Intended result and affected area | Source / criterion | Progress (optional) |
-| --- | --- | --- | --- |
-| 1 | `<result and likely locations>` | `<inspected evidence and acceptance>` | `<not started / in progress / completed>` |
+| Completion and ID | Intended result and affected area | Source / acceptance criterion |
+| --- | --- | --- |
+| [ ] Work Item 1 | `<result and likely locations>` | `<Research/requirements evidence and observable acceptance>` |
+
+## Detailed work items
+
+Add a matching `### Work Item N` section for each register row. IDs and detail sections must match the register; do not create a second authoritative register. Use meaningful, ordered, initially unchecked Task and Step IDs under each item. A small Plan may use one meaningful Task and one Step; do not add empty filler levels or impose a minimum count beyond meaningful traceability. Keep intended actions, dependencies where applicable, item-level acceptance and validation adjacent to the relevant Work Item. A Step is a useful execution/checkpoint unit, not a prediction of every debugging command or repair.
+
+### Work Item 1: `<intended result>`
+
+- [ ] **Task 1.1: `<meaningful outcome>`**
+  1. [ ] **Step 1.1.1:** `<intended action or useful checkpoint>`
+
+**Dependencies:** `<relevant dependencies, or None>`
+
+**Acceptance:** `<observable item-level result linked to the source/criterion above>`
+
+**Validation:** `<relevant check and expected result, or reason unavailable>`
 
 ## Execution guidance and validation
 
