@@ -62,4 +62,4 @@ Report the created or updated paths, the selected scope and primitive, bundled r
 
 ## Safety boundaries
 
-Prefer read-only discovery and validation. Do not add edit, terminal, web, MCP, hook, or agent-delegation capability unless the requested Skill genuinely requires it and the user has approved that scope. Do not use experimental forked context or embed secrets.
+Prefer read-only discovery and validation. The capability list, genuine-need and user-approved-scope conditions, prohibition on inferring approval from the Skill request, and experimental-context, secret and no-tool-grant safeguards in “Limits and safety” also govern recommendations. This local reminder grants no tools or permissions.

@@ -109,7 +109,11 @@ const owners = {
   'CI-001': 'package.json', 'CI-002': '.github/workflows/package.yml', 'PACKAGE-001': 'package.json',
   'PARITY-001': 'package.json', 'PARITY-INPUT-MANIFEST': 'package.json',
   'PARITY-INPUT-DISCOVERY': 'scripts/discover-copilot-artifacts.cjs', 'STRUCT-INPUT-DISCOVERY': 'scripts/discover-copilot-artifacts.cjs',
-  'STRUCT-AGENT': '.github/agents/review.agent.md', 'STRUCT-PROMPT': '.github/prompts/remediate-review.prompt.md'
+  'STRUCT-AGENT': '.github/agents/review.agent.md', 'STRUCT-PROMPT': '.github/prompts/remediate-review.prompt.md',
+  'PILOT-SAFETY-001': '.github/skills/create-copilot-skill/SKILL.md',
+  'MAINTAIN-AUTHORITY-001': '.github/skills/maintain-copilot-artifacts/SKILL.md',
+  'MAINTAIN-PRESERVATION-001': '.github/skills/maintain-copilot-artifacts/SKILL.md',
+  'MAINTAIN-STATIC-001': '.github/skills/maintain-copilot-artifacts/SKILL.md'
 };
 function diagnosticSet(result, expected, label) {
   const tuples = expected.map((item) => {
@@ -269,6 +273,47 @@ try {
   assert.deepEqual(alternate.summaries, pass);
   assert.equal(alternate.status, 0);
   diagnosticSet(alternate, [], 'healthy alternate invocation');
+  const pilot = '.github/skills/create-copilot-skill/SKILL.md';
+  const compactSafety = 'Prefer read-only discovery and validation. The capability list, genuine-need and user-approved-scope conditions, prohibition on inferring approval from the Skill request, and experimental-context, secret and no-tool-grant safeguards in “Limits and safety” also govern recommendations. This local reminder grants no tools or permissions.';
+  const repeatedBaselineSafety = 'Prefer read-only discovery and validation. Do not add or recommend edit, terminal, web, MCP, hook, or agent-delegation capability unless the requested workflow genuinely requires it and the user has approved that scope. Do not use experimental forked context or embed secrets.';
+  expect('complete baseline safety wording retained', [[pilot, compactSafety, repeatedBaselineSafety]], pass);
+  expect('supported complete pilot safety paraphrase', [[pilot,
+    'MUST NOT add or recommend edit, terminal, web, MCP, hook, or agent-delegation capability speculatively. Include such capability only when the requested workflow genuinely requires it and the user has approved that scope; do not infer approval from the Skill request itself.',
+    "Do not add or recommend edit, terminal, web, MCP, hook, or agent-delegation capability speculatively. Include one only for a genuine workflow need and with the user's explicit approval of that scope; a request for this Skill alone is not approval."]], pass);
+  expect('pilot read-only preference removed', [[pilot,
+    'Prefer read-only discovery and validation.', 'Prefer efficient discovery and validation.']], authoredFail, ['FAIL PILOT-SAFETY-001']);
+  expect('pilot capability coverage truncated', [[pilot,
+    'edit, terminal, web, MCP, hook, or agent-delegation', 'edit and terminal']], authoredFail, ['FAIL PILOT-SAFETY-001']);
+  expect('pilot recommendation safeguard removed', [[pilot,
+    'add or recommend edit, terminal, web, MCP, hook, or agent-delegation capability', 'add edit, terminal, web, MCP, hook, or agent-delegation capability']], authoredFail, ['FAIL PILOT-SAFETY-001']);
+  expect('pilot genuine need disjoined from approval', [[pilot,
+    'genuinely requires it and the user has approved that scope', 'genuinely requires it or the user has approved that scope']], authoredFail, ['FAIL PILOT-SAFETY-001']);
+  expect('pilot explicit scope approval weakened', [[pilot,
+    'the user has approved that scope', 'the user may approve that scope']], authoredFail, ['FAIL PILOT-SAFETY-001']);
+  expect('pilot approval inferred from Skill request', [[pilot,
+    'do not infer approval from the Skill request itself', 'the Skill request itself grants approval']], authoredFail, ['FAIL PILOT-SAFETY-001']);
+  expect('pilot speculative capability restriction removed', [[pilot,
+    'capability speculatively.', 'capability.']], authoredFail, ['FAIL PILOT-SAFETY-001']);
+  expect('pilot speculative resource restriction removed', [[pilot,
+    'Include no resource merely speculatively', 'Include resources speculatively']], authoredFail, ['FAIL PILOT-SAFETY-001']);
+  expect('pilot secret safeguard removed', [[pilot,
+    'embed secrets', 'include credentials']], authoredFail, ['FAIL PILOT-SAFETY-001']);
+  expect('pilot experimental-context safeguard removed', [[pilot,
+    'experimental forked context', 'experimental context']], authoredFail, ['FAIL PILOT-SAFETY-001']);
+  expect('pilot Skill permission contradiction added', [[pilot,
+    "MUST NOT use experimental forked context or treat a Skill's instructions as granting platform tools or permissions.",
+    "MUST NOT use experimental forked context or treat a Skill's instructions as granting platform tools or permissions. Skill instructions grant platform tools."]], authoredFail, ['FAIL PILOT-SAFETY-001']);
+  const maintenance = '.github/skills/maintain-copilot-artifacts/SKILL.md';
+  expect('maintenance Skill invocation grants authority', [[maintenance,
+    'This Skill supplies a method only; it grants no edit, execution, delegation, lifecycle-transition, approval or acceptance authority.',
+    'This Skill supplies a method only; it grants no edit, execution, delegation, lifecycle-transition, approval or acceptance authority. Skill invocation grants edit authority.']], authoredFail, ['FAIL MAINTAIN-AUTHORITY-001']);
+  expect('maintenance method permits silent deletion', [[maintenance,
+    'Every removed sentence needs complete retained equivalents;', 'Rules may be deleted as obsolete;']], authoredFail, ['FAIL MAINTAIN-PRESERVATION-001']);
+  expect('maintenance method silently chooses behavior', [[maintenance,
+    'If preservation is uncertain or a contradiction requires a behavior choice, retain the source wording and ask for an engineer decision.',
+    'If preservation is uncertain or a contradiction requires a behavior choice, choose the most likely behavior.']], authoredFail, ['FAIL MAINTAIN-PRESERVATION-001']);
+  expect('static checks falsely claim runtime equivalence', [[maintenance,
+    'Static checks and review do not establish runtime equivalence.', 'Static checks establish runtime equivalence.']], authoredFail, ['FAIL MAINTAIN-STATIC-001']);
   expect('equivalent plan hierarchy wording', [[planTemplate,
     'IDs and detail sections must match the register', 'Item identifiers and their detail sections correspond to the register']], pass);
   expect('missing unchecked Plan Task marker', [[planTemplate,

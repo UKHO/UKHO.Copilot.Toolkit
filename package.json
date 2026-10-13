@@ -60,6 +60,7 @@
     ".github/skills/create-copilot-prompt",
     ".github/skills/create-copilot-skill",
     ".github/skills/create-runbook",
+    ".github/skills/maintain-copilot-artifacts",
     ".github/skills/rpir-lifecycle-core",
     ".github/skills/rpir-stage-assurance",
     ".github/skills/safe-implementation",
@@ -169,6 +170,9 @@
       },
       {
         "path": ".github/skills/create-runbook"
+      },
+      {
+        "path": ".github/skills/maintain-copilot-artifacts"
       },
       {
         "path": ".github/skills/rpir-lifecycle-core"

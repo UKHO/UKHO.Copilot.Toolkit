@@ -325,6 +325,60 @@ function authoredChecks(manifestUnavailable) {
       const manifest = readManifest();
       return manifest.name === 'ukho-copilot-toolkit' && manifest.scripts?.package?.includes('`${p.name}-${p.version}.vsix`') &&
         readText('scripts/verify-vsix-boundary.cjs').includes('`${manifest.name}-${manifest.version}.vsix`');
+    }],
+    ['PILOT-SAFETY-001', '.github/skills/create-copilot-skill/SKILL.md', () => {
+      const owner = '.github/skills/create-copilot-skill/SKILL.md';
+      const safety = `${section(owner, 'Limits and safety')}\n${section(owner, 'Safety boundaries')}\n${section(owner, 'Resource layout')}`;
+      return invariant(safety, [
+        /read-only discovery and (?:validation|checks)/i,
+        /(?:add or recommend|recommend or add).{0,100}edit, terminal, web, MCP, hook, or agent-delegation capability/i,
+        /(?:genuinely requires it and the user has approved that scope|genuine workflow need and (?:the )?user (?:explicitly )?approved that scope|genuine workflow need and (?:with )?(?:the )?user's explicit approval of that scope)/i,
+        /(?:do not infer approval from the Skill request itself|the Skill request itself is not approval|requesting this Skill does not grant approval|a request for this Skill alone is not approval)/i,
+        /agent-delegation capability speculatively/i,
+        /Include no resource merely speculatively/i,
+        /relative links/i,
+        /embed secrets/i,
+        /experimental forked context/i,
+        /treat a Skill's instructions as granting platform tools or permissions/i
+      ], [
+        /genuine workflow need\s+or\s+(?:the )?user (?:explicitly )?approved/i,
+        /the Skill request itself (?:is|counts as) approval/i,
+        /Skill(?:'s)? instructions grant (?:platform )?tools(?: or permissions)?/i,
+        /(?:may|can|must) recommend (?:any )?(?:capability|tool) without (?:approval|a genuine need)/i
+      ]);
+    }],
+    ['MAINTAIN-AUTHORITY-001', '.github/skills/maintain-copilot-artifacts/SKILL.md', () => {
+      const owner = '.github/skills/maintain-copilot-artifacts/SKILL.md';
+      return invariant(section(owner, 'Limits and authority'), [
+        /supplies a method only/i,
+        /grants no edit, execution, delegation, lifecycle-transition, approval or acceptance authority/i,
+        /active phase's approved scope and actual permission/i
+      ], [
+        /(?:this Skill|Skill invocation) (?:approves|grants) (?:edits?|execution|delegation|lifecycle transitions?|acceptance)/i
+      ]);
+    }],
+    ['MAINTAIN-PRESERVATION-001', '.github/skills/maintain-copilot-artifacts/SKILL.md', () => {
+      const owner = '.github/skills/maintain-copilot-artifacts/SKILL.md';
+      return invariant(section(owner, 'Procedure'), [
+        /Map baseline rules to candidate wording and candidate normative clauses back to baseline rules/i,
+        /Every removed sentence needs complete retained equivalents/i
+      ], [
+        /(?:silently|without (?:an )?approved decision) (?:delete|remove|reinterpret|choose) (?:a rule|new behavior)/i,
+        /(?:rules?|sentences?) may be (?:silently )?(?:deleted|removed) as obsolete/i
+      ]) && invariant(section(owner, 'Limits and authority'), [
+        /Do not silently delete, add, relocate, deprecate or reinterpret a normative rule/i,
+        /If preservation is uncertain or a contradiction requires a behavior choice, retain the source wording and ask for an engineer decision/i
+      ]);
+    }],
+    ['MAINTAIN-STATIC-001', '.github/skills/maintain-copilot-artifacts/SKILL.md', () => {
+      const owner = '.github/skills/maintain-copilot-artifacts/SKILL.md';
+      return invariant(section(owner, 'Procedure'), [
+        /Static checks and review do not establish runtime equivalence/i,
+        /Do not claim semantic proof or runtime equivalence from finite checks/i
+      ], [
+        /static checks (?:prove|establish) runtime equivalence/i,
+        /finite checks prove semantic equivalence/i
+      ]);
     }]
   ];
   const violations = [];
