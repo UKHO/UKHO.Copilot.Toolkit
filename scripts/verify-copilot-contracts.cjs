@@ -218,12 +218,271 @@ function invariant(text, required, forbidden = []) {
   return required.every((pattern) => pattern.test(text)) && !forbidden.some((pattern) => pattern.test(text));
 }
 
+// Finite Markdown/text evidence, not a Markdown implementation or a semantic
+// policy engine. Only Research assertions use this view; unrelated checks retain
+// their existing contracts. Remove non-operating material BEFORE finding owners,
+// so a quoted heading cannot create an owner and a same-section quote cannot
+// rescue a deleted obligation. An illustrative subsection ends at its peer.
+function activeResearchText(relative) {
+  const text = readText(relative).replace(/^---\n[\s\S]*?\n---\n/, '')
+    .replace(/<!--[\s\S]*?(?:-->|$)/g, '');
+  let fence, illustration;
+  return text.split('\n').map((line) => {
+    if (/^\s*>/.test(line)) return '';
+    const delimiter = line.match(/^\s{0,3}(`{3,}|~{3,})/);
+    if (fence) {
+      if (delimiter && delimiter[1][0] === fence[0] && delimiter[1].length >= fence.length) fence = null;
+      return '';
+    }
+    if (delimiter) { fence = delimiter[1]; return ''; }
+    const heading = line.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) {
+      if (illustration && heading[1].length <= illustration) illustration = null;
+      if (/\b(?:illustrat\w*|examples?|anti-examples?|historical|quotations?)\b/i.test(heading[2])) illustration = heading[1].length;
+    }
+    if (illustration || /^\s*(?:historical quotation|quotation|labelled anti-example|negative illustration|positive illustration):/i.test(line) || /^\s*[“"].*[”"]\s*$/.test(line)) return '';
+    return line;
+  }).join('\n');
+}
+
+// Explicitly supported vocabulary alternatives. These are deliberately finite;
+// accepting these paraphrases does not claim arbitrary semantic equivalence.
+function researchWording(text) {
+  return text.toLowerCase().replace(/\*\*/g, '').replace(/acknowledgement/g, 'acknowledgment')
+    .replace(/\borientate\b/g, 'orient').replace(/\bprior to\b/g, 'before')
+    .replace(/\bas well as\b/g, 'and').replace(/\breturns to dialogue\b/g, 'return to dialogue')
+    .replace(/\bgenuine\b/g, 'meaningful').replace(/\buseful\b/g, 'meaningful')
+    .replace(/\bparticular\b/g, 'specific').replace(/\bdeclare\b/g, 'state')
+    .replace(/\bfinish the turn\b/g, 'end the turn').replace(/\bretain\b/g, 'preserve')
+    .replace(/\bshall\b/g, 'must').replace(/\bbriefly test\b/g, 'probe briefly')
+    .replace(/\bfocused test\b/g, 'focused probe').replace(/\bconsequential\b/g, 'material')
+    .replace(/\bintended outcome\b/g, 'desired outcome').replace(/\bkey assumptions\b/g, 'material assumptions')
+    .replace(/\breason for the request\b/g, 'motivation').replace(/\bpeople affected\b/g, 'affected people')
+    .replace(/\ba specific example from today\b/g, 'a concrete current example')
+    .replace(/\bout-of-scope work\b/g, 'exclusions').replace(/\brelative importance\b/g, 'priorities')
+    .replace(/\bsettled or explicitly retained\b/g, 'resolved or explicitly carried')
+    .replace(/\bconfirmed or corrected and reconciled\b/g, 'acknowledged and reconciled')
+    .replace(/\s+/g, ' ').trim();
+}
+
+// Scan ALL active clauses in each applicable owner, not just the affirmative
+// paragraph. Patterns name supported bad permissions, not bare topic keywords;
+// lawful deferral, other-phase work and discovery-direction advice remain valid.
+const researchContradictions = [
+  /(?:clear|detailed|apparently factual|solution-led) (?:research )?(?:requests?|prompts?) (?:need|needs|require|requires) no (?:discovery|confirmation|acknowledgment|readback)/i,
+  /(?:clear|detailed|apparently factual|solution-led) (?:research )?(?:requests?|prompts?) (?:may |can )?(?:skip|bypass|proceeds? without) (?:the |an? |explicit |compulsory )*(?:discovery|confirmation|acknowledgment|readback)/i,
+  /(?:research |questions? |all research questions? )?(?:may|can|should|must) (?:omit|skip) (?:the )?(?:known|uncertain|question|supported recommendation|explicit labels|question framing)/i,
+  /(?:known|uncertain|question|recommendation|explicit|question framing)[^.!?\n]{0,70}(?:labels?|fields?|framing) (?:are|is) optional (?:in|for) research/i,
+  /(?:letters|lettered (?:choices|options|alternatives)) (?:are optional in research|(?:are offered|are required|should be offered|may wait) only (?:after|on|for) (?:a |an engineer )?reminder)/i,
+  /(?:research|every research question) (?:must|should) (?:require|use|offer) exactly (?:three|3) (?:choices|options|alternatives)/i,
+  /(?:research|engineers?) (?:must|should) (?:require|give|use) (?:only letter answers|letter-only answers)/i,
+  /research (?:may|can|must|should) (?:invent alternatives|fabricate recommendations|recommend without evidence|automatically select the recommended (?:letter|option))/i,
+  /(?:all|every) research questions? (?:may|can|must|should) (?:be open-only|omit alternatives)/i,
+  /(?:lookup|lookups|research lookups) (?:may|can|should) (?:omit|skip) (?:the )?(?:uncertainty|next-question purpose|source\/search bound|return to dialogue)/i,
+  /(?:research|lookups) (?:may|can|should) (?:continue searching|widen the search) (?:after|when) (?:the )?(?:bound is reached|uncertainty is answered)/i,
+  /(?:research|investigators?) (?:may|can|should|must) (?:perform broad factual(?:\/solution)? search|delegate investigation|compare implementations|recommend substantive solutions|continue independent factual checks|investigate broadly) before (?:actual )?(?:acknowledgment|readback)/i,
+  /(?:research|the coordinator) (?:may|can|should|must) (?:continue|investigate|delegate|proceed) (?:in the same unanswered turn|while (?:a |the )?(?:material answer|readback|acknowledgment) is pending)/i,
+  /(?:emitting|sending|a sent) (?:a )?readback (?:is|counts as|establishes) acknowledgment/i,
+  /(?:silence|uncertainty|prompt clarity|generic [“"]?keep going[”"]? pressure|deferral) (?:is|counts as|establishes) (?:confirmation|acknowledgment|deferral)/i,
+  /research (?:may|can|should) (?:omit the hypothesis label|skip the (?:brief |focused )?probe|replace the objective silently|explore an alternative before the engineer chooses)/i,
+  /(?:a |the )?probe answer (?:is|counts as) (?:an? )?direction (?:choice|change)/i,
+  /research (?:must|should) (?:ask|complete) (?:exactly |at least )?(?:three|five|\d+) (?:questions|rounds)/i,
+  /research (?:must|should) (?:restart (?:discovery|the interview) on (?:every )?continuation|reject natural-language acknowledgment|force certainty|resist explicit deferral|require duplicate confirmation after deferral)/i,
+  /(?:plan|implement|review|other phases)(?:,? (?:plan|implement|and review))* (?:must|should|inherit|require) (?:follow |use |complete )?(?:research's |the |an? )?(?:initial[- ]discovery process|initial interview|research interview)/i,
+  /(?<!nor )(?:acknowledgment|deferred acknowledgment|deferral) (?:is (?:a )?prerequisite for|blocks|gates|approves|invokes) `?\/(?:plan|implement|review)`?/i,
+  /(?:the brief|research|assurance) (?:may|can|should) (?:omit|skip) (?:consequential choices|actual engineer direction|alternative-framing disposition|actual acknowledgment|deferral scope\/timing|dependent limits|observed evidence)/i,
+  /(?:a |the )?brief claiming compliance (?:proves|establishes) (?:actual waiting|runtime behavior|loading)/i,
+  /(?:assurance|research) (?:may|can|should) (?:report unobserved behavior as passed|reject provisional briefs solely for deferral|suppress persistence for unresolved questions)/i,
+  /(?:static checks|authored expectations) (?:prove|establish) (?:reliable runtime behavior|installed loading)/i
+];
+
+function researchScope(relative, heading) {
+  const text = activeResearchText(relative);
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = text.match(new RegExp(`^(#{1,6}) ${escaped}\\s*\\n`, 'm'));
+  if (!match) fail(`${relative} is missing active owning section: ${heading}`);
+  const tail = text.slice(match.index + match[0].length);
+  const end = tail.search(new RegExp(`^#{1,${match[1].length}} `, 'm'));
+  return end < 0 ? tail : tail.slice(0, end);
+}
+
+function researchRequirements(relative, heading, requirements, start) {
+  let scope = researchScope(relative, heading);
+  if (start) {
+    const lines = scope.split('\n').filter((line) => line.startsWith(start));
+    if (lines.length !== 1) return false;
+    scope = lines[0];
+  }
+  const normalized = researchWording(scope);
+  for (const requirement of requirements) {
+    if (!(typeof requirement === 'string' ? normalized.includes(researchWording(requirement)) : requirement.test(normalized))) {
+      fail(`${relative} (${heading}) lacks active obligation: ${requirement}`);
+    }
+  }
+  return true;
+}
+
+function researchChecks() {
+  const agent = '.github/agents/research.agent.md';
+  const skill = '.github/skills/agent-question-resolution/SKILL.md';
+  const template = '.github/skills/agent-question-resolution/templates/clarification-message.md';
+  const method = '.github/skills/agent-question-resolution/references/research-intent-discovery.md';
+  const policy = '.github/copilot-instructions.md';
+  const core = '.github/skills/rpir-lifecycle-core/SKILL.md';
+  const records = '.github/instructions/lifecycle-records.instructions.md';
+  const brief = '.github/skills/codebase-research/research-brief-template.md';
+  const assurance = '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md';
+  const wiki = 'docs/Wiki/rpir.md', catalogue = 'docs/Wiki/artifact-catalogue.md';
+  const sequence = 'orient → discover → acknowledged readback → investigate';
+  const fields = 'Known → Uncertain → Recommendation (if supported) → Question';
+  const boundary = ['operating/context reads and supplied examples', 'uncertainty', 'next-question purpose', 'source/search', 'return to dialogue'];
+  const bypass = ['broad factual/solution search', 'delegated investigation', 'implementation comparison', 'substantive solution recommendation'];
+  const dimensions = ['motivation', 'affected people', 'a concrete current example', 'desired outcome', 'exclusions', 'priorities', 'consequential constraints'];
+  const rows = [
+    ['RESEARCH-INTENT-001', agent, [agent], () =>
+      researchRequirements(agent, 'Research coordinator', [sequence, 'substantively elicit, challenge and broaden', 'detailed, apparently factual and solution-led requests',
+        /before every engineer-facing question[^;\n]*(?:load and apply|read and use) \[agent-question-resolution\]\([^)]*\) and its \[clarification message template\]/i,
+        'Research intent-discovery method', 'Obtain actual confirm/correct acknowledgment', 'separates engineer statements from inference',
+        'Accept natural-language acknowledgment', 'explicitly directs Research to defer discovery or acknowledgment', 'disclosed provisional objective and consequential assumptions',
+        'Do not resist, demand duplicate confirmation', 'silence, uncertainty, clarity or generic “keep going” pressure', 'requested timing',
+        'state the specific uncertainty and next-question purpose', 'bound the source/search', 'stop and return to dialogue when answered or the bound is reached',
+        'Do not expand this into broad factual or solution search, delegated investigation, implementation comparison or substantive solution recommendations',
+        'Supported advice about discovery direction', 'end the turn and wait', 'emitting a readback is not acknowledgment', 'Eligible truthful Research-note persistence remains allowed',
+        'label it as a hypothesis', 'probe briefly', "obtain the engineer's direction choice before deeper exploration", 'without a fixed question or round quota',
+        'Each answer updates understanding', 'reuse the intent trace', 'actual acknowledgment/deferral and its scope/timing', 'Plan-owned formal outcome, scope, acceptance and hierarchy',
+        'Only after actual acknowledgment or explicit deferral', 'actual deferral direction/scope/timing',
+        'For substantive findings after acknowledgment or actual explicit deferral', 'Neither acknowledgment nor deferral is phase approval or a `/plan` gate'])],
+    ['QUESTIONS-METHOD-001', skill, [skill, template], () =>
+      researchRequirements(skill, 'Trigger', ['Research MUST load and apply this Skill and its clarification message template before every question', "Other phases use contextual material clarification; they do not inherit Research's initial-discovery process"]) &&
+      researchRequirements(skill, 'Procedure', [sequence, 'detailed, apparently factual and solution-led requests do not bypass substantive discovery', ...boundary, ...bypass,
+        'state the specific uncertainty and next-question purpose before execution', 'bound the source/search', 'stop to return to dialogue when answered or the bound is reached',
+        'No broad factual/solution search, delegated investigation, implementation comparison or substantive solution recommendation is permitted at this point',
+        'end the turn and wait for a pending material answer or readback acknowledgment', 'eligible truthful Research-note persistence remains allowed',
+        'elicit, challenge and broaden answer-dependently', 'obtain actual confirm/correct acknowledgment', 'Emitting it is insufficient',
+        'explicitly direct Research to defer discovery or that checkpoint', 'honor the actual scope/timing without duplicate confirmation',
+        'Silence, uncertainty, prompt clarity and generic “keep going” pressure are not such a direction', fields,
+        'In every Research question, including later clarification, show those labels explicitly and concisely', 'omit only an unsupported Recommendation',
+        'offer meaningful lettered alternatives with relevant trade-offs and a supported recommendation without waiting for a reminder',
+        'Do not require exactly three choices, letter-only answers, invented alternatives or unsupported advice', "Invite the engineer's own words or qualifications",
+        'For a fact/example request with no meaningful alternatives, explain the information needed and invite free text',
+        'recommendations may guide discovery direction, not prescribe substantive solutions', 'Other phases retain proportional contextual framing and optional genuine alternatives',
+        'use the answer to choose the useful next question', 'retain the intent trace on same-objective continuation', 'Accept natural-language acknowledgment, corrections and “I don\'t know”',
+        'labelled hypothesis', 'brief focused probe', 'engineer direction choice before deeper exploration', 'Do not automatically select the recommended letter',
+        'Clarification, acknowledgment and deferral do not invoke or approve a phase transition or create a `/plan` gate']) &&
+      researchRequirements(skill, 'Outputs', ['Research always uses explicit Known/Uncertain/Question labels and Recommendation when supported', 'actual waiting for acknowledgment', 'deferral scope/timing and dependent unknowns']) &&
+      researchRequirements(skill, 'Limits', ['purpose/source/stop boundary', 'Research must end the turn for a pending material answer or readback acknowledgment, absent explicit deferral', 'Generic completion pressure does not override waiting']) &&
+      researchRequirements(skill, 'Validation', ['declared uncertainty, next-question purpose, source/search bound and return to dialogue', 'explicit framing', 'without reminders', 'alternative-framing probe and engineer direction choice', 'do not mistake a sent readback for an answered one']) &&
+      researchRequirements(template, 'Clarification message template', [fields, 'labels for every question', 'later clarification; omit only an unsupported Recommendation',
+        '**Known:**', '**Uncertain:**', '**Recommendation:**', '**Question:**', 'offer meaningful lettered alternatives with relevant trade-offs without waiting for a reminder',
+        'as many alternatives as are useful, not exactly three', "engineer's own words, never require a letter", 'Do not invent alternatives or fabricate a recommendation',
+        'fact/example request with no meaningful alternatives', 'invite free text without a choices list', 'not a blanket exception for open-question-only discovery',
+        'or automatically select the recommended option', sequence, 'detailed, apparently factual or solution-led requests', 'Actually wait for acknowledgment: end the turn',
+        'rather than begin dependent investigation after emitting it', 'Accept natural-language acknowledgment, corrections and “I don\'t know”', 'preserve the intent trace on continuation',
+        ...boundary, ...bypass, 'state the specific uncertainty and next-question purpose', 'bound the source/search', 'stop and return to dialogue when answered or the bound is reached',
+        'No broad factual/solution search, delegated investigation, implementation comparison or substantive solution recommendation is permitted',
+        'Only other phases retain general permission to continue independent safe work', 'Plan, Implement and Review retain proportional contextual framing',
+        'discovery-direction advice rather than substantive solution advice', 'explicitly directs Research to defer discovery or acknowledgment', 'honor its actual scope/timing without duplicate permission',
+        'Silence, uncertainty, clarity and generic “keep going” pressure are not deferral', 'Neither an answer nor deferral grants phase-transition approval'])],
+    ['RESEARCH-DISCOVERY-001', method, [method], () => {
+      checkLocalLinks(method, readText(method));
+      return researchRequirements(method, 'Orient before discovery; investigate after acknowledgment', [sequence, 'Detailed, apparently factual and solution-led requests still need substantive discovery',
+        'Only explicit engineer-directed deferral changes this sequence', 'operating/context material and supplied examples', 'before execution, state the uncertainty it addresses',
+        'how the answer will shape that question', 'bounded source/search', 'Stop when that uncertainty is answered or the bound is reached and return to dialogue', ...bypass,
+        'Do not use broad factual/solution search, delegated investigation, implementation comparison or substantive solution recommendations before acknowledgment',
+        'Supported recommendations about which discovery direction to explore are permitted', 'Eligible truthful Research-note persistence']) &&
+        researchRequirements(method, 'Discover the objective adaptively', [...dimensions, 'do not ask again for information already supplied'], 'Treat the initial prompt') &&
+        researchRequirements(method, 'Discover the objective adaptively', ['Challenge consequential assumptions or contradictions using supplied facts or eligible evidence', 'do not manufacture disagreement', 'Broaden toward overlooked needs or plausible alternative problem framings']) &&
+        researchRequirements(method, 'Discover the objective adaptively', ['state what changed in understanding', 'highest-value unresolved follow-up that depends on it', fields, 'framing every time',
+          'meaningful lettered options, relevant trade-offs and supported advice without a reminder', 'Invite free text or qualifications', 'not automatically the recommended letter',
+          'Do not require exactly three options or invent alternatives/advice', 'fact/example request without meaningful alternatives', 'no fixed question/round quota or canned questionnaire'], 'After each answer') &&
+        researchRequirements(method, 'Discover the objective adaptively', ['explicitly label it as a hypothesis', 'brief focused probe', "Obtain the engineer's direction choice before deeper exploration", 'a probe answer alone is not a direction change', 'Preserve the original objective unless the engineer chooses otherwise'], 'For a plausible alternative framing') &&
+        researchRequirements(method, 'Read back, correct and stop', ['confirm/correct readback after substantive discovery and before broad investigation', 'Separate engineer statements from inference',
+          'problem, desired outcome, exclusions, precise supplied constraints, relevant examples and material unknowns', 'Actually wait', 'end the turn',
+          'Do not emit a readback and start dependent investigation in the same unanswered turn', 'Natural-language acknowledgment', 'a letter is not required', 'no duplicate confirmation', 'Silence and passive non-response are not confirmation']) &&
+        researchRequirements(method, 'Read back, correct and stop', ['Stop discovery when intent supports a relevant investigation', 'material assumptions are resolved or explicitly carried', 'the readback is acknowledged and reconciled', 'Do not continue questioning merely to exhaust a topic list'], 'Stop discovery') &&
+        researchRequirements(method, 'Honor explicit engineer-directed deferral', ['explicitly directs Research to defer discovery or acknowledgment', 'disclosed provisional objective and consequential assumptions',
+          'Do not resist, demand a second confirmation', 'infer it from silence, uncertainty, passive non-response, prompt clarity or generic “keep going” pressure',
+          'scope/timing, remaining assumptions and dependent limits', 'Honor any requested timing', 'actual safety or permission limits', 'or invoke another phase', '“I don\'t know” is valid and is not itself deferral']) &&
+        researchRequirements(method, 'Continue or change objective', ['reuse the existing intent trace', 'preserve prior answers', 'same explicit question format to later clarification', 'Continuation is not a new interview', 'an unanswered checkpoint is not erased']);
+    }],
+    ['RESEARCH-POLICY-001', policy, [policy], () =>
+      researchRequirements(policy, 'Command execution entry', ['Research delegation waits for actual intent acknowledgment or explicit engineer-directed deferral']) &&
+      researchRequirements(policy, 'Lifecycle authority and transitions', ['for every new objective, including detailed, apparently factual and solution-led requests',
+        ...boundary, ...bypass, 'each additional lookup must state its uncertainty and next-question purpose', 'bound its source/search and stop to return to dialogue',
+        'No broad factual/solution search, delegated investigation, implementation comparison or substantive solution recommendation bypasses intake',
+        'End the turn and wait for a pending material answer or readback acknowledgment', 'generic completion pressure is not deferral',
+        'Honor actual explicit deferral under disclosed provisional understanding and its scope/timing', 'Eligible truthful Research-note persistence remains allowed',
+        'This is not a gate on `/plan`, and does not alter other phases\' contextual material clarification or independent safe work'])],
+    ['RESEARCH-CORE-001', core, [core], () =>
+      researchRequirements(core, 'Continue phase work and resolve unknowns', [...boundary, ...bypass, 'each additional lookup states its uncertainty and next-question purpose before execution',
+        'bounds its source/search, then stops to return to dialogue', 'End the turn and wait for a pending material answer or readback acknowledgment',
+        'No broad factual/solution search, delegated investigation, implementation comparison or substantive solution recommendation is permitted',
+        'generic completion pressure does not override waiting', 'Eligible truthful Research-note persistence remains allowed', 'other phases retain independent safe work']) &&
+      researchRequirements(core, 'Status, questions and validation', ['For every new Research objective, including detailed, apparently factual and solution-led requests',
+        'obtain actual confirm/correct readback acknowledgment before broad investigation; emitting a readback is insufficient',
+        'Explicit engineer direction may defer discovery or acknowledgment', 'disclosed provisional understanding and actual scope/timing, without duplicate confirmation',
+        'Silence, uncertainty, prompt clarity or generic “keep going” pressure is not deferral', 'neither applies an initial interview to other phases nor creates a `/plan` gate', 'Established lifecycle folders still need no routine confirmation'])],
+    ['RESEARCH-RECORDS-001', records, [records], () =>
+      researchRequirements(records, 'Shared workflow and effect contract', ['For every new Research objective, including detailed, apparently factual and solution-led requests', ...boundary, ...bypass,
+        'each additional lookup states its uncertainty and next-question purpose', 'bounds its source/search and stops to return to dialogue',
+        'No broad factual/solution search, delegated investigation, implementation comparison or substantive solution recommendation bypasses intake',
+        'End the turn and wait for a pending material answer or readback acknowledgment', 'emitting a readback or generic completion pressure is insufficient',
+        'Honor actual explicit deferral using disclosed provisional understanding and its scope/timing', 'do not infer deferral or impose a duplicate confirmation',
+        'Eligible truthful Research-note persistence remains allowed', "does not create a `/plan` gate, alter other phases' contextual material clarification or independent safe work"]) &&
+      researchRequirements(records, 'Stage schemas', ['Intent and discovery', 'consequential choices', 'alternative-framing disposition when applicable', 'actual acknowledgment/deferral, unresolved limits',
+        'Assurance distinguishes recorded claims from observed evidence', 'honored deferral is not itself a defect'], '- **Research brief:**')],
+    ['RESEARCH-BRIEF-001', brief, [brief], () =>
+      researchRequirements(brief, 'Intent and discovery', ['Original request', 'Shared understanding', 'distinguish engineer statements from inference', 'Examples and boundaries',
+        'Understanding changes', 'consequential choices offered', 'relevant trade-offs/recommendation when supported', 'actual engineer direction and answer-to-understanding changes',
+        'do not infer selection of a recommended option', 'Alternative framing', 'labelled hypothesis', 'brief probe and its result', 'engineer direction choice before deeper exploration',
+        'retained/revised objective or unresolved disposition', 'Acknowledgment or deferral', 'actual engineer acknowledgment/correction and reconciled interpretation, pending acknowledgment',
+        'actual explicit engineer-directed deferral with its provisional objective and scope/timing', 'sending a readback is not acknowledgment', 'never label provisional understanding confirmed',
+        'Unknowns and dependent limits', 'remaining assumptions, factual questions and what dependent investigation or conclusions they limit', 'without a chat transcript',
+        'Silence, uncertainty, prompt clarity or generic “keep going” pressure is not confirmation or deferral', 'A truthfully provisional brief is valid evidence, not a transition approval',
+        'unresolved questions do not suppress eligible persistence or authorize broader pre-acknowledgment work']) &&
+      researchRequirements(brief, 'Recommendation and validation', ['agent-question-resolution and its template for every engineer-facing question', ...boundary,
+        'state the uncertainty and next-question purpose before execution', 'bound the source/search, and stop to return to dialogue',
+        'Do not broaden into factual/solution search, delegation, implementation comparison or substantive solution advice', 'End the turn and wait for a pending material answer or readback acknowledgment', 'eligible truthful brief persistence remains allowed'])],
+    ['RESEARCH-ASSURANCE-001', assurance, [assurance], () =>
+      researchRequirements(assurance, 'Stage-specific outcome', ['assess consequential choices', 'supported advice/trade-offs', 'actual engineer direction and answer-to-understanding changes',
+        'labelled alternative-framing hypothesis', 'brief probe', 'engineer direction choice before deeper exploration',
+        'actual acknowledgment/correction of a substantive readback, pending acknowledgment', 'actual engineer-directed deferral with provisional understanding, scope/timing and remaining dependent limits',
+        'detailed, apparently factual and solution-led prompts do not silently bypass discovery', 'Distinguish recorded claims from independently observed conversation messages, chronological tool/lookup ordering and resource-loading evidence',
+        'a brief claiming compliance does not prove actual waiting, question format, bounded lookups or loading', 'stated uncertainty/next-question purpose, source/search bound and return to dialogue',
+        'actual acknowledgment or deferral before broad or delegated work or substantive solution recommendations', 'Report unobserved behavior/loading as unverified, not passed',
+        'no mandatory transcript, new capture or report kind is required', 'Do not treat acknowledgment or assurance as phase-transition approval', 'truthfully provisional brief is not rejected solely for deferral',
+        'Remaining questions do not suppress eligible truthful persistence or authorize broad pre-acknowledgment work'], '- **Research:**')],
+    ['RESEARCH-GUIDE-001', 'README.md', ['README.md', wiki, catalogue], () =>
+      researchRequirements('README.md', 'Follow the RPIR workflow', [sequence, 'detailed, apparently factual or solution-led requests',
+        'explicit Known/Uncertain/Recommendation (when supported)/Question framing', 'useful lettered choices and trade-offs at genuine decisions', 'free text when facts/examples are needed', 'letter replies are never required',
+        'bounded next-question-supporting lookups', 'not broad investigation or solution advice', 'ends the turn and waits for a material answer or readback acknowledgment',
+        'explicitly defer discovery or acknowledgment', 'disclosed provisional understanding and actual scope/timing', 'generic “keep going” pressure is not deferral', 'Natural-language acknowledgment works',
+        'continuing the same objective reuses its intent trace', 'acknowledgment or deferral neither invokes Plan', "Plan, Implement and Review retain contextual material clarification, not Research's initial interview",
+        'authored workflow expectations, not evidence of installed loading or reliable runtime behavior']) &&
+      researchRequirements(wiki, 'Prerequisites', [sequence, 'detailed, apparently factual or solution-led requests', 'explicit Known/Uncertain/Recommendation (when supported)/Question framing',
+        'useful lettered choices and trade-offs at genuine decisions', 'free-text fact/example questions', 'letter replies are not required', 'explicitly defer discovery or acknowledgment', 'actual scope/timing, without duplicate confirmation',
+        "continuation reuses the same objective's intent trace", 'Neither acknowledgment nor deferral invokes `/plan`; invoke it manually']) &&
+      researchRequirements(wiki, 'Content', ['consequential choices, actual acknowledgment/deferral and unresolved limits', 'Research actually waits; sending a readback is not acknowledgment',
+        'Neither acknowledgment nor deferral is Plan approval', 'elicit, challenge and broaden based on answers', 'alternative framing as a hypothesis to probe briefly before the engineer chooses a direction',
+        ...boundary, 'each additional lookup states its uncertainty and next-question purpose', 'bounds the source/search, then stops and returns to dialogue', 'No broad factual/solution search, delegated investigation, implementation comparison or substantive solution advice is permitted',
+        'ends the turn for a pending material answer or readback acknowledgment', 'silence, uncertainty and generic “keep going” pressure are not deferral', 'Eligible truthful brief persistence remains allowed',
+        "Plan, Implement and Review retain contextual material clarification and independent safe work, not Research's initial interview", 'authored expectations, not proof of installed loading or reliable runtime behavior',
+        'Research delegation waits for actual acknowledgment or explicit deferral']) &&
+      researchRequirements(catalogue, 'Content', [sequence, 'including detailed/factual/solution-led requests', 'bounded question-supporting checks only before acknowledgment absent explicit deferral',
+        'actual waiting', 'continuation without restarting discovery', 'allow-list after actual acknowledgment or explicit engineer-directed deferral', 'disclosed provisional understanding and actual scope/timing',
+        'every Research question uses explicit Known/Uncertain/Recommendation (when supported)/Question framing', 'meaningful lettered choices/trade-offs at genuine decisions',
+        'free-text facts/examples without invented options or forced letter replies', 'Plan/Implement/Review retain contextual clarification, not the initial interview',
+        'hypothesis/probe/direction choice', 'actual waiting and explicit deferral, not generic “keep going” pressure'])]
+  ];
+  return rows.map(([id, owner, sources, check]) => [id, owner, () =>
+    sources.every((source) => invariant(activeResearchText(source), [], researchContradictions)) && check()]);
+}
+
 function authoredChecks(manifestUnavailable) {
   const core = '.github/skills/rpir-lifecycle-core/SKILL.md';
   const policy = '.github/copilot-instructions.md';
   const review = '.github/agents/review.agent.md';
   const runner = '.github/agents/script-runner.agent.md';
-  const questions = '.github/skills/agent-question-resolution/SKILL.md';
   const workflow = '.github/workflows/package.yml';
   const checks = [
     ['RECOVERY-001', policy, () => {
@@ -291,15 +550,21 @@ function authoredChecks(manifestUnavailable) {
       const fragment = agent.match(/validation-checklist\.md#([^)]*)\)/)?.[1];
       return fragment === 'read-only-validation-worker' && /^## Read-only Validation Worker\s*$/m.test(checklist);
     }],
-    ['QUESTIONS-001', '.github/agents/research.agent.md', () => invariant(section('.github/agents/research.agent.md', 'Research coordinator'),
-      [/A clear request proceeds without a compulsory confirmation checkpoint/, /Ask promptly about consequential engineer-owned decisions/],
-      [/A clear request waits for an explicit confirmation checkpoint/i]) &&
-      invariant(section(questions, 'Procedure'), [/A clear Research request proceeds without a synthesized-understanding confirmation/, /Ask when a material choice cannot be supported/])],
     ['RUNNER-001', runner, () => {
       const text = section(runner, 'Script Runner');
-      return invariant(text, [/(?:An unavailable tool|A tool that is not available), actual Restricted Mode\/managed-policy denial or other non-permitting outcome stops/, /Absence of separate Workspace Trust telemetry alone proves neither permission nor denial/, /attribute its actual cwd within that root before a consequential action/, /inspect relevant before\/after file, generated, process and external effects/, /Do not blindly repeat an uncertain destructive\/external effect/, /If a local invocation failed before testing its requirement/, /failed check keeps dependent acceptance unmet/],
-        [/denial (?:may|can) be (?:bypassed|evaded)/i, /(?:may|can|must) blindly repeat (?:an )?uncertain destructive\/external effect/i,
-          /(?:stable catalogue operation IDs|complete unchanged Tier 1|## Script Runner operations)/i]);
+      return invariant(text, [
+        /(?:An unavailable tool|A tool that is not available), actual Restricted Mode\/managed-policy denial or other non-permitting outcome stops/,
+        /Absence of separate Workspace Trust telemetry alone proves neither permission nor denial/,
+        /attribute its actual cwd within that root before a consequential action/,
+        /inspect relevant before\/after file, generated, process and external effects/,
+        /Do not blindly repeat an uncertain destructive\/external effect/,
+        /If a local invocation failed before testing its requirement/,
+        /failed check keeps dependent acceptance unmet/
+      ], [
+        /denial (?:may|can) be (?:bypassed|evaded)/i,
+        /(?:may|can|must) blindly repeat (?:an )?uncertain destructive\/external effect/i,
+        /(?:stable catalogue operation IDs|complete unchanged Tier 1|## Script Runner operations)/i
+      ]);
     }],
     ['CI-001', 'package.json', () => {
       if (manifestUnavailable) return null;
@@ -353,33 +618,30 @@ function authoredChecks(manifestUnavailable) {
         /supplies a method only/i,
         /grants no edit, execution, delegation, lifecycle-transition, approval or acceptance authority/i,
         /active phase's approved scope and actual permission/i
-      ], [
-        /(?:this Skill|Skill invocation) (?:approves|grants) (?:edits?|execution|delegation|lifecycle transitions?|acceptance)/i
-      ]);
+      ], [/(?:this Skill|Skill invocation) (?:approves|grants) (?:edits?|execution|delegation|lifecycle transitions?|acceptance)/i]);
     }],
     ['MAINTAIN-PRESERVATION-001', '.github/skills/maintain-copilot-artifacts/SKILL.md', () => {
       const owner = '.github/skills/maintain-copilot-artifacts/SKILL.md';
       return invariant(section(owner, 'Procedure'), [
         /Map baseline rules to candidate wording and candidate normative clauses back to baseline rules/i,
         /Every removed sentence needs complete retained equivalents/i
-      ], [
-        /(?:silently|without (?:an )?approved decision) (?:delete|remove|reinterpret|choose) (?:a rule|new behavior)/i,
-        /(?:rules?|sentences?) may be (?:silently )?(?:deleted|removed) as obsolete/i
-      ]) && invariant(section(owner, 'Limits and authority'), [
-        /Do not silently delete, add, relocate, deprecate or reinterpret a normative rule/i,
-        /If preservation is uncertain or a contradiction requires a behavior choice, retain the source wording and ask for an engineer decision/i
-      ]);
+      ], [/(?:silently|without (?:an )?approved decision) (?:delete|remove|reinterpret|choose) (?:a rule|new behavior)/i,
+        /(?:rules?|sentences?) may be (?:silently )?(?:deleted|removed) as obsolete/i]) &&
+        invariant(section(owner, 'Limits and authority'), [
+          /Do not silently delete, add, relocate, deprecate or reinterpret a normative rule/i,
+          /If preservation is uncertain or a contradiction requires a behavior choice, retain the source wording and ask for an engineer decision/i
+        ]);
     }],
     ['MAINTAIN-STATIC-001', '.github/skills/maintain-copilot-artifacts/SKILL.md', () => {
       const owner = '.github/skills/maintain-copilot-artifacts/SKILL.md';
       return invariant(section(owner, 'Procedure'), [
         /Static checks and review do not establish runtime equivalence/i,
         /Do not claim semantic proof or runtime equivalence from finite checks/i
-      ], [
-        /static checks (?:prove|establish) runtime equivalence/i,
-        /finite checks prove semantic equivalence/i
-      ]);
-    }]
+      ], [/static checks (?:prove|establish) runtime equivalence/i, /finite checks prove semantic equivalence/i]);
+    }],
+    // Replaces the former broad-factual-work, optional-letter and primary-open-
+    // question anchors with the AC1–AC7 obligations at their unchanged owners.
+    ...researchChecks()
   ];
   const violations = [];
   const unavailable = [];
