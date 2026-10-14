@@ -1,6 +1,6 @@
 # Clarification message template
 
-Use this structure for engineer-facing questions in any RPIR phase. Research uses explicit, concise **Known → Uncertain → Recommendation (if supported) → Question** labels for every question, including discovery, follow-ups, readback and later clarification; omit only an unsupported Recommendation. Plan, Implement and Review retain proportional contextual framing and may omit unhelpful headings; they do not inherit the Research interview.
+Use this structure for every engineer-facing question in every RPIR phase, including factual requests, probes, follow-ups, readback and later clarification. Always show **Known → Uncertain → Recommendation → Question**, and provide meaningful lettered response paths. A supported Recommendation gives a useful next direction and reason; when a factual conclusion is unsupported, recommend how to supply or obtain evidence rather than guessing. Plan, Implement and Review retain contextual clarification, not Research's initial interview. Updates and reports that ask no question do not need this format.
 
 **Known:** <relevant facts and evidence, briefly; distinguish engineer statements from inference>
 
@@ -8,11 +8,11 @@ Use this structure for engineer-facing questions in any RPIR phase. Research use
 
 <For genuine Research choices, offer meaningful lettered alternatives with relevant trade-offs without waiting for a reminder. This list may precede the recommendation. Use as many alternatives as are useful, not exactly three.>
 
-**Recommendation:** <only when supported: direction and reason; before acknowledgment absent explicit deferral, discovery-direction advice rather than substantive solution advice>
+**Recommendation:** <supported next direction and reason; for unknown facts, a practical evidence-supply/acquisition route; before Research acknowledgment absent explicit deferral, discovery-direction advice rather than substantive solution advice>
 
 **Question:** <one clear contextual question and what the answer changes; invite a choice, qualifications or the engineer's own words, never require a letter>
 
-Do not invent alternatives or fabricate a recommendation. For a Research fact/example request with no meaningful alternatives, explain what information is needed and invite free text without a choices list. This is not a blanket exception for open-question-only discovery. Other phases retain optional genuine alternatives. Do not combine dependent decisions into a forced ballot or automatically select the recommended option.
+Provide meaningful lettered paths that resolve the stated uncertainty, not cosmetic alternatives or competing facts invented to fill a list. For a factual/example request, paths may offer ways to share an example or source, identify/authorize a bounded source to inspect, or say the information is unknown/another route; recommend the useful next step without assuming the fact. Preserve qualifications, free-text answers and useful unknown/other paths. Do not require exactly three paths, a letter-only answer, or selection of the recommended path. Do not combine dependent decisions into a forced ballot or automatically select the recommended option.
 
 Research follows orient → discover → acknowledged readback → investigate, even for detailed, apparently factual or solution-led requests. Use the [discovery method](../references/research-intent-discovery.md) for answer-dependent eliciting, challenge, broadening and alternative-direction control. The readback distinguishes engineer statements from inference and covers problem, desired outcome, exclusions, supplied constraints, relevant examples and unknowns; its Question invites confirmation or correction. Actually wait for acknowledgment: end the turn for a pending material answer or readback, rather than begin dependent investigation after emitting it. Accept natural-language acknowledgment, corrections and “I don't know”; preserve the intent trace on continuation.
 

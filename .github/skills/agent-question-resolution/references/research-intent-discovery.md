@@ -16,7 +16,7 @@ Treat the initial prompt as evidence and a hypothesis, not a complete specificat
 
 Challenge consequential assumptions or contradictions using supplied facts or eligible evidence: explain the tension and ask what would distinguish the interpretations. Respect genuine solution constraints and do not manufacture disagreement. Broaden toward overlooked needs or plausible alternative problem framings when evidence warrants it, not merely to prolong the conversation.
 
-After each answer, state what changed in understanding and select the highest-value unresolved follow-up that depends on it. Use explicit, concise **Known → Uncertain → Recommendation (if supported) → Question** framing every time. At genuine choices, supply meaningful lettered options, relevant trade-offs and supported advice without a reminder; alternatives may precede the recommendation. Invite free text or qualifications and honor the engineer's answer, not automatically the recommended letter. Do not require exactly three options or invent alternatives/advice. For a fact/example request without meaningful alternatives, explain the needed information and invite free text; do not generalize this exception into open-question-only discovery. Keep dependent decisions sequential; there is no fixed question/round quota or canned questionnaire.
+After each answer, state what changed in understanding and select the highest-value unresolved follow-up that depends on it. Use explicit, concise **Known → Uncertain → Recommendation → Question** fields on every question. Offer meaningful lettered paths even when asking for a fact or example: distinguish useful ways to supply/obtain evidence, unknown/other routes, or genuine directions without inventing competing facts. Give a supported next-step Recommendation and reason; if the factual conclusion is unknown, recommend a practical evidence route rather than omitting advice or guessing. Alternatives may precede the Recommendation. Invite free text or qualifications and honor the engineer's answer, not automatically the recommended path. Do not require exactly three options, letter-only answers, or cosmetic alternatives. Keep dependent decisions sequential; there is no fixed question/round quota or canned questionnaire.
 
 For a plausible alternative framing, explicitly label it as a **hypothesis**, explain its evidence, and ask a brief focused probe to test it. Use that answer to present the competing directions with meaningful choices/trade-offs and a supported recommendation when available. Obtain the engineer's direction choice before deeper exploration; a probe answer alone is not a direction change. Preserve the original objective unless the engineer chooses otherwise. Choosing an alternative direction still requires reconciled readback before broad investigation, unless explicitly deferred.
 
@@ -24,9 +24,13 @@ For a plausible alternative framing, explicitly label it as a **hypothesis**, ex
 
 For every new Research objective, provide a meaningful confirm/correct readback after substantive discovery and before broad investigation, unless explicitly deferred. Separate engineer statements from inference and cover the problem, desired outcome, exclusions, precise supplied constraints, relevant examples and material unknowns. Include a concrete expected example and a boundary/counterexample when relevant. Invite confirmation, correction or further discovery using the shared format and the engineer's own words.
 
+Before proposing that initial readback, assess the materially relevant dimensions: problem/motivation and affected people; desired outcome; concrete current example and boundary/exclusions; constraints and priorities; consequential assumptions and foreseeable decisions. For each material dimension, identify whether it is answered by the engineer, supported by eligible evidence, not applicable with a reason, or unresolved with its consequence and next step. Supplied information counts and must not be re-asked. If a consequential answer remains undeveloped, continue with the useful answer-dependent question rather than treating headings, a formatted paraphrase or a question count as proof of understanding. Do not force irrelevant dimensions, a quota or a complete transcript.
+
 Actually wait: when a material question or readback acknowledgment is pending, end the turn. Do not emit a readback and start dependent investigation in the same unanswered turn. Natural-language acknowledgment such as “That captures it; investigate” suffices; a letter is not required. A correction changes the affected interpretation and follow-up before a reconciled readback; an answer that already clearly acknowledges the corrected understanding needs no duplicate confirmation. Silence and passive non-response are not confirmation.
 
 Stop discovery when intent supports a relevant investigation, material assumptions are resolved or explicitly carried, and the readback is acknowledged and reconciled. A clear or detailed prompt can reduce follow-up, not remove acknowledgment or turn discovery into a summary checkbox. Do not continue questioning merely to exhaust a topic list. An unresolved fact may remain a disclosed investigation limit rather than forcing certainty.
+
+After investigation, assess foreseeable engineer-owned decisions newly exposed by evidence. Resolve them where practicable; otherwise state each material choice, its consequence, affected downstream work and a useful resolution route. Keep initial investigability distinct from technical readiness. This assessment does not acquire Plan-owned outcome, scope, acceptance or hierarchy, and does not prohibit necessary clarification when later work yields genuinely new evidence.
 
 ## Honor explicit engineer-directed deferral
 
@@ -40,7 +44,7 @@ When the same objective resumes or the engineer answers/corrects pending dialogu
 
 ## Labelled illustrations — not operating scripts
 
-These hypothetical examples illustrate the active method above. They are self-contained, not a fixed script, question quota, historical operating policy or evidence of runtime compliance. No historical record needs loading to use them.
+These hypothetical examples illustrate the active method above. Each positive engineer-facing question demonstrates the complete shared framing and useful lettered paths. They are self-contained, not a fixed script, question quota, historical operating policy or evidence of runtime compliance. No historical record needs loading to use them.
 
 ### Positive illustration: useful choices without a reminder
 
@@ -57,15 +61,19 @@ These hypothetical examples illustrate the active method above. They are self-co
 
 If the engineer chooses A, acknowledge the narrower objective and ask only a relevant backlog follow-up; do not silently proceed with recommended B.
 
-### Positive illustration: fact/example exception
+### Positive illustration: factual example request
 
 **Known:** You say useful failure evidence must remain available.
 
 **Uncertain:** We have no example of what makes a retained result useful; that affects the intended boundary.
 
-**Question:** Describe a recent result you needed to keep and why, in your own words. That will help distinguish valuable evidence from clutter.
+- **A — Share an example:** Describe a recent result you needed to keep and why.
+- **B — Point to evidence:** Identify an existing guide or source that illustrates the need.
+- **C — Unknown/other:** Say you do not know yet or describe another useful route.
 
-There is no supported recommendation or meaningful choices list for an unknown personal example. Do not fabricate either.
+**Recommendation:** A is the most direct way to understand the concrete need; if no example is available, B can ground the boundary in existing evidence.
+
+**Question:** Which path is useful, or what would you add? A natural-language or qualified answer is welcome.
 
 ### Positive illustration: bounded lookup, then dialogue
 
@@ -77,7 +85,13 @@ If that section names no owner, stop; do not trace scripts or search the whole r
 
 **Uncertain:** Who uses retained results; this determines whose needs discovery should capture.
 
-**Question:** Who currently relies on those results? Describe their role in your own words; the inspected section does not support a choice list or recommendation.
+- **A — Name a user or team:** Describe who relies on the results and how.
+- **B — Share a source:** Point to another bounded source that identifies users.
+- **C — Unknown/other:** Say this is not known or provide another lead.
+
+**Recommendation:** A is the clearest route if you know the users; otherwise B can establish the fact without guessing.
+
+**Question:** Which path can you answer, or what relevant qualification should I retain?
 
 ### Positive illustration: challenge, hypothesis, probe, then direction choice
 
@@ -85,7 +99,13 @@ If that section names no owner, stop; do not trace scripts or search the whole r
 
 **Uncertain:** **Hypothesis:** awareness away from the dashboard, rather than display space, may be the underlying need.
 
-**Question:** In that example, would a larger dashboard have helped while nobody was viewing it? Describe what would have made the failure noticeable; this tests the hypothesis, not an implementation.
+**Recommendation:** A concrete account of what would make the failure noticeable is the best evidence for testing the hypothesis; do not infer an implementation from it.
+
+- **A — Display still matters:** Explain how a larger display would help the affected person.
+- **B — Awareness matters:** Describe when and how someone needs to notice the failure.
+- **C — Neither/unknown/other:** Qualify the example or say what remains unclear.
+
+**Question:** In that example, would a larger dashboard have helped while nobody was viewing it, or which path better describes the need? This tests the hypothesis, not an implementation.
 
 After the engineer replies that nobody was watching:
 
@@ -108,8 +128,11 @@ The probe answer did not authorize switching objectives. After the direction cho
 
 **Uncertain:** That inference needs confirmation; the required retention duration remains unknown.
 
-- **A — Accurate:** Investigate this objective, carrying the unknown duration.
-- **B — Correct or deepen:** Adjust the understanding before investigation; more dialogue now avoids pursuing the wrong objective.
+- **A — Mostly accurate:** Investigate this objective and carry the unknown duration.
+- **B — Correct a point:** Identify the statement, inference or boundary to revise.
+- **C — Deepen first:** Add the missing example, priority or constraint that changes the objective.
+
+**Recommendation:** A is reasonable if the inference is close; B or C is better if a correction would change what investigation is relevant.
 
 **Question:** Does this capture your intent, or what should I correct? A natural-language answer is welcome.
 

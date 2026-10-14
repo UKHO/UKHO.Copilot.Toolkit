@@ -287,6 +287,8 @@ function researchMatrix() {
     continuation: 'Research must restart discovery on every continuation.',
     choices: 'Research must use exactly three choices.', freeText: 'Engineers must give letter-only answers.',
     facts: 'Every Research question must be open-only.', unsupported: 'Research may fabricate recommendations.',
+    omitRecommendation: 'Plan may omit the Recommendation.', guessedFact: 'For factual questions, guess the answer when evidence is missing.',
+    cosmeticPaths: 'Lettered paths may be cosmetic.', noQuestionFormat: 'Updates that ask no question must still use all four fields.',
     natural: 'Research must reject natural-language acknowledgment.', uncertainAnswer: 'Research must force certainty.',
     otherPhase: 'Plan must complete the Research interview.',
     decisions: 'The brief may omit consequential choices.', actualDirection: 'The brief may omit actual engineer direction.',
@@ -317,19 +319,19 @@ function researchMatrix() {
     ['truthful persistence', 'Eligible truthful Research-note persistence remains allowed', bad.persistence]
   ]);
   add('QUESTIONS-METHOD-001', skill, 'Trigger', [
-    ['every question resources', 'Research MUST load and apply this Skill and its clarification message template before every question', bad.format],
+    ['every question resources', 'Every phase MUST load and apply this Skill and its clarification message template before every question', bad.format],
     ['other-phase compatibility', "Other phases use contextual material clarification; they do not inherit Research's initial-discovery process", bad.otherPhase]
   ]);
   add('QUESTIONS-METHOD-001', skill, 'Procedure', [
     ['entry sequence', 'orient → discover → acknowledged readback → investigate', bad.entry],
     ['Known field', 'Known →', bad.known], ['Uncertain field', 'Uncertain →', bad.uncertain],
-    ['Recommendation field', 'Recommendation (if supported) →', bad.recommendation], ['Question field', '→ Question', bad.question],
-    ['explicit default later questions', 'In every Research question, including later clarification, show those labels explicitly and concisely', bad.format],
-    ['unsupported omission', 'omit only an unsupported Recommendation', bad.unsupported],
-    ['lettered choices', 'offer meaningful lettered alternatives', bad.reminder], ['trade-offs', 'with relevant trade-offs and a supported recommendation', bad.reminder],
-    ['no reminder', 'without waiting for a reminder', bad.reminder],
+    ['Recommendation field', 'Recommendation →', bad.recommendation], ['Question field', '→ Question', bad.question],
+    ['explicit default all phases', 'every engineer-facing question in every RPIR phase', bad.format],
+    ['unsupported factual advice', 'Provide a supported Recommendation every time', bad.omitRecommendation],
+    ['lettered paths', 'Offer meaningful lettered response paths', bad.reminder],
     ['two or four choices', 'Do not require exactly three choices', bad.choices], ['free text', "Invite the engineer's own words or qualifications", bad.freeText],
-    ['fact request', 'For a fact/example request with no meaningful alternatives, explain the information needed and invite free text', bad.facts],
+    ['fact request', 'For evidence requests, options can describe ways to provide an example/source', bad.facts],
+    ['other-phase framing', 'Other phases use contextual material clarification; they do not inherit Research', bad.omitRecommendation],
     ['direction advice', 'recommendations may guide discovery direction, not prescribe substantive solutions', bad.solution],
     ['uncertainty', 'specific uncertainty', bad.uncertainty], ['purpose', 'next-question purpose before execution', bad.purpose],
     ['source', 'bound the source/search', bad.source], ['stop', 'stop to return to dialogue when answered or the bound is reached', bad.stop],
@@ -344,10 +346,10 @@ function researchMatrix() {
     ['continuation', 'retain the intent trace on same-objective continuation', bad.continuation],
     ['natural acknowledgment', 'Accept natural-language acknowledgment', bad.natural],
     ['uncertain answer', 'corrections and “I don\'t know”', bad.uncertainAnswer],
-    ['non-Research framing', 'Other phases retain proportional contextual framing and optional genuine alternatives', bad.otherPhase]
+    ['non-Research interview boundary', 'Other phases use contextual material clarification; they do not inherit Research', bad.otherPhase]
   ]);
   add('QUESTIONS-METHOD-001', skill, 'Outputs', [
-    ['visible output default', 'Research always uses explicit Known/Uncertain/Question labels and Recommendation when supported', bad.format],
+    ['visible output default', 'Every engineer-facing RPIR question uses all four explicit labels', bad.format],
     ['actual output wait', 'actual waiting for acknowledgment', bad.wait], ['deferral evidence', 'deferral scope/timing and dependent unknowns', bad.timing]
   ]);
   add('QUESTIONS-METHOD-001', skill, 'Limits', [
@@ -356,18 +358,20 @@ function researchMatrix() {
   ]);
   add('QUESTIONS-METHOD-001', skill, 'Validation', [
     ['lookup evidence', 'declared uncertainty, next-question purpose, source/search bound and return to dialogue', bad.evidence],
-    ['presentation validation', 'explicit framing', bad.format], ['reminder validation', 'without reminders', bad.reminder],
+    ['presentation validation', 'explicit framing', bad.format], ['supported advice validation', 'a supported Recommendation', bad.unsupported],
     ['direction validation', 'alternative-framing probe and engineer direction choice', bad.direction],
     ['readback validation', 'do not mistake a sent readback for an answered one', bad.sent]
   ]);
   add('QUESTIONS-METHOD-001', template, 'Clarification message template', [
     ['Known label', '**Known:**', bad.known], ['Uncertain label', '**Uncertain:**', bad.uncertain],
     ['Recommendation label', '**Recommendation:**', bad.recommendation], ['Question label', '**Question:**', bad.question],
-    ['explicit default', 'labels for every question', bad.format], ['later default', 'later clarification; omit only an unsupported Recommendation', bad.format],
-    ['useful options', 'offer meaningful lettered alternatives', bad.reminder], ['trade-offs', 'with relevant trade-offs without waiting for a reminder', bad.reminder],
+    ['explicit default', 'every engineer-facing question in every RPIR phase', bad.format], ['field sequence', 'Known → Uncertain → Recommendation → Question', bad.format],
+    ['useful options', 'meaningful lettered response paths', bad.reminder], ['trade-offs', 'Include relevant trade-offs', bad.reminder],
     ['two or four options', 'as many alternatives as are useful, not exactly three', bad.choices],
     ['free text', "engineer's own words, never require a letter", bad.freeText], ['unsupported advice', 'Do not invent alternatives or fabricate a recommendation', bad.unsupported],
-    ['fact questions', 'invite free text without a choices list', bad.facts], ['open-only loophole', 'not a blanket exception for open-question-only discovery', bad.facts],
+    ['fact evidence paths', 'For a factual/example request, paths may offer', bad.facts],
+    ['unsupported factual recommendation', 'recommend how to supply or obtain evidence rather than guessing', bad.guessedFact],
+    ['cosmetic alternatives rejected', 'not cosmetic alternatives', bad.cosmeticPaths],
     ['direction advice', 'discovery-direction advice rather than substantive solution advice', bad.solution],
     ['entry sequence', 'orient → discover → acknowledged readback → investigate', bad.entry],
     ['uncertainty', 'specific uncertainty', bad.uncertainty], ['purpose', 'next-question purpose', bad.purpose], ['source', 'bound the source/search', bad.source],
@@ -378,7 +382,7 @@ function researchMatrix() {
     ['natural acknowledgment', 'Accept natural-language acknowledgment', bad.natural], ['continuation', 'preserve the intent trace on continuation', bad.continuation],
     ['explicit deferral', 'honor its actual scope/timing without duplicate permission', bad.deferral],
     ['false deferral', 'Silence, uncertainty, clarity and generic “keep going” pressure are not deferral', bad.falseDeferral],
-    ['other phases', 'Plan, Implement and Review retain proportional contextual framing', bad.otherPhase]
+    ['other phases', 'Plan, Implement and Review retain contextual clarification', bad.otherPhase]
   ]);
   add('RESEARCH-DISCOVERY-001', method, 'Orient before discovery; investigate after acknowledgment', [
     ['entry sequence', 'orient → discover → acknowledged readback → investigate', bad.entry],
@@ -395,10 +399,10 @@ function researchMatrix() {
     ['broadening', 'Broaden toward overlooked needs or plausible alternative problem framings', bad.entry],
     ['answer dependence', 'highest-value unresolved follow-up that depends on it', bad.actualDirection],
     ['Known field', 'Known →', bad.known], ['Uncertain field', 'Uncertain →', bad.uncertain],
-    ['Recommendation field', 'Recommendation (if supported) →', bad.recommendation], ['Question field', '→ Question', bad.question],
-    ['framing default', 'framing every time', bad.format], ['no reminder', 'meaningful lettered options, relevant trade-offs and supported advice without a reminder', bad.reminder],
-    ['free text', 'Invite free text or qualifications', bad.freeText], ['two or four options', 'Do not require exactly three options or invent alternatives/advice', bad.choices],
-    ['fact request', 'fact/example request without meaningful alternatives', bad.facts],
+    ['Recommendation field', 'Recommendation →', bad.recommendation], ['Question field', '→ Question', bad.question],
+    ['framing default', 'fields on every question', bad.format], ['meaningful paths', 'Offer meaningful lettered paths even when asking for a fact or example', bad.reminder],
+    ['free text', 'Invite free text or qualifications', bad.freeText], ['two or four options', 'Do not require exactly three options, letter-only answers, or cosmetic alternatives', bad.choices],
+    ['factual evidence paths', 'meaningful lettered paths even when asking for a fact or example', bad.facts],
     ['hypothesis', 'explicitly label it as a **hypothesis**', bad.hypothesis], ['probe', 'brief focused probe', bad.probe],
     ['direction choice', "Obtain the engineer's direction choice before deeper exploration", bad.direction],
     ['probe is not direction', 'a probe answer alone is not a direction change', 'A probe answer counts as a direction change.'],
@@ -406,6 +410,9 @@ function researchMatrix() {
   ]);
   add('RESEARCH-DISCOVERY-001', method, 'Read back, correct and stop', [
     ['readback sequence', 'confirm/correct readback after substantive discovery and before broad investigation', bad.sent],
+    ['relevant dimensions disposition', 'For each material dimension, identify whether it is answered by the engineer, supported by eligible evidence, not applicable with a reason, or unresolved with its consequence and next step.', 'Research may leave relevant dimensions unassessed.'],
+    ['developed understanding before readback', 'If a consequential answer remains undeveloped, continue with the useful answer-dependent question rather than treating headings, a formatted paraphrase or a question count as proof of understanding.', 'Headings and paraphrase prove understanding.'],
+    ['downstream decisions after investigation', 'After investigation, assess foreseeable engineer-owned decisions newly exposed by evidence. Resolve them where practicable; otherwise state each material choice, its consequence, affected downstream work and a useful resolution route.', 'Research may omit foreseeable downstream decisions.'],
     ['pending answer', 'end the turn', bad.wait], ['unanswered readback', 'Do not emit a readback and start dependent investigation in the same unanswered turn', bad.sent],
     ['natural acknowledgment', 'Natural-language acknowledgment', bad.natural], ['false acknowledgment', 'Silence and passive non-response are not confirmation', 'Silence counts as confirmation.']
   ]);
@@ -496,9 +503,9 @@ function researchMatrix() {
     add('RESEARCH-GUIDE-001', file, heading, [
       ['entry sequence', 'orient → discover → acknowledged readback → investigate', bad.entry],
       ['Known guide field', 'Known/', bad.known], ['Uncertain guide field', 'Uncertain/', bad.uncertain],
-      ['Recommendation guide field', 'Recommendation (when supported)/', bad.recommendation], ['Question guide field', '/Question framing', bad.question],
-      ['choices', file === catalogue ? 'meaningful lettered choices/trade-offs at genuine decisions' : 'useful lettered choices and trade-offs at genuine decisions', bad.reminder],
-      ['free text', file === catalogue ? 'free-text facts/examples without invented options or forced letter replies' : file === wiki ? 'free-text fact/example questions' : 'free text when facts/examples are needed', bad.freeText],
+      ['Recommendation and Question fields', 'Recommendation/Question', bad.recommendation],
+      ['response paths', 'meaningful lettered', bad.reminder],
+      ['factual/evidence paths', file === catalogue ? 'including factual evidence-supply routes without invented facts' : file === wiki ? 'Free text, qualifications, useful unknown/other paths and nonrecommended choices remain valid' : 'Natural-language, qualified and nonrecommended answers remain valid', bad.facts],
       ['explicit deferral', file === catalogue ? 'allow-list after actual acknowledgment or explicit engineer-directed deferral' : 'explicitly defer discovery or acknowledgment', bad.deferral],
       ['continuation', file === catalogue ? 'continuation without restarting discovery' : file === wiki ? "continuation reuses the same objective's intent trace" : 'continuing the same objective reuses its intent trace', bad.continuation]
     ]);
@@ -606,8 +613,9 @@ function researchCompatibility() {
     ['two useful choices', 'At a genuine decision two useful choices may be A — preserve the current objective, or B — investigate the alternative; explain the trade-off and recommend only with evidence.'],
     ['four useful choices', 'At a genuine decision four useful choices may be A — retain scope, B — narrow scope, C — broaden discovery, or D — defer; explain their trade-offs without forcing a letter reply.'],
     ['free-text qualification', 'An engineer may reply in free text with qualifications instead of selecting a letter.'],
-    ['unsupported recommendation omitted', 'If evidence supports no recommendation, omit the Recommendation label rather than fabricate advice.'],
-    ['fact/example question', 'For an unknown personal example with no meaningful alternatives, explain the needed information and ask for free text without options or a recommendation.'],
+    ['unsupported factual conclusion', 'When the fact is unknown, recommend a practical way to provide or obtain evidence rather than guessing.'],
+    ['factual evidence-path question', '**Known:** The source does not show who relies on the results.\n\n**Uncertain:** Which evidence can establish the users.\n\n- **A — Share an example:** Describe a user and how they use the results.\n- **B — Point to a source:** Identify a bounded source to inspect.\n- **C — Unknown/other:** Say what remains unknown or offer another route.\n\n**Recommendation:** A is direct if known; otherwise B can establish the fact without guessing.\n\n**Question:** Which path can you answer, or what qualification should I retain?'],
+    ['no-question update compatibility', 'A progress update with no question does not need the four-field question format.'],
     ['discovery-direction advice', 'Before acknowledgment Research may recommend a discovery direction supported by the supplied example, not a substantive solution.'],
     ['natural acknowledgment', 'After the engineer says “That captures it; investigate”, accept natural-language acknowledgment and investigate without a duplicate checkpoint.'],
     ['uncertain answer', 'After “I don\'t know”, preserve the unknown without inventing certainty or treating it as deferral.'],
@@ -636,6 +644,32 @@ function researchCompatibility() {
     }
   }
 }
+
+function assertPositiveQuestionIllustrations() {
+  const relative = '.github/skills/agent-question-resolution/references/research-intent-discovery.md';
+  const text = fs.readFileSync(staged(relative), 'utf8');
+  const headings = [...text.matchAll(/^### (Positive illustration:[^\n]+)\n/gm)];
+  assert.ok(headings.length >= 4, 'expected varied positive question illustrations');
+  for (const [index, heading] of headings.entries()) {
+    const start = heading.index + heading[0].length;
+    const end = headings[index + 1]?.index ?? text.length;
+    const body = text.slice(start, end);
+    const questions = [...body.matchAll(/\*\*Question:\*\*/g)];
+    assert.ok(questions.length, `${heading[1]} must include a question`);
+    for (const [questionIndex, question] of questions.entries()) {
+      const priorQuestion = questionIndex ? questions[questionIndex - 1].index + questions[questionIndex - 1][0].length : 0;
+      const knownAt = body.lastIndexOf('**Known:**', question.index);
+      const block = body.slice(Math.max(priorQuestion, knownAt), question.index);
+      for (const field of ['**Known:**', '**Uncertain:**', '**Recommendation:**']) {
+        assert.ok(block.includes(field), `${heading[1]} question ${questionIndex + 1} missing ${field}`);
+      }
+      assert.match(block, /^\s*- \*\*[A-Z] —/m, `${heading[1]} question ${questionIndex + 1} needs a meaningful lettered path`);
+    }
+  }
+  assert.ok(text.includes('if the factual conclusion is unknown, recommend a practical evidence route rather than omitting advice or guessing'));
+  console.log(`PASS authored examples: ${headings.length} positive illustrations, all question blocks have four-field framing and lettered paths.`);
+}
+
 try {
   for (const relative of files) {
     const dest = path.join(temp, relative);
@@ -670,8 +704,26 @@ try {
   assert.deepEqual(alternate.summaries, pass);
   assert.equal(alternate.status, 0);
   diagnosticSet(alternate, [], 'healthy alternate invocation');
+  assertPositiveQuestionIllustrations();
   researchMatrix();
   researchCompatibility();
+  for (const relative of [
+    '.github/agents/research.agent.md', '.github/agents/plan.agent.md',
+    '.github/agents/implement.agent.md', '.github/agents/review.agent.md'
+  ]) {
+    expect(`every phase applies question resources: ${relative}`,
+      [[relative, 'Before every engineer-facing question', 'Before selected engineer-facing questions']],
+      authoredFail, ['FAIL QUESTIONS-METHOD-001']);
+  }
+  const sharedQuestionSkill = '.github/skills/agent-question-resolution/SKILL.md';
+  expect('unframed factual question permission restored', [[sharedQuestionSkill,
+    'when a factual conclusion is unsupported, recommend a practical way to supply or obtain the evidence instead of guessing',
+    'when a factual conclusion is unsupported, guess the answer instead of seeking evidence']], authoredFail, ['FAIL QUESTIONS-METHOD-001']);
+  expect('cosmetic response paths allowed', [[sharedQuestionSkill,
+    'not cosmetic alternatives', 'lettered paths may be cosmetic']], authoredFail, ['FAIL QUESTIONS-METHOD-001']);
+  expect('question formatting required for no-question updates', [[sharedQuestionSkill,
+    'ordinary updates or reports that ask no question need no question format',
+    'updates that ask no question must still use all four fields']], authoredFail, ['FAIL QUESTIONS-METHOD-001']);
   const pilot = '.github/skills/create-copilot-skill/SKILL.md';
   const compactSafety = 'Prefer read-only discovery and validation. The capability list, genuine-need and user-approved-scope conditions, prohibition on inferring approval from the Skill request, and experimental-context, secret and no-tool-grant safeguards in “Limits and safety” also govern recommendations. This local reminder grants no tools or permissions.';
   const repeatedBaselineSafety = 'Prefer read-only discovery and validation. Do not add or recommend edit, terminal, web, MCP, hook, or agent-delegation capability unless the requested workflow genuinely requires it and the user has approved that scope. Do not use experimental forked context or embed secrets.';
