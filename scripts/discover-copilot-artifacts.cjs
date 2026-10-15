@@ -29,15 +29,26 @@ function normalize(relative) {
   return normalized;
 }
 
-function lstat(full, relative) {
+// Check the root and every component, not just the leaf: lstat of a leaf
+// follows symlink/junction ancestors. No cache: each read rechecks its path.
+function inspectPath(relative) {
+  const full = path.resolve(root, relative);
+  if (full !== root && !full.startsWith(`${root}${path.sep}`)) fail(`Path escapes fixed repository root: ${relative}`);
+  const parts = path.relative(root, full).split(path.sep).filter(Boolean);
+  let current = root;
   let stat;
-  try {
-    stat = fs.lstatSync(full);
-  } catch (error) {
-    fail(`Cannot inspect ${relative}: ${error.message}`);
+  for (let index = 0; index <= parts.length; index += 1) {
+    if (index) current = path.join(current, parts[index - 1]);
+    try { stat = fs.lstatSync(current); }
+    catch (error) { fail(`Cannot inspect ${relative} at ${current}: ${error.message}`); }
+    if (stat.isSymbolicLink()) fail(`Symbolic links/junctions are not allowed: ${relative} at ${current}`);
+    if (index < parts.length && !stat.isDirectory()) fail(`Expected directory: ${relative} at ${current}`);
   }
-  if (stat.isSymbolicLink()) fail(`Symbolic links are not allowed: ${relative}`);
-  return stat;
+  return { full, stat };
+}
+
+function lstat(full, relative) {
+  return inspectPath(path.relative(root, full)).stat;
 }
 
 function requireDirectory(full, relative) {
@@ -118,4 +129,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { classes, discover, normalize, root };
+module.exports = { classes, discover, inspectPath, normalize, root };

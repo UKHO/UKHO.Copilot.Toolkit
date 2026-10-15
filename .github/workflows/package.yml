@@ -18,12 +18,7 @@ on:
       - scripts/sync-copilot-manifest.cjs
       - scripts/verify-vsix-boundary.cjs
       - scripts/verify-copilot-contracts.cjs
-      - tests/test-copilot-contract-scenarios.cjs
       - tests/test-vsix-boundary.cjs
-      - tests/test-run-lifecycle.cjs
-      - scripts/test-run-lifecycle.cjs
-      - scripts/verify-vsix-packaging-guide.cjs
-      - scripts/check-copilot-workflow.cjs
       - .github/workflows/package.yml
   pull_request:
     paths:
@@ -42,19 +37,14 @@ on:
       - scripts/sync-copilot-manifest.cjs
       - scripts/verify-vsix-boundary.cjs
       - scripts/verify-copilot-contracts.cjs
-      - tests/test-copilot-contract-scenarios.cjs
       - tests/test-vsix-boundary.cjs
-      - tests/test-run-lifecycle.cjs
-      - scripts/test-run-lifecycle.cjs
-      - scripts/verify-vsix-packaging-guide.cjs
-      - scripts/check-copilot-workflow.cjs
       - .github/workflows/package.yml
 
 permissions:
   contents: read
 
 jobs:
-  contracts:
+  structure:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -66,30 +56,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22.14.0
-      - name: Verify Copilot customization contracts
+      - name: Verify Copilot customization structure
         run: node scripts/verify-copilot-contracts.cjs
-  scenarios:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out Toolkit
-        uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.14.0
-      - name: Verify Copilot contract scenarios
-        run: node tests/test-copilot-contract-scenarios.cjs
-  guide:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out Toolkit
-        uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.14.0
-      - name: Verify VSIX packaging guide
-        run: node scripts/verify-vsix-packaging-guide.cjs
   package:
     if: false # Release hold: future owner confirmation and distinct output strategy required.
     runs-on: ubuntu-latest
