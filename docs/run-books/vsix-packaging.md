@@ -41,7 +41,7 @@ The synchronizer retains unrelated `files` entries and unrelated manifest fields
 
 ### Verify contributed customization contracts
 
-`scripts/verify-copilot-contracts.cjs` reuses the fixed-root discovery inventory to check authored recovery invariants, malformed frontmatter, duplicate customization names, unresolved repository-local links, prompt targets, manual coordinator handoffs, role tool contracts, prospective record-instruction `applyTo` coverage, and manifest/discovery parity. Its authored, structural and parity diagnostics remain distinct. It is read-only and does not validate runtime discovery or installed-VSIX behavior. The separate `scripts/test-copilot-contract-scenarios.cjs` exercises positive and negative static fixtures; a run can retain its own `scripts/.rpir-contracts-<24 lowercase hex>/` staging tree. The packaging-guide validator independently checks the six metadata interfaces below.
+`scripts/verify-copilot-contracts.cjs` reuses the fixed-root discovery inventory to check authored recovery invariants, malformed frontmatter, duplicate customization names, unresolved repository-local links, prompt targets, manual coordinator handoffs, role tool contracts, prospective record-instruction `applyTo` coverage, and manifest/discovery parity. Its authored, structural and parity diagnostics remain distinct. It is read-only and does not validate runtime discovery or installed-VSIX behavior. Maintained regression suites live in `tests/`; a completed suite run retains one global latest result under ignored `/.test-staging/`, including captured stdout/stderr and any scenario stage. A new completed run publishes durable results before removing prior positively owned inactive runs across suites. Setup/interruption failures preserve prior evidence; uncertain or refused cleanup remains visible and is not swept. The packaging-guide validator independently checks the six metadata interfaces below.
 
 ## Human process
 
@@ -183,7 +183,8 @@ The workflow text implements P1's checks-only job layout and release hold, but n
 - [`scripts/discover-copilot-artifacts.cjs`](../../scripts/discover-copilot-artifacts.cjs) — fixed-root inventory.
 - [`scripts/sync-copilot-manifest.cjs`](../../scripts/sync-copilot-manifest.cjs) — controlled synchronization boundary.
 - [`scripts/verify-copilot-contracts.cjs`](../../scripts/verify-copilot-contracts.cjs) — customization-contract validation.
-- [`scripts/test-copilot-contract-scenarios.cjs`](../../scripts/test-copilot-contract-scenarios.cjs) and [`scripts/verify-vsix-packaging-guide.cjs`](../../scripts/verify-vsix-packaging-guide.cjs) — static scenario and guide metadata checks.
+- [`tests/test-copilot-contract-scenarios.cjs`](../../tests/test-copilot-contract-scenarios.cjs), [`tests/test-vsix-boundary.cjs`](../../tests/test-vsix-boundary.cjs), and [`scripts/test-run-lifecycle.cjs`](../../scripts/test-run-lifecycle.cjs) — maintained regressions and shared local result lifecycle.
+- [`scripts/verify-vsix-packaging-guide.cjs`](../../scripts/verify-vsix-packaging-guide.cjs) — guide metadata and interface check.
 - [`scripts/verify-vsix-boundary.cjs`](../../scripts/verify-vsix-boundary.cjs) — post-package boundary validation.
 - [`package.json`](../../package.json) — package identity and scripts.
 - [`README.md`](../../README.md) and [workflow](../../.github/workflows/package.yml) — consumer guidance and automation context.

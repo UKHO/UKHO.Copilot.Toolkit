@@ -434,3 +434,9 @@ FodyWeavers.xsd
 # Local lifecycle documentation
 /docs/planning/
 /docs/delivery/
+
+# Retain only the latest owned test run outside maintained test sources.
+/.test-staging/
+
+# Legacy retained mutation-suite stages; migration remains separately guarded.
+/scripts/.rpir-contracts-*/

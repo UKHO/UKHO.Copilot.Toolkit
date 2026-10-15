@@ -1,11 +1,16 @@
 'use strict';
 
-// Static mutation tests only. Never mutate source or delete a retained fixture.
+// Static mutation tests only. Mutate only this run's owned fixture and rotate older owned results after publication.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const crypto = require('node:crypto');
 const { spawnSync } = require('node:child_process');
+if (process.env.TOOLKIT_TEST_RUN_CHILD !== '1') {
+  const { runSuite } = require('../scripts/test-run-lifecycle.cjs');
+  process.exitCode = runSuite('copilot-contract-scenarios', __filename);
+} else {
+const { markTestStarted, registerTestCompletion } = require('../scripts/test-run-lifecycle.cjs');
+registerTestCompletion();
 const source = path.resolve(__dirname, '..');
 const scripts = path.join(source, 'scripts');
 const identity = (value) => process.platform === 'win32' ? value.toLowerCase() : value;
@@ -31,19 +36,25 @@ assert.equal(identity(process.cwd()), identity(source), 'scenario cwd must be th
 plain(source); plain(scripts);
 const files = [
   'package.json', 'README.md', 'CHANGELOG.md', 'LICENSE',
+  'tests/test-copilot-contract-scenarios.cjs',
+  'tests/test-vsix-boundary.cjs',
+  'tests/test-run-lifecycle.cjs',
+  'scripts/test-run-lifecycle.cjs',
   'docs/Wiki/rpir.md', 'docs/Wiki/artifact-catalogue.md',
   'docs/run-books/vsix-packaging.md',
   ...['discover-copilot-artifacts', 'sync-copilot-manifest', 'verify-vsix-boundary',
-    'verify-copilot-contracts', 'test-copilot-contract-scenarios', 'verify-vsix-packaging-guide',
+    'verify-copilot-contracts', 'verify-vsix-packaging-guide',
     'check-copilot-workflow'].map((name) => `scripts/${name}.cjs`)
 ];
 for (const file of files) inspect(path.join(source, file));
 inspect(path.join(source, '.github'));
-fs.accessSync(scripts, fs.constants.R_OK | fs.constants.W_OK);
-const temp = path.join(scripts, `.rpir-contracts-${crypto.randomBytes(12).toString('hex')}`);
+const runDirectory = process.env.TOOLKIT_TEST_RUN_DIR;
+assert.ok(runDirectory, 'shared test-run lifecycle must provide an owned run directory');
+plain(runDirectory);
+const temp = path.join(runDirectory, 'stage');
 assert.ok(!fs.existsSync(temp), `staging collision: ${temp}`);
 fs.mkdirSync(temp, { mode: 0o700 });
-console.log(`Retained staging tree: ${temp}`);
+console.log(`Owned test stage: ${temp}`);
 const pending = new Map();
 const touched = new Set();
 function staged(relative) {
@@ -287,7 +298,7 @@ function researchMatrix() {
     continuation: 'Research must restart discovery on every continuation.',
     choices: 'Research must use exactly three choices.', freeText: 'Engineers must give letter-only answers.',
     facts: 'Every Research question must be open-only.', unsupported: 'Research may fabricate recommendations.',
-    omitRecommendation: 'Plan may omit the Recommendation.', guessedFact: 'For factual questions, guess the answer when evidence is missing.',
+    omitRecommendation: 'Plan may omit the Recommendation.', guessedFact: 'Unsupported facts may guess the answer when evidence is missing.',
     cosmeticPaths: 'Lettered paths may be cosmetic.', noQuestionFormat: 'Updates that ask no question must still use all four fields.',
     natural: 'Research must reject natural-language acknowledgment.', uncertainAnswer: 'Research must force certainty.',
     otherPhase: 'Plan must complete the Research interview.',
@@ -308,7 +319,7 @@ function researchMatrix() {
     ['pending answer wait', 'end the turn and wait', bad.wait], ['unanswered readback', 'emitting a readback is not acknowledgment', bad.sent],
     ['hypothesis', 'label it as a hypothesis', bad.hypothesis], ['probe', 'probe briefly', bad.probe],
     ['direction choice', "obtain the engineer's direction choice before deeper exploration", bad.direction],
-    ['quota', 'without a fixed question or round quota', bad.quota], ['answer update', 'Each answer updates understanding', bad.actualDirection],
+    ['quota', 'without a fixed question or round quota', bad.quota], ['answer update', 'Each consequential answer updates understanding', bad.actualDirection],
     ['explicit deferral', 'explicitly directs Research to defer discovery or acknowledgment', bad.deferral],
     ['false deferral', 'silence, uncertainty, clarity or generic “keep going” pressure', bad.falseDeferral],
     ['natural acknowledgment', 'Accept natural-language acknowledgment', bad.natural], ['continuation', 'reuse the intent trace', bad.continuation],
@@ -329,9 +340,8 @@ function researchMatrix() {
     ['explicit default all phases', 'every engineer-facing question in every RPIR phase', bad.format],
     ['unsupported factual advice', 'Provide a supported Recommendation every time', bad.omitRecommendation],
     ['lettered paths', 'Offer meaningful lettered response paths', bad.reminder],
-    ['two or four choices', 'Do not require exactly three choices', bad.choices], ['free text', "Invite the engineer's own words or qualifications", bad.freeText],
+    ['two or four choices', 'Do not require exactly three choices', bad.choices], ['free text', 'Invite natural-language answers', bad.freeText],
     ['fact request', 'For evidence requests, options can describe ways to provide an example/source', bad.facts],
-    ['other-phase framing', 'Other phases use contextual material clarification; they do not inherit Research', bad.omitRecommendation],
     ['direction advice', 'recommendations may guide discovery direction, not prescribe substantive solutions', bad.solution],
     ['uncertainty', 'specific uncertainty', bad.uncertainty], ['purpose', 'next-question purpose before execution', bad.purpose],
     ['source', 'bound the source/search', bad.source], ['stop', 'stop to return to dialogue when answered or the bound is reached', bad.stop],
@@ -346,7 +356,7 @@ function researchMatrix() {
     ['continuation', 'retain the intent trace on same-objective continuation', bad.continuation],
     ['natural acknowledgment', 'Accept natural-language acknowledgment', bad.natural],
     ['uncertain answer', 'corrections and “I don\'t know”', bad.uncertainAnswer],
-    ['non-Research interview boundary', 'Other phases use contextual material clarification; they do not inherit Research', bad.otherPhase]
+    ['non-Research independent safe work', 'Other phases may continue independent safe work', bad.otherPhase]
   ]);
   add('QUESTIONS-METHOD-001', skill, 'Outputs', [
     ['visible output default', 'Every engineer-facing RPIR question uses all four explicit labels', bad.format],
@@ -358,7 +368,7 @@ function researchMatrix() {
   ]);
   add('QUESTIONS-METHOD-001', skill, 'Validation', [
     ['lookup evidence', 'declared uncertainty, next-question purpose, source/search bound and return to dialogue', bad.evidence],
-    ['presentation validation', 'explicit framing', bad.format], ['supported advice validation', 'a supported Recommendation', bad.unsupported],
+    ['presentation validation', 'all four explicit labels', bad.format], ['supported advice validation', 'a supported Recommendation', bad.unsupported],
     ['direction validation', 'alternative-framing probe and engineer direction choice', bad.direction],
     ['readback validation', 'do not mistake a sent readback for an answered one', bad.sent]
   ]);
@@ -366,9 +376,9 @@ function researchMatrix() {
     ['Known label', '**Known:**', bad.known], ['Uncertain label', '**Uncertain:**', bad.uncertain],
     ['Recommendation label', '**Recommendation:**', bad.recommendation], ['Question label', '**Question:**', bad.question],
     ['explicit default', 'every engineer-facing question in every RPIR phase', bad.format], ['field sequence', 'Known → Uncertain → Recommendation → Question', bad.format],
-    ['useful options', 'meaningful lettered response paths', bad.reminder], ['trade-offs', 'Include relevant trade-offs', bad.reminder],
+    ['useful options', 'meaningful lettered paths that resolve the stated uncertainty', bad.reminder], ['trade-offs', 'with relevant trade-offs', bad.reminder],
     ['two or four options', 'as many alternatives as are useful, not exactly three', bad.choices],
-    ['free text', "engineer's own words, never require a letter", bad.freeText], ['unsupported advice', 'Do not invent alternatives or fabricate a recommendation', bad.unsupported],
+    ['free text', "engineer's own words, never require a letter", bad.freeText], ['unsupported advice', 'recommend how to supply or obtain evidence rather than guessing', bad.unsupported],
     ['fact evidence paths', 'For a factual/example request, paths may offer', bad.facts],
     ['unsupported factual recommendation', 'recommend how to supply or obtain evidence rather than guessing', bad.guessedFact],
     ['cosmetic alternatives rejected', 'not cosmetic alternatives', bad.cosmeticPaths],
@@ -465,7 +475,7 @@ function researchMatrix() {
     ['all requests', 'For every new Research objective, including detailed, apparently factual and solution-led requests', bad.entry],
     ['actual wait', 'emitting a readback or generic completion pressure is insufficient', bad.sent],
     ['explicit deferral', 'Honor actual explicit deferral using disclosed provisional understanding and its scope/timing', bad.deferral],
-    ['other phases', "alter other phases' contextual material clarification or independent safe work", bad.otherPhase]
+    ['other phases', 'make the Research interview apply to other phases', bad.otherPhase]
   ]);
   add('RESEARCH-RECORDS-001', records, 'Stage schemas', [
     ['choices', 'consequential choices', bad.decisions], ['alternative disposition', 'alternative-framing disposition when applicable', bad.disposition],
@@ -486,15 +496,16 @@ function researchMatrix() {
     ['provisional persistence', 'unresolved questions do not suppress eligible persistence or authorize broader pre-acknowledgment work', bad.persistence]
   ]);
   add('RESEARCH-ASSURANCE-001', assurance, 'Stage-specific outcome', [
-    ['choices', 'assess consequential choices', bad.decisions], ['actual direction', 'actual engineer direction and answer-to-understanding changes', bad.actualDirection],
+    ['choices', 'Assess consequential choices', bad.decisions], ['actual direction', 'actual engineer direction and answer-to-understanding changes', bad.actualDirection],
     ['hypothesis', 'labelled alternative-framing hypothesis', bad.hypothesis], ['probe', 'brief probe', bad.probe],
     ['direction choice', 'engineer direction choice before deeper exploration', bad.direction],
     ['actual acknowledgment', 'actual acknowledgment/correction of a substantive readback, pending acknowledgment', bad.capture],
     ['deferral limits', 'actual engineer-directed deferral with provisional understanding, scope/timing and remaining dependent limits', bad.timing],
     ['independent evidence', 'Distinguish recorded claims from independently observed conversation messages, chronological tool/lookup ordering and resource-loading evidence', bad.evidence],
     ['claimed compliance', 'a brief claiming compliance does not prove actual waiting, question format, bounded lookups or loading', bad.evidence],
-    ['uncertainty evidence', 'stated uncertainty/next-question purpose', bad.uncertainty], ['source evidence', 'source/search bound', bad.source],
-    ['dialogue evidence', 'return to dialogue', bad.stop],
+    ['dependent limits evidence', 'remaining dependent limits', bad.limits],
+    ['chronological source evidence', 'chronological tool/lookup ordering', bad.unobserved],
+    ['acknowledgment-before-broad-work evidence', 'verify actual acknowledgment or deferral before broad or delegated work', bad.sent],
     ['unobserved is unverified', 'Report unobserved behavior/loading as unverified, not passed', bad.unobserved],
     ['honored deferral', 'truthfully provisional brief is not rejected solely for deferral', 'Assurance may reject provisional briefs solely for deferral.'],
     ['provisional persistence', 'Remaining questions do not suppress eligible truthful persistence or authorize broad pre-acknowledgment work', bad.persistence]
@@ -524,7 +535,7 @@ function researchMatrix() {
   ]);
   add('RESEARCH-GUIDE-001', catalogue, 'Content', [
     ['narrow checks', 'bounded question-supporting checks only before acknowledgment absent explicit deferral', bad.factual],
-    ['other phases', 'Plan/Implement/Review retain contextual clarification, not the initial interview', bad.otherPhase],
+    ['other phases', "Plan/Implement/Review retain contextual clarification, not Research's initial interview", bad.otherPhase],
     ['direction control', 'hypothesis/probe/direction choice', bad.direction],
     ['actual waiting', 'actual waiting and explicit deferral, not generic “keep going” pressure', bad.wait]
   ]);
@@ -572,14 +583,20 @@ function researchMatrix() {
     const removed = line.replace(needle, '');
     const title = `${id} ${path.basename(file)} ${heading}: ${label}`;
     const mutation = (replacement) => [[file, line, replacement]];
-    const negative = (suffix, replacement) => expect(`${title} ${suffix}`, mutation(replacement), authoredFail, [`FAIL ${id}`]);
+    const expectedDiagnostics = (suffix) => [
+      `FAIL ${id}`,
+      ...(id === 'RESEARCH-INTENT-001' && file === agent && ['weakened', 'additive separate paragraph', 'additive other active section'].includes(suffix)
+        ? ['FAIL QUESTIONS-METHOD-001']
+        : [])
+    ];
+    const negative = (suffix, replacement) => expect(`${title} ${suffix}`, mutation(replacement), authoredFail, expectedDiagnostics(suffix));
     expect(`${title} equivalent`, mutation(line.replace(needle, equivalent(needle))), pass);
     negative('deleted', removed);
     negative('weakened', line.replace(needle, contradiction));
     negative('additive separate paragraph', `${line}${newline}${newline}${contradiction}`);
     // A different active section must not evade the owner-wide contradiction
     // scan. Insert before existing examples, never accidentally inside them.
-    expect(`${title} additive other active section`, [[file, lines[at], `${'#'.repeat(depth)} Additional Research constraints${newline}${newline}${contradiction}${newline}${newline}${lines[at]}`]], authoredFail, [`FAIL ${id}`]);
+    expect(`${title} additive other active section`, [[file, lines[at], `${'#'.repeat(depth)} Additional Research constraints${newline}${newline}${contradiction}${newline}${newline}${lines[at]}`]], authoredFail, expectedDiagnostics('additive other active section'));
     for (const [kind, quote] of [
       ['blockquote', `> ${needle}`], ['backtick fence', `\`\`\`text${newline}${needle}${newline}\`\`\``],
       ['tilde fence', `~~~text${newline}${needle}${newline}~~~`], ['comment', `<!--${newline}${needle}${newline}-->`],
@@ -690,6 +707,7 @@ try {
   record('delivery', '001-legacy-fixture');
   record('copilot', '001-current-fixture');
   assertLineage();
+  markTestStarted();
   for (const parent of ['planning', 'delivery', 'copilot']) {
     const subject = parent === 'copilot' ? '001-current-fixture' : '001-legacy-fixture';
     const base = `docs/${parent}/${subject}`;
@@ -713,14 +731,16 @@ try {
   ]) {
     expect(`every phase applies question resources: ${relative}`,
       [[relative, 'Before every engineer-facing question', 'Before selected engineer-facing questions']],
-      authoredFail, ['FAIL QUESTIONS-METHOD-001']);
+      authoredFail, relative.endsWith('/research.agent.md')
+        ? ['FAIL QUESTIONS-METHOD-001', 'FAIL RESEARCH-INTENT-001']
+        : ['FAIL QUESTIONS-METHOD-001']);
   }
   const sharedQuestionSkill = '.github/skills/agent-question-resolution/SKILL.md';
   expect('unframed factual question permission restored', [[sharedQuestionSkill,
     'when a factual conclusion is unsupported, recommend a practical way to supply or obtain the evidence instead of guessing',
     'when a factual conclusion is unsupported, guess the answer instead of seeking evidence']], authoredFail, ['FAIL QUESTIONS-METHOD-001']);
   expect('cosmetic response paths allowed', [[sharedQuestionSkill,
-    'not cosmetic alternatives', 'lettered paths may be cosmetic']], authoredFail, ['FAIL QUESTIONS-METHOD-001']);
+    'do not invent competing facts or cosmetic alternatives', 'do not invent competing facts or lettered paths may be cosmetic']], authoredFail, ['FAIL QUESTIONS-METHOD-001']);
   expect('question formatting required for no-question updates', [[sharedQuestionSkill,
     'ordinary updates or reports that ask no question need no question format',
     'updates that ask no question must still use all four fields']], authoredFail, ['FAIL QUESTIONS-METHOD-001']);
@@ -813,10 +833,10 @@ try {
   ]], pass);
   expect('Research question method reduced to a reference', [[researchAgent,
     'load and apply [agent-question-resolution]', 'refer to [agent-question-resolution]'
-  ]], authoredFail, ['FAIL RESEARCH-INTENT-001']);
+  ]], authoredFail, ['FAIL QUESTIONS-METHOD-001', 'FAIL RESEARCH-INTENT-001']);
   expect('equivalent application of both question resources', [[researchAgent,
     'load and apply [agent-question-resolution]', 'read and use [agent-question-resolution]'
-  ]], pass);
+  ]], authoredFail, ['FAIL QUESTIONS-METHOD-001']);
   expect('Research template application reduced to a reference', [[researchAgent,
     'and its [clarification message template](../skills/agent-question-resolution/templates/clarification-message.md)',
     '; refer to its [clarification message template](../skills/agent-question-resolution/templates/clarification-message.md)'
@@ -824,11 +844,11 @@ try {
   expect('additive detailed-request acknowledgment bypass', [[researchAgent,
     'Accept natural-language acknowledgment; do not require a letter or repeat facts already supplied.',
     'Accept natural-language acknowledgment; do not require a letter or repeat facts already supplied. A clear request proceeds without a compulsory confirmation checkpoint.'
-  ]], authoredFail, ['FAIL RESEARCH-INTENT-001']);
+  ]], authoredFail, ['FAIL QUESTIONS-METHOD-001', 'FAIL RESEARCH-INTENT-001']);
   const questionSkill = '.github/skills/agent-question-resolution/SKILL.md';
   expect('shared method template application reduced to a reference', [[questionSkill,
-    'Research MUST load and apply this Skill and its clarification message template before every question',
-    'Research MUST load and apply this Skill before every question; refer to its clarification message template'
+    'Every phase MUST load and apply this Skill and its clarification message template before every question',
+    'Every phase MUST refer to this Skill and its clarification message template before every question'
   ]], authoredFail, ['FAIL QUESTIONS-METHOD-001']);
   expect('Research deferral is resisted by shared method', [[questionSkill,
     'honor the actual scope/timing without duplicate confirmation or a repeated checkpoint.',
@@ -954,7 +974,7 @@ try {
     const start = original.indexOf(`  ${trigger}:`), end = original.indexOf(marker, start + 1);
     assert.ok(start >= 0 && end > start, `missing ${trigger} trigger`);
     const block = original.slice(start, end);
-    const damaged = block.replace(`      - scripts/test-copilot-contract-scenarios.cjs${newline}`, '');
+    const damaged = block.replace(`      - tests/test-copilot-contract-scenarios.cjs${newline}`, '');
     assert.notEqual(block, damaged, `missing ${trigger} scenario filter`);
     expect(`${trigger} trigger omits scenarios`, [[workflow, block, damaged]], authoredFail, ['FAIL CI-002']);
     const noPolicy = block.replace(`      - .github/copilot-instructions.md${newline}`, '');
@@ -963,8 +983,17 @@ try {
     const noHelper = block.replace(`      - scripts/check-copilot-workflow.cjs${newline}`, '');
     assert.notEqual(block, noHelper);
     expect(`${trigger} trigger omits shared workflow helper`, [[workflow, block, noHelper]], authoredFail, ['FAIL CI-002']);
+    for (const required of [
+      'tests/test-vsix-boundary.cjs', 'tests/test-run-lifecycle.cjs',
+      'scripts/test-run-lifecycle.cjs', 'scripts/verify-copilot-contracts.cjs',
+      'scripts/verify-vsix-packaging-guide.cjs'
+    ]) {
+      const withoutRequired = block.replace(`      - ${required}${newline}`, '');
+      assert.notEqual(block, withoutRequired, `missing ${trigger} required filter: ${required}`);
+      expect(`${trigger} trigger omits ${required}`, [[workflow, block, withoutRequired]], authoredFail, ['FAIL CI-002']);
+    }
   }
-  expect('scenario CI route removed', [[workflow, 'run: node scripts/test-copilot-contract-scenarios.cjs', 'run: echo disabled']], authoredFail, ['FAIL CI-002']);
+  expect('scenario CI route removed', [[workflow, 'run: node tests/test-copilot-contract-scenarios.cjs', 'run: echo disabled']], authoredFail, ['FAIL CI-002']);
   const workflowNewline = fs.readFileSync(staged(workflow), 'utf8').includes('\r\n') ? '\r\n' : '\n';
   const extraJob = `  extra:${workflowNewline}    runs-on: ubuntu-latest${workflowNewline}    steps:${workflowNewline}      - run: npm run package${workflowNewline}`;
   expect('extra CI packaging route', [[workflow, `  package:${workflowNewline}`, `${extraJob}  package:${workflowNewline}`]], authoredFail, ['FAIL CI-002']);
@@ -976,7 +1005,8 @@ try {
   expect('unsupported YAML indirection', [[workflow, `  scenarios:${workflowNewline}    runs-on: ubuntu-latest`, `  scenarios:${workflowNewline}    runs-on: &runner ubuntu-latest`]], authoredFail, ['FAIL CI-002']);
   expect('masked guide failure', [[workflow, `  guide:${workflowNewline}`, `  guide:${workflowNewline}    continue-on-error: true${workflowNewline}`]], authoredFail, ['FAIL CI-002']);
   expect('packaging hold removed', [[workflow, 'if: false # Release hold:', 'if: true # Release hold:']], authoredFail, ['FAIL CI-002']);
-  expect('scenario npm script removed', [['package.json', '"test-copilot-contract-scenarios": "node scripts/test-copilot-contract-scenarios.cjs"', '"test-copilot-contract-scenarios": "echo disabled"']], authoredFail, ['FAIL CI-001']);
+  expect('scenario npm script removed', [['package.json', '"test-copilot-contract-scenarios": "node tests/test-copilot-contract-scenarios.cjs"', '"test-copilot-contract-scenarios": "echo disabled"']], authoredFail, ['FAIL CI-001']);
+  expect('archive suite npm path removed', [['package.json', '"test-vsix-boundary": "node tests/test-vsix-boundary.cjs"', '"test-vsix-boundary": "echo disabled"']], authoredFail, ['FAIL CI-001']);
   const discoverText = fs.readFileSync(staged('scripts/discover-copilot-artifacts.cjs'), 'utf8');
   const discoveryNewline = discoverText.includes('\r\n') ? '\r\n' : '\n';
   expect('unavailable discovery preserves authored checks', [['scripts/discover-copilot-artifacts.cjs',
@@ -1011,9 +1041,9 @@ try {
   const firstStop = guideText.match(/"id": "toolkit-verify-copilot-contracts"[\s\S]*?"stopBehavior": "[^"]+"/)[0];
   guideCase('regressed stop behavior', [['docs/run-books/vsix-packaging.md', firstStop,
     firstStop.replace('correct a permitted local cause and rerun relevant checks', 'ignore local failure and proceed')]], 'unexpected stopBehavior');
-  guideCase('scenario package interface removed', [['package.json', '"test-copilot-contract-scenarios": "node scripts/test-copilot-contract-scenarios.cjs"', '"test-copilot-contract-scenarios": "echo disabled"']], 'scripts.test-copilot-contract-scenarios');
-  const retentionLine = 'console.log(`Retained staging tree (no deletion): ' + '${temp}`);';
-  guideCase('scenario script interface removed', [['scripts/test-copilot-contract-scenarios.cjs', retentionLine, 'console.log(`Discarded staging tree: ${temp}`);']], 'Scenario script loses its reviewed');
+  guideCase('scenario package interface removed', [['package.json', '"test-copilot-contract-scenarios": "node tests/test-copilot-contract-scenarios.cjs"', '"test-copilot-contract-scenarios": "echo disabled"']], 'package.json scripts.test-copilot-contract-scenarios');
+  const retentionLine = 'console.log(`Test stage retained with its run results: ' + '${temp}`);';
+  guideCase('scenario result interface removed', [['tests/test-copilot-contract-scenarios.cjs', retentionLine, 'console.log(`Test stage discarded: ${temp}`);']], 'Scenario script loses its reviewed');
   guideCase('unsafe CI packaging route', [[workflow, `  package:${workflowNewline}`, `${extraJob}  package:${workflowNewline}`]], 'unexpected workflow jobs or execution route');
   guideCase('CI hold lifted', [[workflow, 'if: false # Release hold:', 'if: true # Release hold:']], 'unsupported or unsafe package job/step structure');
 } finally {
@@ -1026,10 +1056,11 @@ try {
       console.error(`Restored staged mutation: ${full}`);
     } catch (error) { process.exitCode = 1; console.error(`Cannot safely restore ${relative}: ${error.message}`); }
   }
-  console.log(`Retained staging tree (no deletion): ${temp}`);
+  console.log(`Test stage retained with its run results: ${temp}`);
   console.log(`Staged files mutated: ${[...touched].sort().join(', ') || 'none'}`);
   try {
     const items = inventory();
     console.log(`Retained artifacts (${items.length} entries, ${bytes} file bytes):\n${items.join('\n')}`);
   } catch (error) { process.exitCode = 1; console.error(`Cannot inventory retained tree: ${error.message}`); }
+}
 }

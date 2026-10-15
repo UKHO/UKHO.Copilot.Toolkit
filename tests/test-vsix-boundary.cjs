@@ -1,7 +1,13 @@
 'use strict';
 
 const assert = require('node:assert/strict');
-const { verifyArchiveContents } = require('./verify-vsix-boundary.cjs');
+const { verifyArchiveContents } = require('../scripts/verify-vsix-boundary.cjs');
+if (process.env.TOOLKIT_TEST_RUN_CHILD !== '1') {
+  const { runSuite } = require('../scripts/test-run-lifecycle.cjs');
+  process.exitCode = runSuite('vsix-boundary', __filename);
+} else {
+const { markTestStarted, registerTestCompletion } = require('../scripts/test-run-lifecycle.cjs');
+registerTestCompletion();
 
 const manifest = { name: 'ukho-copilot-toolkit', publisher: 'ukho', version: '1.0.0' };
 const changelog = [
@@ -15,6 +21,7 @@ const changelog = [
 const readme = '[`CHANGELOG.md`](https://github.com/UKHO/UKHO.Copilot.Toolkit/blob/main/CHANGELOG.md)';
 const identity = '<PackageManifest><Metadata><Identity Language="en-US" Id="ukho-copilot-toolkit" Version="1.0.0" Publisher="ukho"/></Metadata></PackageManifest>';
 const boundary = new Set(['package.json', 'README.md', 'CHANGELOG.md']);
+markTestStarted();
 
 function crc32(buffer) {
   let crc = 0xffffffff;
@@ -94,6 +101,8 @@ const negatives = [
   ['missing VSIX identity member', (entries) => { delete entries['extension.vsixmanifest']; }],
   ['missing packaged identity member', (entries) => { delete entries['extension/package.json']; }],
   ['missing packaged changelog member', (entries) => { delete entries['extension/changelog.md']; }],
+  ['maintained test source in archive', (entries) => { entries['extension/tests/test-vsix-boundary.cjs'] = 'test source'; }],
+  ['generated test results in archive', (entries) => { entries['extension/.test-staging/runs/latest/summary.json'] = '{}'; }],
   ['mismatched packaged changelog', (entries) => { entries['extension/changelog.md'] = changelog.replace('Local review candidate', 'Changed narrative'); }],
   ['invalid source candidate narrative', (entries, source) => { return [entries, source.replace('1.0.0 review candidate', '1.1.0 review candidate')]; }],
   ['invalid packaged README changelog link', (entries) => { entries['extension/readme.md'] = '[`CHANGELOG.md`](CHANGELOG.md)'; }]
@@ -108,3 +117,4 @@ for (const [label, mutate] of negatives) {
 }
 
 console.log(`Passed ${negatives.length + 1} VSIX boundary cases (one positive, ${negatives.length} negative).`);
+}

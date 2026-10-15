@@ -10,7 +10,9 @@
   },
   "scripts": {
     "verify-copilot-contracts": "node scripts/verify-copilot-contracts.cjs",
-    "test-copilot-contract-scenarios": "node scripts/test-copilot-contract-scenarios.cjs",
+    "test-copilot-contract-scenarios": "node tests/test-copilot-contract-scenarios.cjs",
+    "test-vsix-boundary": "node tests/test-vsix-boundary.cjs",
+    "test-run-lifecycle": "node tests/test-run-lifecycle.cjs",
     "verify-vsix-packaging-guide": "node scripts/verify-vsix-packaging-guide.cjs",
     "package": "node -e \"const fs=require('fs');const cp=require('child_process');const p=JSON.parse(fs.readFileSync('package.json','utf8'));const bin=process.platform==='win32'?'node_modules/@vscode/vsce/vsce':'node_modules/.bin/vsce';const r=cp.spawnSync(process.execPath,[bin,'package','--allow-missing-repository','--out',`${p.name}-${p.version}.vsix`],{stdio:'inherit'});process.exit(r.status===null?1:r.status)\"",
     "verify-package": "node scripts/verify-vsix-boundary.cjs"

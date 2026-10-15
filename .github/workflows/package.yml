@@ -18,7 +18,10 @@ on:
       - scripts/sync-copilot-manifest.cjs
       - scripts/verify-vsix-boundary.cjs
       - scripts/verify-copilot-contracts.cjs
-      - scripts/test-copilot-contract-scenarios.cjs
+      - tests/test-copilot-contract-scenarios.cjs
+      - tests/test-vsix-boundary.cjs
+      - tests/test-run-lifecycle.cjs
+      - scripts/test-run-lifecycle.cjs
       - scripts/verify-vsix-packaging-guide.cjs
       - scripts/check-copilot-workflow.cjs
       - .github/workflows/package.yml
@@ -39,7 +42,10 @@ on:
       - scripts/sync-copilot-manifest.cjs
       - scripts/verify-vsix-boundary.cjs
       - scripts/verify-copilot-contracts.cjs
-      - scripts/test-copilot-contract-scenarios.cjs
+      - tests/test-copilot-contract-scenarios.cjs
+      - tests/test-vsix-boundary.cjs
+      - tests/test-run-lifecycle.cjs
+      - scripts/test-run-lifecycle.cjs
       - scripts/verify-vsix-packaging-guide.cjs
       - scripts/check-copilot-workflow.cjs
       - .github/workflows/package.yml
@@ -72,7 +78,7 @@ jobs:
         with:
           node-version: 22.14.0
       - name: Verify Copilot contract scenarios
-        run: node scripts/test-copilot-contract-scenarios.cjs
+        run: node tests/test-copilot-contract-scenarios.cjs
   guide:
     runs-on: ubuntu-latest
     steps:

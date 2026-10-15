@@ -380,14 +380,16 @@ function researchChecks() {
         'Silence, uncertainty, prompt clarity and generic “keep going” pressure are not such a direction', fields,
         'every engineer-facing question in every RPIR phase', 'explicit, concise', 'Provide a supported Recommendation every time',
         'meaningful lettered response paths that resolve the stated uncertainty', 'when a factual conclusion is unsupported, recommend a practical way to supply or obtain the evidence instead of guessing',
+        'For evidence requests, options can describe ways to provide an example/source',
         'Do not require exactly three choices, letter-only answers or selection of the recommended path', 'Invite natural-language answers',
         'Include relevant trade-offs, qualifications and other/unknown paths where useful', 'cosmetic alternatives', 'recommendations may guide discovery direction, not prescribe substantive solutions',
         'use the answer to choose the useful next question', 'retain the intent trace on same-objective continuation', 'Accept natural-language acknowledgment, corrections and “I don\'t know”',
+        'Other phases may continue independent safe work',
         'labelled hypothesis', 'brief focused probe', 'engineer direction choice before deeper exploration', 'Do not automatically select the recommended letter',
         'Clarification, acknowledgment and deferral do not invoke or approve a phase transition or create a `/plan` gate']) &&
       researchRequirements(skill, 'Outputs', ['Every engineer-facing RPIR question uses all four explicit labels', 'meaningful lettered response paths', 'supported next-step Recommendation', 'ordinary updates or reports that ask no question need no question format', 'actual waiting for acknowledgment', 'deferral scope/timing and dependent unknowns']) &&
       researchRequirements(skill, 'Limits', ['purpose/source/stop boundary', 'Research must end the turn for a pending material answer or readback acknowledgment, absent explicit deferral', 'Generic completion pressure does not override waiting']) &&
-      researchRequirements(skill, 'Validation', ['declared uncertainty, next-question purpose, source/search bound and return to dialogue', 'every engineer-facing RPIR question', 'meaningful response paths', 'evidence-supply or evidence-acquisition route', 'alternative-framing probe and engineer direction choice', 'do not mistake a sent readback for an answered one']) &&
+      researchRequirements(skill, 'Validation', ['declared uncertainty, next-question purpose, source/search bound and return to dialogue', 'every engineer-facing RPIR question', 'all four explicit labels', 'a supported Recommendation', 'meaningful response paths', 'evidence-supply or evidence-acquisition route', 'alternative-framing probe and engineer direction choice', 'do not mistake a sent readback for an answered one']) &&
       researchRequirements(template, 'Clarification message template', [fields, 'every engineer-facing question in every RPIR phase', 'Always show',
         '**Known:**', '**Uncertain:**', '**Recommendation:**', '**Question:**', 'offer meaningful lettered alternatives with relevant trade-offs without waiting for a reminder',
         'meaningful lettered paths that resolve the stated uncertainty', 'as many alternatives as are useful, not exactly three', "engineer's own words, never require a letter", 'not cosmetic alternatives or competing facts invented to fill a list',
@@ -617,7 +619,10 @@ function authoredChecks(manifestUnavailable) {
     }],
     ['CI-001', 'package.json', () => {
       if (manifestUnavailable) return null;
-      return readManifest().scripts?.['test-copilot-contract-scenarios'] === 'node scripts/test-copilot-contract-scenarios.cjs';
+      const scripts = readManifest().scripts || {};
+      return scripts['test-copilot-contract-scenarios'] === 'node tests/test-copilot-contract-scenarios.cjs' &&
+        scripts['test-vsix-boundary'] === 'node tests/test-vsix-boundary.cjs' &&
+        scripts['test-run-lifecycle'] === 'node tests/test-run-lifecycle.cjs';
     }],
     ['CI-002', workflow, () => {
       return checkWorkflow(root);

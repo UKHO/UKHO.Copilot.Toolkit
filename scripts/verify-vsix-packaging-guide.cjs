@@ -13,7 +13,9 @@ const metadataStart = '<!-- vsix-packaging-operation-metadata:start -->';
 const metadataEnd = '<!-- vsix-packaging-operation-metadata:end -->';
 const expectedPackageScripts = {
   'verify-copilot-contracts': 'node scripts/verify-copilot-contracts.cjs',
-  'test-copilot-contract-scenarios': 'node scripts/test-copilot-contract-scenarios.cjs',
+  'test-copilot-contract-scenarios': 'node tests/test-copilot-contract-scenarios.cjs',
+  'test-vsix-boundary': 'node tests/test-vsix-boundary.cjs',
+  'test-run-lifecycle': 'node tests/test-run-lifecycle.cjs',
   'verify-vsix-packaging-guide': 'node scripts/verify-vsix-packaging-guide.cjs',
   package: "node -e \"const fs=require('fs');const cp=require('child_process');const p=JSON.parse(fs.readFileSync('package.json','utf8'));const bin=process.platform==='win32'?'node_modules/@vscode/vsce/vsce':'node_modules/.bin/vsce';const r=cp.spawnSync(process.execPath,[bin,'package','--allow-missing-repository','--out',`${p.name}-${p.version}.vsix`],{stdio:'inherit'});process.exit(r.status===null?1:r.status)\"",
   'verify-package': 'node scripts/verify-vsix-boundary.cjs'
@@ -111,13 +113,18 @@ const expectedOperations = [
 ];
 
 function scenarioScriptInterface() {
-  const script = fs.readFileSync(path.join(root, 'scripts', 'test-copilot-contract-scenarios.cjs'), 'utf8');
+  const script = fs.readFileSync(path.join(root, 'tests', 'test-copilot-contract-scenarios.cjs'), 'utf8');
+  const lifecycle = fs.readFileSync(path.join(root, 'scripts', 'test-run-lifecycle.cjs'), 'utf8');
   if (!script.includes("assert.equal(identity(process.cwd()), identity(source), 'scenario cwd must be the selected root');") ||
-      !script.includes("const temp = path.join(scripts, `.rpir-contracts-${crypto.randomBytes(12).toString('hex')}`);") ||
+      !script.includes("const temp = path.join(runDirectory, 'stage');") ||
+      !script.includes("runSuite('copilot-contract-scenarios', __filename)") ||
+      !script.includes("'scripts/test-run-lifecycle.cjs'") ||
       !script.includes("fs.cpSync(path.join(source, '.github'), path.join(temp, '.github'), { recursive: true, errorOnExist: true, force: false });") ||
-      !script.includes("console.log(`Retained staging tree (no deletion): ${temp}`);") ||
-      !script.includes("'verify-copilot-contracts', 'test-copilot-contract-scenarios', 'verify-vsix-packaging-guide'")) {
-    fail('Scenario script loses its reviewed root, bounded fixture, retained-tree or executable interface');
+      !script.includes("console.log(`Test stage retained with its run results: ${temp}`);") ||
+      !lifecycle.includes("const STAGING_NAME = '.test-staging';") ||
+      !lifecycle.includes('replacementSummary.cleanup') ||
+      !lifecycle.includes('fs.rmSync(candidate, { recursive: true, force: false })')) {
+    fail('Scenario script loses its reviewed root, bounded fixture or global result-lifecycle interface');
   }
 }
 

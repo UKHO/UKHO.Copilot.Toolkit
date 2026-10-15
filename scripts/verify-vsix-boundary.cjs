@@ -23,6 +23,8 @@ const prohibited = [
   'node_modules/',
   'package-lock.json',
   'scripts/',
+  'tests/',
+  '.test-staging/',
   '.vsix',
   'ukho.engineering.copilot',
   'copilot-team-rules',

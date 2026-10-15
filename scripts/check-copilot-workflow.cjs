@@ -3,10 +3,10 @@
 // Bounded checks-only workflow grammar: reject unsupported execution routes rather than guessing YAML semantics.
 const fs = require('fs');
 const path = require('path');
-const requiredFilters = ['.github/copilot-instructions.md', 'scripts/test-copilot-contract-scenarios.cjs', 'scripts/check-copilot-workflow.cjs'];
+const requiredFilters = ['.github/copilot-instructions.md', 'tests/test-copilot-contract-scenarios.cjs', 'tests/test-vsix-boundary.cjs', 'tests/test-run-lifecycle.cjs', 'scripts/test-run-lifecycle.cjs', 'scripts/check-copilot-workflow.cjs', 'scripts/verify-copilot-contracts.cjs', 'scripts/verify-vsix-packaging-guide.cjs'];
 const commands = {
   contracts: 'node scripts/verify-copilot-contracts.cjs',
-  scenarios: 'node scripts/test-copilot-contract-scenarios.cjs',
+  scenarios: 'node tests/test-copilot-contract-scenarios.cjs',
   guide: 'node scripts/verify-vsix-packaging-guide.cjs',
   package: 'npm run package'
 };
