@@ -12,6 +12,7 @@ Use prospectively; do not rewrite historical reports. This report is evidence, n
 - **Actual files and behavior:** `<changed files, delivered principal artifact with existence/content evidence; None if absent and explain why>`.
 - **Completed Plan work:** `<IDs or outcomes; None if applicable>`.
 - **Remaining Plan work:** `<IDs or outcomes and reasons; None if applicable>`. A partial report is a checkpoint, not completion.
+- **Plan marker tracking:** `<checked Steps/Tasks and Work Items with supporting outcomes/gate evidence; remaining or reopened markers and reasons; unsaved/denied/unverified marker updates distinctly from delivered work>`.
 - **Corrections:** `<failure diagnosis, attributable repair without overwriting user work, relevant recheck and result; None if not needed>`.
 
 ## Validation

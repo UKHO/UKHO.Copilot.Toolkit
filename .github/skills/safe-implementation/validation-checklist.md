@@ -20,8 +20,9 @@ description: "Checklist for scoped RPIR implementation and honest validation"
 ## Evidence, records and independent review
 
 - [ ] Inspect diff, relevant links/frontmatter and retained behavior. Confirm actual deliverable existence before marking work complete.
+- [ ] For the active approved Plan, compare existing Step/Task/Work Item markers with actual outcomes and the explicit Work Item exit gate; preserve completed children when only the parent gate fails, and reopen only disproved markers and unsupported dependent parents with evidence/reasons. Verify marker-only postimages and disclose unsaved tracking separately from verified work.
 - [ ] Record **Performed**, **Failed**, **Unavailable**, **Not run** separately, with outcomes/dispositions/reasons. Do not describe failed or unavailable checks as passes.
-- [ ] Save any new report only in the verified Research folder with contained non-overwriting numbered identity, effective permission, direct same-folder Plan link and full readback. On a safe collision re-inspect and choose an absent number; never claim a failed save persisted. Preserve finalized records; markers/status are optional bookkeeping, not approval.
+- [ ] Save any new report only in the verified Research folder with contained non-overwriting numbered identity, effective permission, direct same-folder Plan link and full readback. On a safe collision re-inspect and choose an absent number; never claim a failed save persisted. Preserve finalized records; lifecycle status mirrors are optional. Required active-Plan execution markers are progress evidence only, not standalone validation, approval or acceptance.
 - [ ] Keep handoff manual. `/review` with the inspected report admits independent Review; supported corrections produce fresh implementation evidence and fresh independent review. Unresolved findings prevent acceptance.
 
 ## Read-only Validation Worker

@@ -12,7 +12,7 @@ description: "Template for an initial or material Review-origin RPIR implementat
 
 ## Planned work
 
-Use one authoritative Work Item register mapping each intended outcome to Research/requirements evidence and observable acceptance. Begin with unchecked completion markers; they track execution progress only, never validation pass, approval, or Review acceptance.
+Use one authoritative Work Item register mapping each intended outcome to Research/requirements evidence and observable acceptance. Begin with unchecked completion markers; they track execution progress only and are not standalone validation proof, approval, or Review acceptance. Each Work Item must state an explicit exit gate tied to its acceptance and every required validation's specified successful result.
 
 | Completion and ID | Intended result and affected area | Source / acceptance criterion |
 | --- | --- | --- |
@@ -30,6 +30,8 @@ Add a matching `### Work Item N` section for each register row. IDs and detail s
 **Dependencies:** `<relevant dependencies, or None>`
 
 **Acceptance:** `<observable item-level result linked to the source/criterion above>`
+
+**Exit gate:** `<acceptance is met and each required validation has its specified successful result; identify evidence>`
 
 **Validation:** `<relevant check and expected result, or reason unavailable>`
 
