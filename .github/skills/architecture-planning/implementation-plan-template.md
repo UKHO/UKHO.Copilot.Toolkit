@@ -9,6 +9,7 @@ description: "Template for an initial or material Review-origin RPIR implementat
 - **Outcome and acceptance:** State the observable deliverable and original criteria for success.
 - **Change boundary:** Name affected areas, material exclusions, compatibility/security commitments and consequential external effects. Projected files guide implementation; they are not an exhaustive repair whitelist.
 - **Approach:** Explain relevant patterns, trade-offs, dependencies and sequencing. Record decisions needed from the engineer rather than inventing them. Ordinary related-file/test selection, failure diagnosis and implementation details belong to Implement.
+- **Conditional ADR binding:** When relevant, identify the associated ADR path/ID and inspected substantive version or snapshot, decision state, actual agreement evidence/conditions, and dependent Work Items. Do not add another hierarchy or imply that Plan invocation, implementation approval, or Review establishes architectural agreement. If no ADR is relevant, state that proportionately.
 - **Optional checkpoint guidance:** If useful, identify coherent local Git checkpoint opportunities and eligible phase-evidence timing as non-binding guidance. Do not make commits a persistence, validation, Work Item or phase-transition gate; actual consumer repository, ignores, grant and helper facts remain runtime inputs. The shared [local Git checkpoint capability](../local-git-checkpoints/SKILL.md) owns the procedure.
 
 ## Planned work

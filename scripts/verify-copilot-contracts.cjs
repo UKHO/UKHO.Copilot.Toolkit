@@ -289,6 +289,164 @@ function skillMarkdownResources(inventory) {
   return [...resources].sort();
 }
 
+function requireADRRule(text, patterns, diagnostic) {
+  if (patterns.some((pattern) => !pattern.test(text))) fail(diagnostic, 'ADR-CONTRACT-001');
+}
+
+function checkArchitectureDecisionRecordContract(sources = {}) {
+  const paths = {
+    skill: '.github/skills/architecture-decision-records/SKILL.md',
+    coverage: '.github/skills/architecture-decision-records/references/research-input-coverage.md',
+    template: '.github/skills/architecture-decision-records/templates/adr.md',
+    core: '.github/skills/rpir-lifecycle-core/SKILL.md',
+    repository: '.github/copilot-instructions.md',
+    plan: '.github/agents/plan.agent.md',
+    research: '.github/agents/research.agent.md',
+    implement: '.github/agents/implement.agent.md',
+    review: '.github/agents/review.agent.md',
+    runner: '.github/agents/script-runner.agent.md',
+    lifecycleInstruction: '.github/instructions/lifecycle-records.instructions.md'
+  };
+  const source = Object.fromEntries(Object.entries(paths).map(([key, relative]) => [key, sources[key] ?? readText(relative)]));
+  const metadata = parseFrontmatterText(source.skill, paths.skill).values;
+  if (metadata.name !== 'architecture-decision-records' || metadata['user-invocable'] !== 'false') {
+    fail('ADR Skill must use its directory name and remain non-invocable', 'ADR-CONTRACT-001');
+  }
+  for (const resource of ['references/research-input-coverage.md', 'templates/adr.md']) {
+    if (!source.skill.includes(`](${resource})`)) fail(`ADR Skill must directly link ${resource}`, 'ADR-CONTRACT-001');
+  }
+  requireADRRule(source.skill, [
+    /selective|relevant architectural choice/i,
+    /Research[\s\S]*Plan[\s\S]*Implement[\s\S]*Review/i,
+    /not a fifth RPIR phase|not an authority grant/i,
+    /only a Proposed ADR directly associated with its active planning objective/i,
+    /explicitly engineer-selected, verified contained destination/i,
+    /Do not recursively create unselected ancestors/i,
+    /absence\/collision[\s\S]*effective permission[\s\S]*readback/i
+  ], 'ADR Skill is missing selective applicability, phase, ownership, or effect safeguards');
+
+  const expectedInputs = [
+    '1.1', '1.2', '1.3', '1.4', '1.5',
+    '2.1', '2.2', '2.3', '2.4', '2.5',
+    '3.1', '3.2', '3.3', '3.4', '3.5',
+    '4.1', '4.2', '4.3', '4.4', '4.5', '4.6', '4.7'
+  ];
+  const mappedRows = source.coverage.split('\n').filter((line) => line.startsWith('|')).map((line) => line.split('|').map((cell) => cell.trim()));
+  const mappedInputs = mappedRows.map((cells) => {
+    const sample = cells[1]?.match(/^(\d\.\d)\s+(.+)$/);
+    return sample ? { id: sample[1], label: sample[2], research: cells[2], owner: cells[3], complete: cells.length === 5 } : null;
+  }).filter(Boolean);
+  const actualInputs = mappedInputs.map((item) => item.id);
+  const incompleteMapping = mappedInputs.some((item) => !item.label || !item.research || !item.owner || !item.complete);
+  if (JSON.stringify(actualInputs) !== JSON.stringify(expectedInputs) || incompleteMapping) {
+    fail('ADR coverage map must contain one complete, ordered disposition for all 22 sample inputs', 'ADR-CONTRACT-001');
+  }
+  requireADRRule(source.coverage, [
+    /not a 22-question script|not a quota/i,
+    /Practice alignment/i,
+    /Assumptions and costs/i,
+    /Diagrams and evidence/i,
+    /Related decisions and references/i,
+    /Open items and agreement/i
+  ], 'ADR coverage map is missing supporting input categories or its non-questionnaire boundary');
+
+  requireADRRule(source.template, [
+    /^- \*\*Authored:\*\*/m,
+    /^- \*\*Decision date:\*\*/m,
+    /^- \*\*Decision participants and roles:\*\*/m,
+    /^- \*\*Agreement evidence:\*\*/m,
+    /^- \*\*Affected systems:\*\*/m,
+    /^- \*\*Related decisions:\*\*/m,
+    /^- \*\*Source revisions:\*\*/m,
+    /^## Alternatives and reasoning$/m,
+    /^## Consequences$/m,
+    /state requires actual applicable decision authority and agreement evidence/i
+  ], 'ADR template is missing standalone decision provenance, alternatives, consequences, or agreement safeguards');
+
+  // Bounded owner-local assertions, not a natural-language policy verifier.
+  // Each prerequisite must occur in the same normative status sentence;
+  // mentions in metadata/open-item placeholders are not safeguards.
+  for (const owner of ['skill', 'template']) {
+    const statusRule = source[owner].match(/Unconditional `?Accepted`? requires[^.\n]*\./i)?.[0] || '';
+    requireADRRule(statusRule, [/required decision approvals[^.]*satisfied/i],
+      `ADR ${owner}: unconditional Accepted requires satisfied decision approvals`);
+    requireADRRule(statusRule, [/decision-critical conditions[^.]*satisfied/i],
+      `ADR ${owner}: unconditional Accepted requires satisfied decision-critical conditions`);
+    requireADRRule(source[owner], [
+      /Otherwise (?:retain|keep) Proposed[^.\n]*qualified\/pending state[^.\n]*evidenced consumer conventions/i
+    ], `ADR ${owner}: outstanding prerequisites require Proposed or a qualified/pending state`);
+  }
+
+  const adrException = source.core.split('### Planning-stage ADR authorship exception')[1]?.split('\n### ')[0] || '';
+  requireADRRule(adrException, [
+    /Only the Plan coordinator may/i,
+    /during active planning/i,
+    /directly associated/i,
+    /Proposed ADR/i,
+    /explicitly engineer-selected, verified contained destination/i,
+    /Do not recursively create unselected ancestor directories/i,
+    /identity, containment, absence\/collision and effective permission/i,
+    /save without overwrite[\s\S]*readback/i,
+    /no unrelated source\/document\/register edits/i,
+    /actual path\/ID and substantive inspected version/i
+  ], 'Lifecycle core ADR exception lacks Plan-only authority, guarded effects, preservation, or version binding');
+  requireADRRule(source.repository, [
+    /Plan remains source\/configuration-read-only except for the narrow, associated Proposed-ADR exception/i,
+    /Script Runner and delegated analysts remain source-read-only/i,
+    /actual agreement evidence, conditions and dependent Work Items/i
+  ], 'Repository policy does not preserve the narrow ADR exception and delegated read-only boundary');
+  requireADRRule(source.plan, [
+    /directly associated Proposed ADR/i,
+    /Plan `edit` is limited to its working Plan, an eligible guarded Research status update, and the exact associated Proposed-ADR exception/i
+  ], 'Plan coordinator guidance is missing associated-ADR ownership or binding safeguards');
+  const planBinding = source.plan.match(/\bBind\b[^.;\n]*[.;]/i)?.[0] || '';
+  for (const [label, pattern] of [
+    ['identity', /identity|path\/ID/i],
+    ['substantive version', /substantive (?:version|revision|snapshot)/i],
+    ['decision state', /decision (?:state|status)/i],
+    ['agreement evidence', /actual agreement evidence|evidence of actual agreement/i],
+    ['conditions', /conditions/i],
+    ['dependent work', /dependent Work Items|affected Work Items/i]
+  ]) {
+    requireADRRule(planBinding, [pattern], `Plan ADR binding is missing ${label}`);
+  }
+  requireADRRule(source.research, [
+    /ADR input coverage map/i,
+    /compact \*\*ADR inputs and remaining gaps\*\*/i,
+    /Research never authors a standalone ADR/i
+  ], 'Research guidance must reuse ADR coverage and hand over gaps without ADR authorship');
+  const implementADR = source.implement.split(/\n\s*\n/).find((paragraph) => /^If the approved Plan binds an ADR,/i.test(paragraph)) || '';
+  requireADRRule(implementADR, [
+    /inspect[^.\n]*exact[^.\n]*path\/ID[^.\n]*substantive (?:version|snapshot)/i
+  ], 'Implement ADR inspection is missing exact identity/version binding');
+  const resolution = implementADR.match(/\bResolve\b[^.\n]*\./i)?.[0] || '';
+  for (const [label, pattern] of [
+    ['material version mismatch', /material (?:version )?mismatch/i],
+    ['unavailable content', /unavailable content|missing content/i],
+    ['unsatisfied conditions', /unsatisfied (?:decision )?conditions?/i]
+  ]) {
+    requireADRRule(resolution, [pattern, /before dependent (?:effects|changes)/i],
+      `Implement ADR resolution is missing ${label} before dependent effects`);
+  }
+  requireADRRule(implementADR, [
+    /(?:continu(?:e|ing)|allow(?:ing)?)[^.\n]*(?:independent|unrelated) approved work(?:[^.\n]*continue)?/i
+  ], 'Implement ADR guidance is missing independent-work continuity');
+  requireADRRule(source.review, [
+    /independently compare actual delivery\/evidence and governance claims/i,
+    /clean Review does not establish enterprise or architectural approval/i,
+    /Review remains source-read-only/i
+  ], 'Review guidance conflates delivery acceptance or grants ADR authorship');
+  requireADRRule(source.runner, [
+    /Script Runner itself remains source\/configuration\/customization-read-only in every phase/i,
+    /Plan coordinator's separate associated-Proposed-ADR exception never transfers to Runner/i
+  ], 'Script Runner guidance must not inherit Plan ADR authorship authority');
+  requireADRRule(source.lifecycleInstruction, [
+    /twelve `applyTo` shapes/i,
+    /not canonical RPIR records/i
+  ], 'Lifecycle instruction must keep ADRs outside the canonical record patterns');
+  return true;
+}
+
 function checkCustomizationContracts(inventory) {
   const artifacts = classes.flatMap((definition) => definition.kind === 'skill'
     ? inventory[definition.name].map((skill) => `${skill}/SKILL.md`)
@@ -331,6 +489,7 @@ function checkCustomizationContracts(inventory) {
   for (const relative of resources) {
     if (!parsedByPath.has(relative)) checkLocalLinks(relative, readText(relative));
   }
+  checkArchitectureDecisionRecordContract();
   return { artifactCount: artifacts.length, resourceCount: resources.length };
 }
 
@@ -386,5 +545,6 @@ if (require.main === module) {
 
 module.exports = {
   checkAgentMetadata, checkLocalLinks, checkManifestParity, checkPromptMetadata,
-  checkCustomizationContracts, parseFrontmatterText, parseHandoffs, parseStringList
+  checkCustomizationContracts, checkArchitectureDecisionRecordContract,
+  parseFrontmatterText, parseHandoffs, parseStringList
 };

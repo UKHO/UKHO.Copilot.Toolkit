@@ -25,6 +25,7 @@ const prohibited = [
   'scripts/',
   'tests/',
   '.test-staging/',
+  'architecture/decisions/',
   '.vsix',
   'ukho.engineering.copilot',
   'copilot-team-rules',

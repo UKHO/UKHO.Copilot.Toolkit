@@ -38,6 +38,10 @@ Working drafts may be revised and can retain genuine questions. Freeze the inspe
 - An implementation report describes actual deliverables, correction history and performed, failed, unavailable and not-run checks. `/review` with its inspected physical version admits independent Review, not acceptance. A partial report is a checkpoint, not a substitute for the promised artifact.
 - Review classifies severity, actionability and original-criteria correction versus material change. Its findings support a manual decision but do not grant scope, mutate Plan hierarchy or authorize implementation.
 
+### Architecture decision records are supplementary
+
+For a relevant architectural choice, the Plan coordinator may draft or revise only a directly associated Proposed ADR during active planning, alongside the working Plan. This narrow exception does not change the approved Plan itself, add a canonical RPIR predecessor, or authorize Research/Implement/Review, workers, analysts or Script Runner to author ADRs. Each destination/directory/file effect remains subject to verified identity, containment, absence/collision, effective permission, save and readback; consumer conventions control where an ADR belongs. The Plan binds the inspected ADR version/state, actual agreement evidence, conditions and dependent work. Implement resolves material mismatch before affected changes; Review independently compares delivery and governance claims. Neither phase invocation nor delivery acceptance is architectural approval. See the [lifecycle core](../../.github/skills/rpir-lifecycle-core/SKILL.md) and [architecture decision records Skill](../../.github/skills/architecture-decision-records/SKILL.md).
+
 ### Manual boundaries still apply
 
 Here, optionality applies to lifecycle status mirrors only. Implement's existing Step, Task and Work Item progress markers are required under the narrow active-Plan exception above, but never constitute standalone validation, approval, a phase transition or Review acceptance.

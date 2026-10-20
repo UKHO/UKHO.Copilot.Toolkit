@@ -8,6 +8,7 @@ description: "Checklist for scoped RPIR implementation and honest validation"
 
 - [ ] Inspect the approved physical Plan/version, Research lineage and original criteria; Review correction uses the original approved Plan plus inspected Review context. Findings alone grant no edits.
 - [ ] Compare actual changes and principal output to the approved outcome. Related-file/test selection and ordinary repair stay within its material boundary; preserve unrelated user work and compatibility/security commitments.
+- [ ] If an ADR is Plan-bound, inspect its exact identity and substantive version/snapshot, decision state, agreement evidence, conditions and affected Work Items. Resolve material drift or pending conditions before dependent effects; do not float to a newer ADR or infer approval. Continue independent approved work and record any gap.
 - [ ] Diagnose local failures, correct attributable mistakes using actual preimages, and rerun relevant checks. A failed check stays failed until evidence of a passing recheck; a partial report is not the principal artifact.
 - [ ] Ask promptly for new requirements, material public behavior, consequential dependencies, altered security/compatibility commitments, additional external effects or genuine identity/ownership uncertainty. Continue independent safe work.
 

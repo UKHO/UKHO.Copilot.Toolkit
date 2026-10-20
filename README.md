@@ -30,6 +30,10 @@ RPIR may use coherent local commits during implementation and, where the consume
 
 Plan, Implement and Review retain contextual material clarification, not Research's initial interview. These are authored workflow expectations, not evidence of installed loading or reliable runtime behavior. For supported corrections to the original criteria, manually resume Implement with the original approved Plan and linked Review context; then obtain a fresh independent Review. Material scope changes need an engineer decision and return to Plan. Prompt availability varies by Copilot surface; see the [RPIR guide](docs/Wiki/rpir.md) for workflow details.
 
+### Selective architecture decision records
+
+For a consequential architectural choice, RPIR can carry relevant Research evidence and gaps into a standalone Proposed ADR drafted alongside the working Plan, before `/implement`. This is selective—not a required artifact for routine corrections or every change—and reuses Research answers rather than starting a second interview. The Plan remains the only delivery hierarchy and binds the ADR version, actual agreement evidence, conditions and dependent work. Architectural agreement, `/implement` approval and clean delivery Review are distinct. Consumer conventions govern destination and approval; the Toolkit does not prescribe an enterprise threshold or approval matrix. See the [architecture decision records capability](.github/skills/architecture-decision-records/SKILL.md) and [RPIR guide](docs/Wiki/rpir.md). These are authored workflow rules, not proof of installed runtime behavior.
+
 ## Support and further information
 
 - General support: [UKHO Copilot Toolkit repository](https://github.com/UKHO/UKHO.Copilot.Toolkit)

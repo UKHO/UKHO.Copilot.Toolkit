@@ -14,6 +14,7 @@ Use prospectively; do not rewrite historical reports. This report is evidence, n
 - **Remaining Plan work:** `<IDs or outcomes and reasons; None if applicable>`. A partial report is a checkpoint, not completion.
 - **Plan marker tracking:** `<checked Steps/Tasks and Work Items with supporting outcomes/gate evidence; remaining or reopened markers and reasons; unsaved/denied/unverified marker updates distinctly from delivered work>`.
 - **Corrections:** `<failure diagnosis, attributable repair without overwriting user work, relevant recheck and result; None if not needed>`.
+- **ADR binding, if applicable:** `<Plan-bound ADR identity/version and state inspected; actual agreement/conditions; dependent work and any mismatch or unresolved gap, with independent work preserved; None if no ADR is bound>`.
 
 ## Validation
 

@@ -32,6 +32,10 @@ Keep this compact enough to preserve a reconstructible objective without a chat 
 - **Patterns and options:** `<reusable components, material alternatives and trade-offs; omit irrelevant options>`.
 - **Assumptions and risks:** `<what is inferred, what would change the recommendation and relevant security/compatibility constraints>`.
 
+### ADR inputs and remaining gaps (when relevant)
+
+`<Compact decision-specific handover: cite existing Research evidence for relevant context, constraints, options/reasons, consequences, operating/debt/reversibility/dependencies, and actual participants/choice if known. Attribute statements; label assumptions; identify material unknowns with consequences, affected work and resolution route. Reuse answers/citations rather than repeat questions. The shared [coverage map](../architecture-decision-records/references/research-input-coverage.md) is guidance, not a quota. Research does not author an ADR; Plan owns any associated draft and formal delivery hierarchy.>`
+
 ## Recommendation and validation
 
 - **Recommended approach:** `<supported next-phase direction and expected benefit, not implementation approval>`.

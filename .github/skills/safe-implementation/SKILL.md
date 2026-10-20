@@ -23,6 +23,8 @@ Use this skill to keep implementation within the approved scope.
 4. Re-read changed files, inspect the diff, links and principal output, and apply the [validation checklist](./validation-checklist.md). Seek fresh independent Review after corrections.
 5. Report actual files, behavior, correction history, four validation states and limitations. A partial report is a checkpoint, not successful delivery.
 
+For a Plan-bound ADR, inspect its exact identity and substantive version/snapshot, decision state, actual agreement evidence, conditions and dependent Work Items before affected changes. Resolve material mismatch, unavailable content or unsatisfied conditions before dependent effects; continue independent approved work. Do not adopt a floating newer version or revise an ADR without applicable scope.
+
 ### Incremental Plan progress
 
 During the pass, persist supported progress in the existing active approved Plan as each checkpoint completes; do not defer all marker updates to the final report. Only the Implement coordinator updates already-existing markers, under the marker-only exception in the [RPIR lifecycle core](../rpir-lifecycle-core/SKILL.md):

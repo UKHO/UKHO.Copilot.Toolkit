@@ -41,6 +41,10 @@ Research, Plan and Review may delegate observational Script Runner goals, or sep
 
 The contributed `/plan`, `/implement` and `/review` prompt files are Local routes where prompt files are supported. Agent Host does not load those prompt files; do not assume its built-in `/plan` or a selected coordinator supplies the same sign-off semantics. Validate a supported equivalent route in the target harness before relying on RPIR there.
 
+## Selective architecture decision records
+
+An architectural choice may warrant a standalone ADR when lasting cross-component effects, material security/data/operating commitments, difficult reversal, meaningful alternatives or expected future challenge make durable rationale useful. These are relevance signals, not a universal threshold; routine local corrections normally do not require an ADR. Research reuses its relevant evidence and citations and records consequential gaps without a second mandatory interview. For a relevant choice, the Plan coordinator may draft a directly associated Proposed ADR alongside the working Plan before `/implement`, under the narrow guarded exception in the [lifecycle core](../../.github/skills/rpir-lifecycle-core/SKILL.md). The Plan remains the sole delivery hierarchy and binds the ADR's inspected version, actual agreement/conditions and dependent work. Consumer conventions govern destination, template, retention and approval; no approval is inferred from phase invocation or clean Review. Implement resolves material drift before dependent effects while continuing independent approved work; Review assesses consistency but does not grant architectural approval. See the [architecture decision records Skill](../../.github/skills/architecture-decision-records/SKILL.md).
+
 ## Optional local Git checkpoints
 
 Local commits are optional checkpoints within the existing phases, not a fifth phase or a substitute for saved physical records, validation, manual transitions or acceptance. Prefer coherent, locally validated implementation increments; eligible Research, Plan, implementation-report or Review evidence may be checkpointed only after its physical save/readback and only where the consumer versions those records. Do not commit per file, checkbox or phase by default, require a pristine whole worktree, or hold marker persistence for a commit.
@@ -58,6 +62,7 @@ Review inspects the full intended implementation range and relevant remaining ch
 - [Implement coordinator](../../.github/agents/implement.agent.md) — Approved-scope implementation, validation, command, and reporting boundaries.
 - [Review coordinator](../../.github/agents/review.agent.md) — Independent review, report, acceptance, and remediation boundaries.
 - [Repository Copilot instructions](../../.github/copilot-instructions.md) — Repository-wide RPIR policy and least-privilege controls.
+- [Architecture decision records Skill](../../.github/skills/architecture-decision-records/SKILL.md) — Shared coverage, ADR template, and bounded phase responsibilities.
 
 ## Related links
 

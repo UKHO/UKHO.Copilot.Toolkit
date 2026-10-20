@@ -22,7 +22,8 @@ Use this Skill for read-only investigation that turns an ambiguous request into 
 3. Prefer existing conventions and reusable components over speculative design.
 4. Separate observed facts, assumptions, options, risks, and open questions.
 5. Cite precise file paths and symbols for every material claim.
-6. Return a narrow evidence report containing the research question, observed facts, cited files and symbols, constraints, assumptions, risks, and unanswered questions. Omit categories that have no evidence.
+6. When a relevant architectural decision is in scope, consult the shared [ADR input coverage map](../architecture-decision-records/references/research-input-coverage.md) only within the existing discovery/acknowledgment or explicit-deferral boundary. Reuse supplied answers/citations; report relevant evidence and material gaps without imposing a questionnaire or assuming completeness.
+7. Return a narrow evidence report containing the research question, observed facts, cited files and symbols, constraints, assumptions, risks, and unanswered questions. For a relevant ADR, include a compact **ADR inputs and remaining gaps** handover that cites existing evidence and states consequential gaps/routes; omit irrelevant categories. Research supplies evidence only and never authors the standalone ADR.
 
 ## Outputs
 

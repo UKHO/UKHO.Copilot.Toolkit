@@ -14,7 +14,12 @@ const changelog = [
 ].join('\n');
 const readme = '[`CHANGELOG.md`](https://github.com/UKHO/UKHO.Copilot.Toolkit/blob/main/CHANGELOG.md)';
 const identity = '<PackageManifest><Metadata><Identity Language="en-US" Id="ukho-copilot-toolkit" Version="1.0.0" Publisher="ukho"/></Metadata></PackageManifest>';
-const boundary = new Set(['package.json', 'README.md', 'CHANGELOG.md']);
+const adrSkillResources = [
+  '.github/skills/architecture-decision-records/SKILL.md',
+  '.github/skills/architecture-decision-records/references/research-input-coverage.md',
+  '.github/skills/architecture-decision-records/templates/adr.md'
+];
+const boundary = new Set(['package.json', 'README.md', 'CHANGELOG.md', ...adrSkillResources]);
 
 function crc32(buffer) {
   let crc = 0xffffffff;
@@ -72,7 +77,8 @@ function validEntries() {
     'extension.vsixmanifest': identity,
     'extension/package.json': JSON.stringify(manifest),
     'extension/readme.md': readme,
-    'extension/changelog.md': changelog
+    'extension/changelog.md': changelog,
+    ...Object.fromEntries(adrSkillResources.map((file) => [`extension/${file}`, 'reusable ADR workflow resource']))
   };
 }
 
@@ -96,6 +102,8 @@ const negatives = [
   ['missing packaged changelog member', (entries) => { delete entries['extension/changelog.md']; }],
   ['maintained test source in archive', (entries) => { entries['extension/tests/test-vsix-boundary.cjs'] = 'test source'; }],
   ['generated test results in archive', (entries) => { entries['extension/.test-staging/runs/latest/summary.json'] = '{}'; }],
+  ['real ADR document in archive', (entries) => { entries['extension/architecture/decisions/ADR-001-storage.md'] = '# Accepted decision'; }],
+  ['temporary ADR proposal in archive', (entries) => { entries['extension/docs/temp/adr.agent.md'] = '# Temporary proposal'; }],
   ['mismatched packaged changelog', (entries) => { entries['extension/changelog.md'] = changelog.replace('Local review candidate', 'Changed narrative'); }],
   ['invalid source candidate narrative', (entries, source) => { return [entries, source.replace('1.0.0 review candidate', '1.1.0 review candidate')]; }],
   ['invalid packaged README changelog link', (entries) => { entries['extension/readme.md'] = '[`CHANGELOG.md`](CHANGELOG.md)'; }]

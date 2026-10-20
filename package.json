@@ -52,6 +52,7 @@
     ".github/prompts/remediate-review.prompt.md",
     ".github/prompts/review.prompt.md",
     ".github/skills/agent-question-resolution",
+    ".github/skills/architecture-decision-records",
     ".github/skills/architecture-planning",
     ".github/skills/code-review",
     ".github/skills/codebase-research",
@@ -147,6 +148,9 @@
     "chatSkills": [
       {
         "path": ".github/skills/agent-question-resolution"
+      },
+      {
+        "path": ".github/skills/architecture-decision-records"
       },
       {
         "path": ".github/skills/architecture-planning"
