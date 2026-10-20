@@ -47,6 +47,10 @@ Initial `/plan` with inspected Research approves planning; `/implement` with the
 
 An actually permitted Implement command may be direct or use the optional Script Runner for a bounded goal. Real platform denial cannot be bypassed via another route. Diagnose ordinary local failures and recheck after an in-boundary correction; reconcile uncertain destructive or external completion before repetition. Wiki text never authorizes commands or mutations. Prompt files are Local shortcuts where supported; Agent Host does not load them, so validate an equivalent supported route before relying on its sign-off semantics.
 
+### Optional local Git checkpoints
+
+A local commit is optional metadata/history, distinct from source or record authorship, physical save/readback, validation, phase invocation and Review acceptance. A separate explicit bounded grant is required only when an eligible checkpoint is relevant. Verified non-Git/other-VCS projects and no-eligible-change candidates skip without blocking RPIR; uncertain membership/access stays unavailable. Consumer ignore/local policy applies to all work. Coordinators propose candidate content and Script Runner alone executes the Git metadata effect; it cannot authorize source-mutating helpers for Research, Plan or Review. Commit claims require inspected history/content/state, not command exit alone. See the [shared checkpoint capability](../../.github/skills/local-git-checkpoints/SKILL.md) for the contract; this reference does not grant Git effects.
+
 ## Canonical references
 
 - [RPIR lifecycle core](../../.github/skills/rpir-lifecycle-core/SKILL.md) — Canonical plan authority, provenance and phase boundaries.

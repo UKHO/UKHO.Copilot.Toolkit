@@ -257,7 +257,7 @@ function checkAgentMetadata(relative, values, blocks, agentNames) {
   }
   if (name === 'Script Runner' && (values['user-invocable'] !== 'false' || Object.hasOwn(values, 'agents') ||
       !equal(parseStringList(values.tools, relative, 'tools'), ['read', 'search', 'runInTerminal']))) {
-    fail(`${relative} must remain non-invocable, non-delegating and non-editing`);
+    fail(`${relative} must remain non-invocable, non-delegating and non-file-authoring with its existing exact tools; bounded Git metadata effects are governed separately`);
   }
   if (Object.hasOwn(workerTools, name) && (values['user-invocable'] !== 'false' ||
       !equal(parseStringList(values.tools, relative, 'tools'), workerTools[name]))) {

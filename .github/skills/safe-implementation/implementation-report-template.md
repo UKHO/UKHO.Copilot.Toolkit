@@ -26,6 +26,7 @@ Use prospectively; do not rewrite historical reports. This report is evidence, n
 ## Execution and review evidence
 
 - **Commands, if any:** `<actual permitted route, command/cwd, permission outcome, exit, sanitized output, observed generated/tracked/untracked and external effects, inspection limits; None if none>`. Execution is not validation.
+- **Local Git checkpoint, if relevant:** `<status as supported: skipped—not applicable; skipped—no eligible changes; not attempted; unavailable/unresolved; failed; no commit verified; verified with actual ID, parent, purpose/content and relevant validation; verified with unexpected effects; or completion uncertain. State separately the explicit grant/effect scope, remaining uncommitted/local-only work and reconciliation; do not infer success from exit status. None if no checkpoint was relevant.>`
 - **Diff and preservation:** `<inspected changed work and principal artifact versus Plan; preservation of original criteria and unrelated work>`.
 - **Independent review:** `<fresh Review needed, or reviewed findings and their resolution/uncertainty; no self-acceptance>`.
 

@@ -44,7 +44,7 @@ Investigate material planning gaps and disclose what remains unresolved. Use [ag
 
 The plan may retain unresolved questions and incomplete evidence. The engineer's `/implement` invocation with the inspected Plan transfers ownership of the bounded outcome even if an agent advised further planning. Identify effects dependent on unresolved **material** decisions; ask the engineer before changing those commitments. Ordinary implementation investigation, related-file/test selection and attributable repair need no predicted branch or new approval. Continue independent work and report evidence limits honestly.
 
-Specify the approved outcome, material boundaries and acceptance without requiring prediction of every local repair, test or related file. Implement chooses ordinary in-boundary details and preserves original criteria. Missing material scope, new dependency or changed security/compatibility commitment requires an engineer decision; publication alone does not authorize edits.
+Specify the approved outcome, material boundaries and acceptance without requiring prediction of every local repair, test or related file. Implement chooses ordinary in-boundary details and preserves original criteria. A Plan may describe coherent local Git checkpoint opportunities as non-binding guidance; that does not grant Git effects, make commits a Work Item gate, or require per-file/phase commits. Use the shared [local Git checkpoint capability](../local-git-checkpoints/SKILL.md) for the conditional contract. Missing material scope, new dependency or changed security/compatibility commitment requires an engineer decision; publication alone does not authorize edits.
 
 ## Limits
 

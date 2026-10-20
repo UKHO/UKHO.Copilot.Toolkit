@@ -9,7 +9,8 @@ Use prospectively; preserve finalized historical reports. Review evidence never 
 ## Disposition and comparison
 
 - **Disposition:** `<No remediation required / Remediation required / Needs clarification>`; mixed actionable and unclear findings cannot be all OK.
-- **Approved criteria and actual output:** `<inspected Plan/version, original acceptance and material boundary compared with actual diff, principal artifact existence/content and implementation report/version; a report alone is not delivery>`.
+- **Approved criteria and actual output:** `<inspected Plan/version, original acceptance and material boundary compared with actual full relevant diff/range, remaining work, principal artifact existence/content and implementation report/version; a report alone is not delivery>`.
+- **Implementation range and checkpoint evidence:** `<baseline/range and how determined; unavailable facts without guessing; relevant verified commit IDs/content/parents if any; remaining uncommitted/local-only changes. Commit history does not substitute for inspecting the intended range or acceptance evidence.>`
 - **Evidence and risks:** `<validation results, unresolved gaps, preservation/security/compatibility concerns and why disposition follows>`.
 
 ## Findings

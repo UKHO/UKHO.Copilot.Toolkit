@@ -86,6 +86,7 @@ All four prompt paths remain registered under `package.json` → `contributes.ch
 | Create and validate a focused prompt file | User-invocable capability | `.github/skills/create-copilot-prompt/SKILL.md` | Review when prompt inputs, activation, or side-effect boundaries change. |
 | Create and validate a resource-backed skill | User-invocable capability | `.github/skills/create-copilot-skill/SKILL.md` | Review when skill structure, resources, or validation guidance changes. |
 | Create or update a human-readable repository Run Book | User-invocable capability; creates guidance only and cannot authorize Runner execution or commands | `.github/skills/create-runbook/SKILL.md` | Review when Run Book anatomy or non-authority boundaries change. |
+| Apply conditional, bounded local Git checkpoints to coherent RPIR implementation work or eligible saved phase evidence | Internal/model-selected workflow capability; `user-invocable: false`; separate explicit local-commit grant; Script Runner is the sole Git-mutation executor | [`.github/skills/local-git-checkpoints/SKILL.md`](../../.github/skills/local-git-checkpoints/SKILL.md) | Review when applicability, grants, candidate preservation, helper effects, failure reconciliation or reporting rules change. |
 | Refine wording while preserving Copilot artifact contracts | User-invocable maintenance method; does not prove semantic equivalence or activate artifacts | `.github/skills/maintain-copilot-artifacts/SKILL.md` | Review when rule mapping, preservation, or artifact-maintenance guidance changes. |
 | Apply lifecycle input, provenance, and phase boundaries | Internal/model-selected workflow capability; `user-invocable: false` | `.github/skills/rpir-lifecycle-core/SKILL.md` | Review when lifecycle authority, provenance, or confirmation boundaries change. |
 | Assess RPIR draft-stage assurance readiness | Internal/model-selected workflow capability; `user-invocable: false` | `.github/skills/rpir-stage-assurance/SKILL.md` | Review when completeness, traceability, authority, or handoff-readiness checks change. |
@@ -93,7 +94,7 @@ All four prompt paths remain registered under `package.json` → `contributes.ch
 | Design focused test and validation matrices | Internal/model-selected workflow capability; `user-invocable: false` | `.github/skills/test-design/SKILL.md` | Review when test scenarios or unavailable-check requirements change. |
 | Maintain repository-managed Wiki Markdown | User-invocable capability | `.github/skills/wiki-maintenance/SKILL.md` | Review when page anatomy, source validation, navigation, or RPIR maintenance guidance changes. |
 
-All 15 listed skill directories are discovered from `.github/skills`; the manifest synchronizer derives their `package.json` → `contributes.chatSkills` and `package.json.files` registration. This descriptive inventory is not proof of installed discovery, execution, packaging, or policy authority.
+All 16 listed skill directories are discovered from `.github/skills`; the manifest synchronizer derives their `package.json` → `contributes.chatSkills` and `package.json.files` registration. This descriptive inventory is not proof of installed discovery, execution, packaging, or policy authority.
 
 ## Canonical references
 

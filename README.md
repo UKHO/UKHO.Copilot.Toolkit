@@ -24,6 +24,10 @@ Each phase produces a saved record for you to inspect. Manually invoke the next 
 3. **Implement:** Inspect the changes and saved implementation report, then manually invoke `/review` with that report.
 4. **Review:** Follow the independent Review disposition. Unresolved findings mean the work is not accepted.
 
+### Optional local Git checkpoints
+
+RPIR may use coherent local commits during implementation and, where the consumer versions lifecycle records, checkpoint eligible records only after they are physically saved and read back. This is conditional—not a fifth phase, persistence or validation gate, or requirement to commit every phase/file. The separate explicit local-commit grant is distinct from `/implement` approval and terminal access; Script Runner is the sole Git-mutation executor. If the actual project is outside Git or has no eligible changes (including respected ignored/local-only work), checkpointing skips normally and RPIR continues. Missing or inaccessible Git remains unavailable rather than being reported as a no-repository skip. Preserve the consumer's ignore and local policies. See the [shared checkpoint capability](.github/skills/local-git-checkpoints/SKILL.md) and [RPIR guide](docs/Wiki/rpir.md); authored guidance does not prove installed agent behavior.
+
 Plan, Implement and Review retain contextual material clarification, not Research's initial interview. These are authored workflow expectations, not evidence of installed loading or reliable runtime behavior. For supported corrections to the original criteria, manually resume Implement with the original approved Plan and linked Review context; then obtain a fresh independent Review. Material scope changes need an engineer decision and return to Plan. Prompt availability varies by Copilot surface; see the [RPIR guide](docs/Wiki/rpir.md) for workflow details.
 
 ## Support and further information
