@@ -12,7 +12,7 @@ Use prospectively; do not rewrite historical reports. This report is evidence, n
 - **Actual files and behavior:** `<changed files, delivered principal artifact with existence/content evidence; None if absent and explain why>`.
 - **Completed Plan work:** `<IDs or outcomes; None if applicable>`.
 - **Remaining Plan work:** `<IDs or outcomes and reasons; None if applicable>`. A partial report is a checkpoint, not completion.
-- **Plan marker tracking:** `<checked Steps/Tasks and Work Items with supporting outcomes/gate evidence; remaining or reopened markers and reasons; unsaved/denied/unverified marker updates distinctly from delivered work>`.
+- **Plan marker tracking:** `<checked Steps/Tasks and Work Items with supporting outcomes/gate evidence; where ordered evidence exists, distinguish completion-to-save/readback before unrelated later work, observed late reconciliation, and unverified timing; record remaining/reopened markers and reasons; disclose affected IDs with denied/failed/conflicting/unverified saves as unsaved tracking, distinct from delivered work>`.
 - **Corrections:** `<failure diagnosis, attributable repair without overwriting user work, relevant recheck and result; None if not needed>`.
 - **ADR binding, if applicable:** `<Plan-bound ADR identity/version and state inspected; actual agreement/conditions; dependent work and any mismatch or unresolved gap, with independent work preserved; None if no ADR is bound>`.
 
@@ -27,7 +27,7 @@ Use prospectively; do not rewrite historical reports. This report is evidence, n
 ## Execution and review evidence
 
 - **Commands, if any:** `<actual permitted route, command/cwd, permission outcome, exit, sanitized output, observed generated/tracked/untracked and external effects, inspection limits; None if none>`. Execution is not validation.
-- **Local Git checkpoint, if relevant:** `<status as supported: skipped—not applicable; skipped—no eligible changes; not attempted; unavailable/unresolved; failed; no commit verified; verified with actual ID, parent, purpose/content and relevant validation; verified with unexpected effects; or completion uncertain. State separately the explicit grant/effect scope, remaining uncommitted/local-only work and reconciliation; do not infer success from exit status. None if no checkpoint was relevant.>`
+- **Local Git checkpoint, if relevant:** `<inspected approved Plan/version and its explicit strategy/approval plus required phase-invocation reference; assess expected Work Item and earlier coherent Task opportunities even when no commit occurred, and give evidence-based combination/deferral/skip/unavailable/failure dispositions. Distinguish not attempted, skipped—not applicable/no eligible changes, unavailable/unresolved, failed, no commit verified, verified (actual ID/parent/purpose/content/relevant validation), verified with unexpected effects, or completion uncertain. State covered scope and remaining uncommitted/local-only work; do not infer authority from a silent Plan or success from exit status. A missing commit is not by itself a technical delivery defect. None if no checkpoint was relevant.>`
 - **Diff and preservation:** `<inspected changed work and principal artifact versus Plan; preservation of original criteria and unrelated work>`.
 - **Independent review:** `<fresh Review needed, or reviewed findings and their resolution/uncertainty; no self-acceptance>`.
 

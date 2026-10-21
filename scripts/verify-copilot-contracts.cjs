@@ -447,6 +447,247 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
   return true;
 }
 
+function requireExecutionRule(text, patterns, diagnostic) {
+  if (patterns.some((pattern) => !pattern.test(text))) fail(diagnostic, 'RPIR-EXECUTION-CONTRACT-001');
+}
+
+function between(text, start, end) {
+  const first = text.indexOf(start);
+  if (first < 0) return '';
+  const contentStart = first + start.length;
+  const last = text.indexOf(end, contentStart);
+  return last < 0 ? '' : text.slice(contentStart, last);
+}
+
+// Selected owner-local contradictions only, not general natural-language logic.
+function rejectDuplicateGrant(text, owner) {
+  if (/\b(?:A|An) (?:separate|additional|duplicate) grant (?:exchange|step|approval) is (?:required|mandatory) for (?:every|each) (?:candidate|checkpoint|commit)\b/i.test(text) ||
+      /\b(?:must|shall) (?:request|obtain) (?:a |an )?(?:separate|additional|duplicate) grant for (?:every|each) (?:candidate|checkpoint|commit)\b/i.test(text)) {
+    fail(`${owner} must reject mandatory duplicate grants for covered effects`, 'RPIR-EXECUTION-CONTRACT-001');
+  }
+}
+
+function requireOrderedLoop(text, start, markerRule, diagnostic) {
+  const loop = text.split('\n').find((line) => line.startsWith(start))?.split('. ')[0] || '';
+  requireExecutionRule(loop, [new RegExp([
+    'inspect[^→]+→', '(?:make|perform)[^→]+→', 'determine newly supported Step/Task outcomes[^→]+→',
+    'inspect the actual Plan preimage[^→]*→', markerRule, '→ handle checkpoint disposition → select the next unit'
+  ].join('\\s*'), 'i')], diagnostic);
+}
+
+function checkIncrementalRpirContract(sources = {}) {
+  const paths = {
+    repository: '.github/copilot-instructions.md', core: '.github/skills/rpir-lifecycle-core/SKILL.md',
+    checklist: '.github/skills/local-git-checkpoints/references/checkpoint-checklist.md',
+    planning: '.github/skills/architecture-planning/SKILL.md',
+    planTemplate: '.github/skills/architecture-planning/implementation-plan-template.md',
+    runner: '.github/agents/script-runner.agent.md', implementAgent: '.github/agents/implement.agent.md',
+    reviewAgent: '.github/agents/review.agent.md', researchAgent: '.github/agents/research.agent.md',
+    safe: '.github/skills/safe-implementation/SKILL.md',
+    validationChecklist: '.github/skills/safe-implementation/validation-checklist.md',
+    implementationReport: '.github/skills/safe-implementation/implementation-report-template.md',
+    reviewTemplate: '.github/skills/code-review/review-report-template.md',
+    assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
+    readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md', wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md'
+  };
+  const source = Object.fromEntries(Object.entries(paths).map(([key, relative]) => [key, sources[key] ?? readText(relative)]));
+
+  const commandEntry = source.repository.match(/^- \*\*Goal-directed Script Runner:\*\*[^\n]*/m)?.[0] || '';
+  requireExecutionRule(commandEntry, [/or an explicit bounded phase-record grant/i,
+    /not duplicate approval for unchanged Plan-covered effects/i, /same runtime safeguards/i],
+  'Repository command entry must preserve separately bounded phase-record checkpoints');
+
+  const policyCheckpoint = source.repository.match(/^- \*\*Conditional local Git checkpoints:\*\*[^\n]*/m)?.[0] || '';
+  requireExecutionRule(policyCheckpoint, [
+    /explicit approval of an inspected Plan/i, /bounded local staging\/append-only commit strategy/i,
+    /after `\/implement`/i, /No separate grant exchange is required/i,
+    /current loaded session cannot self-upgrade/i, /effective permission/i
+  ], 'Repository policy must bind covered Git authority to Plan approval, phase transition and current-session limits');
+
+  const coreCheckpoint = between(source.core, '## Conditional local Git checkpoints', '\n## Preserve physical lineage');
+  requireExecutionRule(coreCheckpoint, [
+    /explicit approval of an inspected Plan/i, /no separate grant exchange is required/i,
+    /after `\/implement`/i, /silent, prohibiting or unapproved-option Plan/i,
+    /editing these rules does not self-upgrade/i, /staged-snapshot validation/i, /effective permission/i
+  ], 'Lifecycle core checkpoint authority lacks Plan binding, phase, negative or runtime safeguards');
+
+  const checklistAuthorization = between(source.checklist, '## 3. Bind authorization to the approved Plan', '\n## 4. Inspect and preserve the candidate');
+  requireExecutionRule(checklistAuthorization, [
+    /explicitly approved the inspected Plan\/version/i, /explicitly includes a bounded local staging\/append-only commit strategy/i,
+    /no (?:separate grant exchange|additional grant step) is required/i, /(?:before|precede) a concrete candidate/i,
+    /literal candidate and candidate-relevant validation/i,
+    /silent, prohibiting, or merely optional\/unapproved strategy does not authorize Git/i,
+    /earlier Research effects/i, /validity, resume\/revalidation and revocation conditions/i,
+    /Material objective\/scope, repository\/worktree\/branch, permission or consequential helper changes require reassessment/i
+  ], 'Checkpoint checklist authorization must cover approved Plans, future candidates and fail-closed cases');
+  rejectDuplicateGrant(checklistAuthorization, 'Checkpoint checklist authorization');
+  const phaseRecordAuthorization = checklistAuthorization.match(/^For a separately authorized phase-record checkpoint[^\n]*/m)?.[0] || '';
+  requireExecutionRule(phaseRecordAuthorization, [
+    /explicit bounded grant for that phase and saved\/read-back record/i,
+    /do not demand an approved implementation Plan or `\/implement` evidence/i,
+    /same repository\/worktree\/branch, content\/exclusions, Runner ownership, validation, local-policy\/helper\/permission, validity and revocation safeguards/i,
+    /not a duplicate grant for unchanged Plan-covered effects/i,
+    /both routes retain the same literal-candidate and runtime checks/i
+  ], 'Checkpoint checklist must retain separately bounded phase-record authority with the same safeguards');
+
+  const checklistCadence = between(source.checklist, '## 2. Apply local policy and determine eligible content', '\n## 3. Bind authorization');
+  requireExecutionRule(checklistCadence, [
+    /after each completed Work Item before unrelated items/i, /earlier coherent, validated Task boundaries/i,
+    /explain justified combinations, deferrals, or no-commit outcomes/i,
+    /Do not split by file type, elapsed time, line count or checkbox/i,
+    /invent a numerical threshold/i
+  ], 'Checkpoint checklist must state normal Work Item cadence and bounded earlier Task consideration');
+
+  const planGuidance = between(source.planning, 'Specify the approved outcome', '\n## Limits');
+  requireExecutionRule(planGuidance, [
+    /bounded local staging\/append-only commit strategy/i,
+    /Approval of that inspected Plan includes its covered commits after `\/implement`/i,
+    /without a separate grant exchange/i,
+    /Normal cadence is a checkpoint after each completed eligible coherent Work Item/i,
+    /proactive consideration of earlier coherent validated Task boundaries/i,
+    /Silent, prohibited or unapproved-option Plans do not authorize Git/i
+  ], 'Planning guidance must require explicit bounded strategy and normal cadence without duplicate approval');
+
+  requireExecutionRule(source.planTemplate, [
+    /Local Git checkpoint strategy, when intended/i, /repository\/worktree\/branch selection rule/i,
+    /Script Runner ownership/i, /Explicit approval of this inspected Plan authorizes only its covered commits after `\/implement`/i,
+    /no separate grant exchange is needed/i, /after each completed Work Item/i,
+    /earlier coherent validated Tasks/i, /Plan publication cannot authorize its own checkpoint or earlier Research effects/i
+  ], 'Plan template must capture bounded authorization fields, cadence and phase limits');
+
+  // Only the normative opening body, never frontmatter or a historical section.
+  const runner = (source.runner.split('\n# Script Runner\n')[1] || '').split(/^## /m)[0];
+  const runnerAuthority = runner.split('\n\n').filter((paragraph) => paragraph.trim()).slice(0, 2).join('\n\n');
+  requireExecutionRule(runnerAuthority, [
+    /inspected approved Plan\/version/i, /explicit bounded commit strategy with approval and `\/implement` evidence/i,
+    /literal candidate/i, /no duplicate grant is required/i, /silent\/prohibiting Plan/i,
+    /source\/configuration\/customization-read-only/i, /source-mutating hook or helper/i
+  ], 'Script Runner summary must consume Plan authority without expanding tools or effects');
+  requireExecutionRule(runnerAuthority, [
+    /explicit bounded phase-record grant/i,
+    /without requiring an approved implementation Plan or `\/implement` evidence/i,
+    /both routes retain identical candidate, ownership, validation, helper and permission safeguards/i
+  ], 'Script Runner must retain separately bounded phase-record authority with the same safeguards');
+  rejectDuplicateGrant(runner, 'Script Runner authority');
+  requireExecutionRule(source.researchAgent.match(/^When a significant architectural decision[^\n]*/m)?.[0] || '', [
+    /separately granted local Git index\/history checkpoint/i, /eligible Research brief after physical save\/readback/i
+  ], 'Research must retain its separately authorized saved-brief checkpoint route');
+
+  const implement = source.implementAgent.match(/^Own the permitted direct edit[^\n]*/m)?.[0] || '';
+  requireExecutionRule(implement, [
+    /inspected approved Plan explicitly includes a bounded strategy/i,
+    /approval supplies authority for covered commits after `\/implement` without a second grant/i,
+    /literal candidate/i, /candidate-relevant validation/i,
+    /Silent\/prohibiting Plans, unapproved options, revocation, or material drift do not authorize effects/i,
+    /effective permission/i
+  ], 'Implement authority summary must bind covered commits and retain runtime candidate checks');
+
+  const reviewAgentCheckpoint = source.reviewAgent.match(/^Review and its Correctness[^\n]*/m)?.[0] || '';
+  requireExecutionRule(reviewAgentCheckpoint, [
+    /applicable approved Plan explicitly covers that record and phase/i,
+    /after physical save\/readback/i,
+    /Plan authority does not authorize its own or earlier Research checkpoints/i,
+    /candidate state, helpers and permission/i
+  ], 'Review checkpoint summary must accept covered Plan authority without expanding Review effects');
+  requireExecutionRule(reviewAgentCheckpoint, [/other valid bounded authorization applies/i],
+    'Review must retain its separately bounded record-checkpoint route');
+
+  const progress = between(source.safe, '### Incremental Plan progress', '\n## Limits');
+  requireExecutionRule(progress, [
+    /primary loop before moving to an unrelated unit/i, /determine newly supported Step\/Task outcomes/i,
+    /inspect the actual Plan preimage/i, /update eligible existing markers only, save and read back\/verify preservation/i,
+    /handle checkpoint disposition/i, /select the next unit/i,
+    /failed, denied or unverifiable save is unsaved tracking/i,
+    /promptly disclose affected Step\/Task\/Work Item IDs/i,
+    /parent-only failure or pause preserves supported children/i,
+    /final checked state alone does not prove completion-to-save timing/i
+  ], 'Safe implementation loop must persist progress in order and disclose honest recovery');
+  requireOrderedLoop(progress, 'During the pass, use this primary loop',
+    'update eligible existing markers only, save and read back/verify preservation\\s*',
+    'Safe implementation loop must persist progress in order and disclose honest recovery');
+  const selectiveRecovery = progress.match(/^- On resume,[^\n]*/m)?.[0] || '';
+  requireExecutionRule(selectiveRecovery, [
+    /reopen only (?:the invalidated|disproved) markers and dependent parent markers whose completion is no longer supported/i,
+    /preserve unaffected completed work/i, /record the evidence\/reason/i
+  ], 'Safe implementation recovery must selectively reopen disproved completion and preserve unaffected work');
+
+  const implementationCapabilities = between(source.validationChecklist, '## Capabilities and effects', '\n## Evidence, records and independent review');
+  requireExecutionRule(implementationCapabilities, [
+    /Plan-covered Git-metadata effects/i,
+    /verify the inspected approved Plan explicitly covers the bounded effect and phase/i,
+    /bind validation to the complete candidate/i,
+    /Only Script Runner performs the Git mutation/i
+  ], 'Implementation checklist must use Plan-covered authority while retaining candidate and executor safeguards');
+  rejectDuplicateGrant(implementationCapabilities, 'Implementation checklist capabilities');
+
+  const implementLoop = source.implementAgent.match(/^The prominent execution loop is:[^\n]*/m)?.[0] || '';
+  requireExecutionRule(implementLoop, [
+    /determine newly supported Step\/Task outcomes/i, /inspect the actual Plan preimage/i,
+    /save eligible existing markers only and read back\/verify preservation/i,
+    /handle checkpoint disposition/i, /select the next unit/i,
+    /before unrelated later work/i, /disclose affected IDs promptly as unsaved tracking/i
+  ], 'Implement summary must preserve the ordered completion/save/checkpoint loop');
+  requireOrderedLoop(implementLoop, 'The prominent execution loop is:',
+    'save eligible existing markers only and read back/verify preservation\\s*',
+    'Implement summary must preserve the ordered completion/save/checkpoint loop');
+
+  const markerReportField = source.implementationReport.match(/^- \*\*Plan marker tracking:\*\*[^\n]*/m)?.[0] || '';
+  requireExecutionRule(markerReportField, [
+    /completion-to-save\/readback before unrelated later work/i, /observed late reconciliation/i,
+    /unverified timing/i, /denied\/failed\/conflicting\/unverified saves as unsaved tracking/i,
+  ], 'Implementation report marker field must distinguish completion timing and unsaved tracking');
+  const implementationCheckpointField = source.implementationReport.match(/^- \*\*Local Git checkpoint, if relevant:\*\*[^\n]*/m)?.[0] || '';
+  requireExecutionRule(implementationCheckpointField, [
+    /expected Work Item and earlier coherent Task opportunities/i, /even when no commit occurred/i,
+    /missing commit is not by itself a technical delivery defect/i
+  ], 'Implementation report checkpoint field must assess opportunities and no-commit paths');
+
+  const reviewCheckpointField = source.reviewTemplate.match(/^- \*\*Implementation range and checkpoint evidence:\*\*[^\n]*/m)?.[0] || '';
+  requireExecutionRule(reviewCheckpointField, [
+    /inspected Plan strategy\/approval reference/i,
+    /expected completed-Work-Item and earlier coherent-Task opportunities/i,
+    /including no-commit dispositions|including no-commit paths|even when no commit occurred/i,
+    /timely completion-to-save\/readback/i, /observed late\/omitted action/i,
+    /unverified timing/i, /silence and final markers do not prove chronology/i,
+    /missing commit alone is not defective code/i
+  ], 'Review template must assess available chronology and no-commit paths without overclaim');
+
+  const assuranceImplement = source.assurance.match(/^- \*\*Implement:\*\*[^\n]*/m)?.[0] || '';
+  requireExecutionRule(assuranceImplement, [
+    /completion-to-save\/readback before unrelated later work/i, /observed timely action/i,
+    /observed late\/omitted backfill/i, /unverified timing/i,
+    /expected checkpoint opportunities/i, /no silence-based pass or commit-count gate/i
+  ], 'Stage assurance must distinguish observed timing, unknown evidence and checkpoint exceptions');
+
+  const readmeCheckpointSection = between(source.readme, '### Optional local Git checkpoints', '\nPlan, Implement and Review retain contextual material clarification');
+  requireExecutionRule(readmeCheckpointSection, [
+    /approving that inspected Plan approves its covered commits after `\/implement`/i,
+    /no separate grant exchange is needed/i, /after each completed Work Item/i,
+    /earlier coherent validated Task boundaries/i
+  ], 'README checkpoint section must explain Plan-approved authority and normal cadence');
+  const readmeProgress = source.readme.match(/^During implementation,[^\n]*/m)?.[0] || '';
+  requireExecutionRule(readmeProgress, [
+    /before moving to unrelated work/i, /affected IDs are disclosed as unsaved/i,
+    /a final checked state is not proof of when it was saved/i
+  ], 'README progress guidance must explain timely persistence and honest recovery');
+
+  const wikiRpirCheckpoint = between(source.wikiRpir, '## Optional local Git checkpoints', '\n## Canonical references');
+  const wikiEvidenceCheckpoint = between(source.wikiEvidence, '### Optional local Git checkpoints', '\n## Canonical references');
+  for (const [label, text] of [['RPIR Wiki', wikiRpirCheckpoint], ['lifecycle evidence Wiki', wikiEvidenceCheckpoint]]) {
+    requireExecutionRule(text, [
+      /after each completed Work Item/i, /earlier coherent validated Task/i,
+      /When a Plan includes local commits|(?:explicitly includes a bounded|Plan that states a bounded) local staging\/append-only(?: commit)? strategy/i,
+      /no (?:duplicate grant|separate grant exchange)/i, /literal candidate/i, /effective permission/i
+    ], `${label} must align user guidance with the canonical checkpoint strategy and cadence`);
+  }
+  const wikiRpirProgress = source.wikiRpir.match(/^The Implement coordinator's main loop[^\n]*/m)?.[0] || '';
+  requireExecutionRule(wikiRpirProgress, [
+    /before moving to unrelated work/i, /persists only eligible existing markers/i,
+    /disclose affected IDs(?: promptly)? as unsaved tracking/i, /parent-only failure or pause retains supported children/i
+  ], 'RPIR Wiki progress summary must preserve completion-boundary tracking and recovery');
+  return true;
+}
+
 function checkCustomizationContracts(inventory) {
   const artifacts = classes.flatMap((definition) => definition.kind === 'skill'
     ? inventory[definition.name].map((skill) => `${skill}/SKILL.md`)
@@ -490,6 +731,7 @@ function checkCustomizationContracts(inventory) {
     if (!parsedByPath.has(relative)) checkLocalLinks(relative, readText(relative));
   }
   checkArchitectureDecisionRecordContract();
+  checkIncrementalRpirContract();
   return { artifactCount: artifacts.length, resourceCount: resources.length };
 }
 
@@ -545,6 +787,6 @@ if (require.main === module) {
 
 module.exports = {
   checkAgentMetadata, checkLocalLinks, checkManifestParity, checkPromptMetadata,
-  checkCustomizationContracts, checkArchitectureDecisionRecordContract,
+  checkCustomizationContracts, checkArchitectureDecisionRecordContract, checkIncrementalRpirContract,
   parseFrontmatterText, parseHandoffs, parseStringList
 };

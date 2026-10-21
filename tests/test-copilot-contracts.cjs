@@ -78,6 +78,207 @@ assert.doesNotThrow(() => contracts.checkLocalLinks(adrPaths.skill, adrSources.s
 cases += 5;
 cases += 2;
 
+const executionPaths = {
+  repository: '.github/copilot-instructions.md', core: '.github/skills/rpir-lifecycle-core/SKILL.md',
+  checklist: '.github/skills/local-git-checkpoints/references/checkpoint-checklist.md',
+  planning: '.github/skills/architecture-planning/SKILL.md',
+  planTemplate: '.github/skills/architecture-planning/implementation-plan-template.md',
+  runner: '.github/agents/script-runner.agent.md', implementAgent: '.github/agents/implement.agent.md',
+  reviewAgent: '.github/agents/review.agent.md', researchAgent: '.github/agents/research.agent.md',
+  safe: '.github/skills/safe-implementation/SKILL.md',
+  validationChecklist: '.github/skills/safe-implementation/validation-checklist.md',
+  implementationReport: '.github/skills/safe-implementation/implementation-report-template.md',
+  reviewTemplate: '.github/skills/code-review/review-report-template.md',
+  assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
+  readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md', wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md'
+};
+const executionSources = Object.fromEntries(Object.entries(executionPaths).map(([key, relative]) => [key, readArtifact(relative)]));
+assert.doesNotThrow(() => contracts.checkIncrementalRpirContract(executionSources));
+cases += 1;
+
+for (const [label, key, mutate, diagnostic] of [
+  ['duplicate grant reintroduced in checkpoint owner', 'checklist', (text) => replaceOnce(text,
+    'no separate grant exchange is required', 'a separate grant exchange is required'),
+  /Checkpoint checklist authorization must cover approved Plans/],
+  ['future candidate distinction removed', 'checklist', (text) => replaceOnce(text,
+    'Approval may precede a concrete candidate', 'Approval requires a concrete candidate'),
+  /Checkpoint checklist authorization must cover approved Plans/],
+  ['silent Plan negative removed', 'checklist', (text) => replaceOnce(text,
+    'A silent, prohibiting, or merely optional/unapproved strategy does not authorize Git.',
+    'A strategy authorizes Git.'), /Checkpoint checklist authorization must cover approved Plans/],
+  ['revocation limit removed', 'checklist', (text) => replaceOnce(text,
+    'validity, resume/revalidation and revocation conditions', 'validity and resume/revalidation conditions'),
+  /Checkpoint checklist authorization must cover approved Plans/],
+  ['material drift limit removed', 'checklist', (text) => replaceOnce(text,
+    'permission or consequential helper changes require reassessment', 'permission or consequential helper changes need no reassessment'),
+  /Checkpoint checklist authorization must cover approved Plans/],
+  ['duplicate-grant requirement reintroduced in validation checklist', 'validationChecklist', (text) => replaceOnce(text,
+    'Plan-covered Git-metadata effects', 'separately granted Git-metadata effects'),
+  /Implementation checklist must use Plan-covered authority/],
+  ['Review checkpoint omits Plan coverage', 'reviewAgent', (text) => replaceOnce(text,
+    'only when an applicable approved Plan explicitly covers that record and phase', 'only when a checkpoint is useful'),
+  /Review checkpoint summary must accept covered Plan authority/],
+  ['Work Item cadence removed', 'checklist', (text) => replaceOnce(text,
+    'after each completed Work Item before unrelated items', 'at convenient times'),
+  /Checkpoint checklist must state normal Work Item cadence/],
+  ['earlier Task consideration removed', 'checklist', (text) => replaceOnce(text,
+    'proactively consider earlier coherent, validated Task boundaries', 'consider other work'),
+  /Checkpoint checklist must state normal Work Item cadence/],
+  ['loop order loses checkpoint disposition', 'safe', (text) => replaceOnce(text,
+    '→ handle checkpoint disposition → select the next unit', '→ select the next unit'),
+  /Safe implementation loop must persist progress in order/],
+  ['unsaved affected-ID disclosure removed', 'safe', (text) => replaceOnce(text,
+    'promptly disclose affected Step/Task/Work Item IDs as unsaved tracking', 'record a tracking issue'),
+  /Safe implementation loop must persist progress in order/],
+  ['report timing evidence omitted', 'implementationReport', (text) => replaceOnce(text,
+    'observed late reconciliation, and unverified timing', 'timing information'),
+  /Implementation report marker field must distinguish/],
+  ['Review no-commit opportunity omitted', 'reviewTemplate', (text) => replaceOnce(text,
+    'including no-commit dispositions', 'where relevant'),
+  /Review template must assess available chronology/],
+  ['assurance silence-based pass allowed', 'assurance', (text) => replaceOnce(text,
+    'no silence-based pass or commit-count gate', 'silence may demonstrate compliance'),
+  /Stage assurance must distinguish observed timing/]
+]) {
+  const fixture = { ...executionSources, [key]: mutate(executionSources[key]) };
+  assertRejected(label, () => contracts.checkIncrementalRpirContract(fixture),
+    (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' && diagnostic.test(error.message));
+}
+
+const supportedCheckpointEquivalent = {
+  ...executionSources,
+  checklist: replaceOnce(executionSources.checklist, 'no separate grant exchange is required', 'no additional grant step is required')
+};
+assert.doesNotThrow(() => contracts.checkIncrementalRpirContract(supportedCheckpointEquivalent));
+cases += 1;
+
+// Preserve positive rules while adding contradictions: absence-only fixtures
+// cannot prove rejection of conflicting legacy requirements.
+for (const [key, boundary, owner] of [
+  ['checklist', '## 4. Inspect and preserve the candidate', 'Checkpoint checklist authorization'],
+  ['validationChecklist', '## Evidence, records and independent review', 'Implementation checklist capabilities'],
+  ['runner', 'Before every Git command,', 'Script Runner authority']
+]) {
+  for (const contradiction of [
+    'A separate grant exchange is required for every candidate.',
+    'You must obtain an additional grant for each checkpoint.'
+  ]) {
+    assertRejected(`additive duplicate grant in ${key}: ${contradiction}`, () => contracts.checkIncrementalRpirContract({
+      ...executionSources,
+      [key]: replaceOnce(executionSources[key], boundary, `${contradiction}\n\n${boundary}`)
+    }), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' &&
+      error.message === `${owner} must reject mandatory duplicate grants for covered effects`);
+  }
+}
+
+for (const key of ['safe', 'implementAgent']) {
+  for (const [target, replacement] of [
+    ['→ handle checkpoint disposition → select the next unit', '→ select the next unit → handle checkpoint disposition'],
+    [key === 'safe'
+      ? '→ update eligible existing markers only, save and read back/verify preservation → handle checkpoint disposition'
+      : '→ save eligible existing markers only and read back/verify preservation → handle checkpoint disposition',
+    key === 'safe'
+      ? '→ handle checkpoint disposition → update eligible existing markers only, save and read back/verify preservation'
+      : '→ handle checkpoint disposition → save eligible existing markers only and read back/verify preservation']
+  ]) {
+    assertRejected(`phrase-preserving loop reorder in ${key}: ${target}`, () => contracts.checkIncrementalRpirContract({
+      ...executionSources, [key]: replaceOnce(executionSources[key], target, replacement)
+    }), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' &&
+      (key === 'safe' ? /Safe implementation loop must persist progress in order/ : /Implement summary must preserve the ordered/).test(error.message));
+  }
+}
+
+const runnerOpening = executionSources.runner.match(/^Accept a self-contained[^\n]*\n\nOnly `read`[^\n]*/m)?.[0];
+assert.ok(runnerOpening, 'Runner fixture requires its two normative opening paragraphs');
+assertRejected('Runner rules relocated to historical section', () => contracts.checkIncrementalRpirContract({
+  ...executionSources,
+  runner: `${replaceOnce(executionSources.runner, runnerOpening, 'Accept only the supplied goal.\n\nObserve the requested scope.')}\n\n## Historical example (not operating policy)\n\n${runnerOpening}\n`
+}), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' && /Script Runner summary must consume Plan authority/.test(error.message));
+
+for (const replacement of ['', 'reopen all markers and unaffected completed work']) {
+  let safe = replaceOnce(executionSources.safe,
+    'reopen only the invalidated markers and dependent parent markers whose completion is no longer supported', replacement);
+  safe = replaceOnce(safe, 'on resume reopen only disproved completion and dependent parents, with evidence', 'on resume assess progress');
+  assertRejected(`selective reopening removed or reversed: ${replacement}`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, safe
+  }), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' && /Safe implementation recovery must selectively reopen/.test(error.message));
+}
+assertRejected('unaffected completed work preservation reversed', () => contracts.checkIncrementalRpirContract({
+  ...executionSources, safe: replaceOnce(executionSources.safe,
+    'preserve unaffected completed work', 'reopen unaffected completed work')
+}), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' && /Safe implementation recovery must selectively reopen/.test(error.message));
+
+for (const [key, target, diagnostic] of [
+  ['repository', 'or an explicit bounded phase-record grant', /Repository command entry must preserve/],
+  ['checklist', 'do not demand an approved implementation Plan or `/implement` evidence for this route', /Checkpoint checklist must retain separately bounded/],
+  ['runner', 'without requiring an approved implementation Plan or `/implement` evidence', /Script Runner must retain separately bounded/],
+  ['researchAgent', 'separately granted local Git index/history checkpoint', /Research must retain/],
+  ['reviewAgent', 'or other valid bounded authorization applies, ', /Review must retain/]
+]) {
+  assertRejected(`separate phase-record route removed from ${key}`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, [key]: replaceOnce(executionSources[key], target, 'route omitted')
+  }), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' && diagnostic.test(error.message));
+}
+
+// Legitimate bootstrap, uncovered effects and separate phase-record grants are
+// not duplicate-grant contradictions; supported local equivalents remain valid.
+for (const [key, target, replacement] of [
+  ['safe', 'reopen only the invalidated markers', 'reopen only disproved markers'],
+  ['safe', '→ make the coherent change, check and repair →', '→ perform the coherent change and relevant checks →'],
+  ['implementAgent', '→ make/check/repair the coherent change →', '→ perform the coherent change and checks →'],
+  ['checklist', '## 4. Inspect and preserve the candidate',
+    'A bootstrap session still requires its distinct actual bounded grant. Genuinely uncovered effects require an engineer decision.\n\n## 4. Inspect and preserve the candidate']
+]) {
+  assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({
+    ...executionSources, [key]: replaceOnce(executionSources[key], target, replacement)
+  }));
+  cases += 1;
+}
+
+// A literal candidate mention elsewhere in the checklist must not satisfy the
+// authorization section's candidate requirement.
+assertRejected('wrong-section candidate decoy', () => contracts.checkIncrementalRpirContract({
+  ...executionSources,
+  checklist: replaceOnce(executionSources.checklist,
+    'literal candidate and candidate-relevant validation evidence', 'a candidate and relevant validation evidence')
+}), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' &&
+  /Checkpoint checklist authorization must cover approved Plans/.test(error.message));
+
+const cadenceSectionDecoy = replaceOnce(executionSources.checklist,
+  'after each completed Work Item before unrelated items', 'at convenient times');
+assertRejected('wrong-section Work Item cadence decoy', () => contracts.checkIncrementalRpirContract({
+  ...executionSources,
+  checklist: replaceOnce(cadenceSectionDecoy, '## 4. Inspect and preserve the candidate',
+    '## 4. Inspect and preserve the candidate\n\nNormally checkpoint eligible coherent work after each completed Work Item before unrelated items.')
+}), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' &&
+  /Checkpoint checklist must state normal Work Item cadence/.test(error.message));
+
+const progressLoopDecoy = replaceOnce(executionSources.safe,
+  '→ handle checkpoint disposition → select the next unit', '→ select the next unit');
+assertRejected('wrong-section progress-loop decoy', () => contracts.checkIncrementalRpirContract({
+  ...executionSources,
+  safe: `${progressLoopDecoy}\n\nUnrelated note: handle checkpoint disposition before selecting the next unit.`
+}), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' &&
+  /Safe implementation loop must persist progress in order/.test(error.message));
+
+const reportTimingDecoy = replaceOnce(executionSources.implementationReport,
+  'observed late reconciliation, and unverified timing', 'timing information');
+assertRejected('wrong-field implementation timing decoy', () => contracts.checkIncrementalRpirContract({
+  ...executionSources,
+  implementationReport: replaceOnce(reportTimingDecoy, '## Validation',
+    '## Validation\n\nObserved late reconciliation, and unverified timing may be noted here.')
+}), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' &&
+  /Implementation report marker field must distinguish/.test(error.message));
+
+const reviewTimingDecoy = replaceOnce(executionSources.reviewTemplate,
+  'observed late/omitted action, or unverified timing', 'timing evidence');
+assertRejected('wrong-field Review timing decoy', () => contracts.checkIncrementalRpirContract({
+  ...executionSources,
+  reviewTemplate: replaceOnce(reviewTimingDecoy, '## Findings',
+    '## Findings\n\nObserved late/omitted action, or unverified timing is considered.')
+}), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' &&
+  /Review template must assess available chronology/.test(error.message));
+
 for (const [label, key, mutate, diagnostic] of [
   ['missing mapped ADR input', 'coverage', (text) => replaceOnce(text, /^\| 4\.3[^\n]*\n/m, ''), /all 22 sample inputs/],
   ['unguarded ADR directory destination', 'core', (text) => replaceOnce(text, 'explicitly engineer-selected, verified contained destination', 'selected destination'), /Plan-only authority, guarded effects/],
