@@ -6,7 +6,9 @@ All notable releases of the UKHO Copilot Toolkit are documented here. Versions f
 
 ### 1.0.0 review candidate
 
-- The intended `1.0.0` VSIX is a local review candidate only: it is not a released version and is not approved for distribution. This engineer-selected major version includes breaking changes, consistent with the README's versioning convention.
+- The replacement `1.0.0` VSIX uses the repository-root output `ukho-copilot-toolkit-1.0.0.vsix`; the previous undistributed same-version archive is preserved separately at `Releases/ukho-copilot-toolkit-1.0.0.vsix`. The replacement remains a private review candidate, not a released version and not approved for distribution. This engineer-selected major version includes breaking changes, consistent with the README's versioning convention.
+- Skill contributions now identify each regular `.github/skills/<skill>/SKILL.md` entry file, while `package.json.files` continues to include each complete Skill directory and its supporting resources.
+- Packaging builds to an owned temporary path and publishes only to an absent version-derived root target; archive verification is bound to that exact root candidate and compares source payload bytes and complete contribution metadata. The preserved `Releases/` archive is never a fallback.
 
 ### Breaking changes
 

@@ -97,12 +97,22 @@ function discoverSkills(definition) {
     if (manifest) {
       const manifestStat = lstat(manifest.full, manifest.relative);
       if (!manifestStat.isFile()) fail(`Skill SKILL.md is not a regular file: ${manifest.relative}`);
-      result.push(normalize(relative));
+      result.push(normalize(manifest.relative));
     }
     for (const entry of children) visit(entry.full, entry.relative);
   }
   for (const entry of entries(base, definition.directory)) visit(entry.full, entry.relative);
   return result;
+}
+
+function skillPayloadRoots(contributions) {
+  if (!Array.isArray(contributions)) fail('Skill contributions must be an array');
+  const roots = contributions.map((contribution) => {
+    const relative = normalize(contribution);
+    if (!relative.endsWith('/SKILL.md')) fail(`Skill contribution must identify SKILL.md: ${relative}`);
+    return path.posix.dirname(relative);
+  });
+  return [...new Set(roots)].sort(compare);
 }
 
 function discover() {
@@ -129,4 +139,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { classes, discover, inspectPath, normalize, root };
+module.exports = { classes, discover, inspectPath, normalize, root, skillPayloadRoots };

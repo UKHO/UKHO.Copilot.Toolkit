@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { classes, discover, normalize, root } = require('./discover-copilot-artifacts.cjs');
+const { classes, discover, normalize, root, skillPayloadRoots } = require('./discover-copilot-artifacts.cjs');
 
 const manifestPath = path.join(root, 'package.json');
 const controlledRoots = classes.map((definition) => definition.directory);
@@ -61,7 +61,9 @@ function desiredManifest(manifest, inventory) {
     next.contributes[definition.name] = inventory[definition.name].map((relative) => ({ path: manifestPathValue(relative) }));
   }
   const unrelatedFiles = manifest.files.filter((entry) => !isControlled(normalize(entry)));
-  const discoveredFiles = classes.flatMap((definition) => inventory[definition.name]).map(manifestPathValue);
+  const discoveredFiles = classes.flatMap((definition) => (
+    definition.kind === 'skill' ? skillPayloadRoots(inventory[definition.name]) : inventory[definition.name]
+  )).map(manifestPathValue);
   next.files = [...unrelatedFiles, ...discoveredFiles];
   return next;
 }
@@ -76,7 +78,9 @@ function differences(current, inventory) {
     }
   }
   const actualFiles = current.files.filter((entry) => isControlled(normalize(entry)));
-  const expectedFiles = classes.flatMap((definition) => inventory[definition.name]);
+  const expectedFiles = classes.flatMap((definition) => (
+    definition.kind === 'skill' ? skillPayloadRoots(inventory[definition.name]) : inventory[definition.name]
+  ));
   if (JSON.stringify(actualFiles) !== JSON.stringify(expectedFiles)) {
     changes.push(`files: ${formatDelta(actualFiles, expectedFiles)}`);
   }
@@ -122,11 +126,13 @@ function main() {
   console.log('Copilot manifest synchronized.');
 }
 
-try {
-  main();
-} catch (error) {
-  console.error(`Copilot manifest synchronization failed: ${error.message}`);
-  process.exitCode = 1;
+if (require.main === module) {
+  try {
+    main();
+  } catch (error) {
+    console.error(`Copilot manifest synchronization failed: ${error.message}`);
+    process.exitCode = 1;
+  }
 }
 
 module.exports = { desiredManifest, differences, discover, readManifest };

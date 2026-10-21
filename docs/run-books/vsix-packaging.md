@@ -17,13 +17,13 @@ The Run Book is repository-local and does not become part of the installed exten
 - `.github/instructions`, for files ending in `.instructions.md`;
 - `.github/agents`, for files ending in `.agent.md`;
 - `.github/prompts`, for files ending in `.prompt.md`; and
-- `.github/skills`, for directories containing a regular `SKILL.md`.
+- `.github/skills`, for sorted regular-file contribution paths ending in `SKILL.md`. Each contributed file is separate from its containing Skill directory, which remains the recursive package-inclusion root.
 
 It rejects unsafe or ambiguous paths such as symbolic links, traversal, unsupported entries, and duplicate normalized contribution paths. Its direct interface reports the sorted inventory as JSON. The same discovery implementation is used by synchronization and boundary verification, so it is an inspection aid for the supported roots, not a broad repository scanner.
 
 ### Check or deliberately synchronize the manifest
 
-`scripts/sync-copilot-manifest.cjs` discovers the inventory, reads `package.json`, and compares the current controlled values with that inventory. Its default mode is a non-mutating `check`: drift is reported and the check fails without writing the manifest. Synchronization is a separate, deliberate explicit `sync` mode and writes `package.json` only after the inventory and manifest have been read successfully.
+`scripts/sync-copilot-manifest.cjs` discovers file-valued contribution entries, derives the containing Skill directories for `package.json.files`, reads the manifest, and compares both projections. Its default mode is a non-mutating `check`: drift is reported and the check fails without writing the manifest. Synchronization is a separate, deliberate explicit `sync` mode and writes `package.json` only after the inventory and manifest have been read successfully. Importing the module for fixture tests does not run its CLI.
 
 Synchronization controls exactly these five manifest locations:
 
@@ -37,13 +37,13 @@ The synchronizer retains unrelated `files` entries and unrelated manifest fields
 
 ### Verify the packaged boundary
 
-`scripts/verify-vsix-boundary.cjs` reuses shared discovery and checks that the manifest contributions match it, that contribution files and complete skills remain inside the manifest `files` boundary, and that prohibited content is absent. After packaging, it examines the expected VSIX archive for missing or unexpected members and validates the packaged `README.md` changelog link. Verification is a post-package boundary check; it is not an inventory-update or repair operation.
+`scripts/verify-vsix-boundary.cjs` reuses shared discovery and checks that file-valued contribution metadata matches it, that each complete Skill payload remains inside the manifest `files` boundary, and that prohibited content is absent. It reads only the repository-root, version-derived VSIX; it does not fall back to `Releases/` or another archive. It checks identity, engine and contribution metadata, exact expected members, source bytes for all included files (including binary resources), ZIP CRC/bounds/compression and local/central names, changelog equality, and the README link. The pinned `vsce` README relative-link rewrite is checked against its expected source-derived output. Verification is read-only and does not repair inputs.
 
 ### Check contributed customization structure
 
 `scripts/verify-copilot-contracts.cjs` reuses the fixed-root discovery inventory to check manifest/discovery parity, supported frontmatter structure, duplicate customization names, supported repository-local inline Markdown links, prompt routes, declared coordinator tools/delegates, and manual `send: false` handoffs. It also checks Markdown resources nested under discovered Skills once, without requiring resource frontmatter. The check is read-only and bounded to structural metadata; it does not assert authored policy wording or validate runtime discovery or installed-VSIX behavior. Static structure cannot establish conversation compliance, installed loading, platform permissions or runtime safety.
 
-`npm run test-vsix-boundary` is a separate, optional in-memory check for changes to the archive-validation helper. It runs 17 cases directly and writes no staged or retained results. It is not part of routine authoring CI and does not test a real VSIX or installed behavior.
+`npm run test-vsix-boundary` is a separate fixture suite for archive verification and packaging safety. Its 50 cases include in-memory ZIPs and bounded temporary-directory tests for the helper; it does not invoke real `vsce` packaging, write a retained candidate or test installed behavior. It is not part of routine authoring CI.
 
 ## Human process
 
@@ -115,9 +115,9 @@ The following constrained metadata records the six Toolkit-specific packaging in
 		"command": "npm run package",
 		"cwd": ".",
 		"arguments": [],
-		"outputsOrWrites": ["ukho-copilot-toolkit-<package.json version>.vsix, derived as ${name}-${version}.vsix."],
-		"effects": ["Creates the version-derived VSIX after the declared current-state prerequisite checks succeed."],
-		"prerequisites": ["Workspace Trust.", "Fixed root cwd.", "Readable, parseable package.json whose name is ukho-copilot-toolkit.", "Declared package script and fixed local @vscode/vsce executable exist.", "Local package dependencies exist.", "Immediately preceding successful requested toolkit-check-copilot-manifest operation with no requested intervening operation; at that check capture complete package.json bytes and declared fixed discovery-probe sorted JSON.", "Immediately before packaging, reread/reprobe and require byte-for-byte equality."],
+		"outputsOrWrites": ["Repository-root ukho-copilot-toolkit-<package.json version>.vsix, derived as ${name}-${version}.vsix and created only when absent.", "One uniquely created contained temporary build directory and VSIX, removed after publication or failure handling."],
+		"effects": ["Runs pinned @vscode/vsce against a uniquely owned temporary output, then publishes by exclusive copy to the absent version-derived repository-root target; never overwrites an archive or falls back to another path."],
+		"prerequisites": ["Workspace Trust.", "Fixed root cwd.", "Readable, parseable package.json whose name is ukho-copilot-toolkit and version is the approved internal version.", "Declared package helper and fixed local @vscode/vsce executable exist at pinned version 3.9.2.", "Local package dependencies exist; do not install dependencies for this operation.", "Version-derived repository-root target is absent; all existing archives, including Releases/ukho-copilot-toolkit-1.0.0.vsix, are preserved.", "Immediately preceding successful requested toolkit-check-copilot-manifest operation with no requested intervening operation; at that check capture complete package.json bytes and declared fixed discovery-probe sorted JSON.", "Immediately before packaging, reread/reprobe and require byte-for-byte equality."],
 		"stopBehavior": "On failure, inspect results and effects, correct a permitted local cause and rerun relevant checks; reconcile uncertain destructive or external completion before repetition, respect denial, and keep dependent work unmet until prerequisites pass.",
 		"prohibitedEffects": ["No dependency installation, secrets, authentication, publishing, deployment, release/tag, remote mutation, global configuration, external-path write, shell composition, redirection, substitution, aliases, wildcards, traversal, npx, arbitrary interpreter or script target, recursive deletion, or safety-control bypass."]
 	},
@@ -129,8 +129,8 @@ The following constrained metadata records the six Toolkit-specific packaging in
 		"cwd": ".",
 		"arguments": [],
 		"outputsOrWrites": [],
-		"effects": ["Verifies the generated VSIX boundary, manifest contributions, and packaged README changelog link without workspace mutation."],
-		"prerequisites": ["Workspace Trust.", "Repository root is the fixed working directory.", "The expected version-derived VSIX exists."],
+		"effects": ["Verifies the exact version-derived repository-root VSIX against identity, engine/contribution metadata, expected boundary, source bytes, archive integrity and README/changelog contracts without workspace mutation; never searches Releases/ or another archive."],
+		"prerequisites": ["Workspace Trust.", "Repository root is the fixed working directory.", "The exact expected version-derived root VSIX exists as a regular file."],
 		"stopBehavior": "On failure, inspect results and effects, correct a permitted local cause and rerun relevant checks; reconcile uncertain destructive or external completion before repetition, respect denial, and keep dependent work unmet until prerequisites pass.",
 		"prohibitedEffects": ["No dependency installation, secrets, authentication, publishing, deployment, release/tag, remote mutation, global configuration, external-path write, shell composition, redirection, substitution, aliases, wildcards, traversal, npx, arbitrary interpreter or script target, recursive deletion, or safety-control bypass."]
 	}
@@ -146,20 +146,20 @@ The following constrained metadata records the six Toolkit-specific packaging in
 
 ## Ordered process
 
-For an authorized future human-maintained packaging execution, these interfaces form an ordered process. **Packaging is currently on hold**: this list is not authorization to run it, and the existing root VSIX archives must not be overwritten. The authored checks-only CI workflow runs one structural check; its packaging job remains disabled. Reenabling packaging needs owner confirmation and an authorized distinct output strategy.
+These interfaces form the documented order for an explicitly authorized local candidate operation; this Run Book is not that authorization. The selected `1.0.0` candidate is the repository-root `ukho-copilot-toolkit-1.0.0.vsix`; the existing `Releases/ukho-copilot-toolkit-1.0.0.vsix` archive is preserved. A collision at the root target stops packaging rather than allowing overwrite or relocation. The authored checks-only CI workflow runs one structural check; its packaging job remains disabled. Marketplace/remote publication and distribution remain outside this operation.
 
 1. `npm run verify-copilot-contracts` — checks supported customization structure and manifest parity without workspace mutation.
 2. `node scripts/discover-copilot-artifacts.cjs` — reports the sorted customization inventory as JSON without repository mutation.
 3. `node scripts/sync-copilot-manifest.cjs check` — performs the non-mutating manifest check; use discovery and this check to decide whether sync is needed.
 4. **Only if separately authorized and needed:** `node scripts/sync-copilot-manifest.cjs sync` — synchronizes only the bounded manifest locations after the declared probe comparison succeeds. Inspect its changes, then repeat step 3 successfully before step 5. If no sync was needed, use the successful step 3 check immediately before step 5.
-5. **Only if separately authorized:** `npm run package` — creates the VSIX after the fresh successful manifest check and declared immediate current-state comparison, with no requested intervening operation.
-6. `npm run verify-package` — checks the generated VSIX against the manifest boundary and packaged README link.
+5. **Only after the approved Plan transition and its guards:** `npm run package` — invokes the pinned tool through `scripts/package-vsix.cjs`, which builds in a unique temporary directory and uses exclusive publication to the absent version-derived root target after the fresh successful manifest check and immediate current-state comparison.
+6. `npm run verify-package` — checks that exact version-derived root VSIX against the manifest, complete payload bytes, metadata and archive-integrity contracts; it does not fall back to the preserved `Releases/` file.
 
 Inspect with discovery and check before any deliberately authorized sync; inspect any resulting controlled manifest change and recheck successfully afterward. Whether or not sync was needed, require a fresh successful check immediately before a separately authorized package and post-package verification. On a local failure, inspect diagnostics and effects, correct a permitted cause and rerun relevant checks before dependent steps. Do not weaken a failing check or assume a failed prerequisite passed. A failed consequential write or uncertain destructive/external completion needs reconciliation before repetition; an actual denial is not a fallback opportunity. This Run Book never selects commands for Runner or grants sync/packaging authority.
 
 ## Expected results
 
-Independent checks-only CI runs the read-only structural check without creating a VSIX. The optional archive-helper fixtures are invoked separately and are not a routine CI job. If packaging is later separately authorized, the human process checks the manifest boundary, synchronizes only the declared locations when deliberately needed, creates a distinct authorized VSIX and verifies its archive boundary. The JSON metadata is packaging-interface documentation; it does not prescribe Script Runner commands.
+Independent checks-only CI runs the read-only structural check without creating a VSIX. The archive-verification/package-safety fixture suite is invoked separately and is not a routine CI job. The local process checks the manifest boundary, synchronizes only the declared locations when deliberately needed, creates a distinct absent root VSIX through temporary output and exclusive publication, then verifies that exact artifact. The JSON metadata is packaging-interface documentation; it does not prescribe Script Runner commands or grant execution authority.
 
 ## Diagnostics and failure disposition
 
@@ -168,7 +168,7 @@ A failed check or missing prerequisite blocks its dependent step, not in-boundar
 ## Safety limits
 
 - Do not bypass a failed prerequisite or treat an unperformed recheck as passed; diagnose and revalidate a corrected local failure before dependent work.
-- Do not edit the VSIX archive directly or treat archive contents as a substitute for correcting source inputs.
+- Do not edit the VSIX archive directly or treat archive contents as a substitute for correcting source inputs. Never overwrite an existing output, verify a different same-version archive, or fall back to `Releases/` when the selected root input is missing.
 - Do not distribute, publish, install, or release a VSIX as part of this process.
 - Do not treat synchronization as broad manifest rewriting: its mutation surface is limited to the five locations listed above.
 - Do not change `README.md` consumer guidance as part of this Run Book. The maintainer documentation remains separate from installation, support, and rollback instructions.
@@ -176,7 +176,7 @@ A failed check or missing prerequisite blocks its dependent step, not in-boundar
 
 ## Validation and limitations
 
-This Run Book records the preserved package interfaces, controlled manifest boundary and human recovery sequence. The [authored workflow](../../.github/workflows/package.yml) defines one structural-check job and a disabled package job. The structural check uses bounded frontmatter and supported inline Markdown-link syntax; it is not a complete YAML/Markdown parser, does not assert substantive policy wording and does not establish conversation behavior, installed loading, permissions or runtime safety. The optional [archive-helper fixtures](../../tests/test-vsix-boundary.cjs) cover in-memory cases only. This Run Book does not claim that sync, package, or archive verification against a real VSIX has been executed. Runtime discovery, synchronization, Windows replacement behavior, packaging, archive verification, installed-extension checks, hosted CI and cross-platform equivalence remain unvalidated here.
+This Run Book records the package interfaces, controlled manifest boundary and human recovery sequence. The [authored workflow](../../.github/workflows/package.yml) defines one structural-check job and a disabled package job. The structural check uses bounded frontmatter and supported inline Markdown-link syntax; it is not a complete YAML/Markdown parser, does not assert substantive policy wording and does not establish conversation behavior, installed loading, permissions or runtime safety. The [archive/package-safety fixture suite](../../tests/test-vsix-boundary.cjs) covers in-memory archive cases and temporary helper cases, not a real VSIX build. This Run Book does not itself claim that sync, package, or archive verification against a real candidate has been executed. Runtime discovery, Windows replacement behavior, installed-extension checks, hosted CI and cross-platform equivalence remain unvalidated here.
 
 The workflow retains the checks-only job layout and release hold, but no hosted CI execution is established here; this Run Book does not enable a release. Neither local script results nor a workflow definition establish installed-agent effectiveness, cross-platform validation or release readiness. This page alone is not a passing validation result.
 
@@ -185,7 +185,7 @@ The workflow retains the checks-only job layout and release hold, but no hosted 
 - [`scripts/discover-copilot-artifacts.cjs`](../../scripts/discover-copilot-artifacts.cjs) — fixed-root inventory.
 - [`scripts/sync-copilot-manifest.cjs`](../../scripts/sync-copilot-manifest.cjs) — controlled synchronization boundary.
 - [`scripts/verify-copilot-contracts.cjs`](../../scripts/verify-copilot-contracts.cjs) — bounded customization-structure validation.
-- [`tests/test-vsix-boundary.cjs`](../../tests/test-vsix-boundary.cjs) — optional standalone in-memory archive-helper cases.
+- [`tests/test-vsix-boundary.cjs`](../../tests/test-vsix-boundary.cjs) — archive-verification and packaging-safety fixture suite.
 - [`scripts/verify-vsix-boundary.cjs`](../../scripts/verify-vsix-boundary.cjs) — post-package boundary validation.
 - [`package.json`](../../package.json) — package identity and scripts.
 - [`README.md`](../../README.md) and [workflow](../../.github/workflows/package.yml) — consumer guidance and automation context.

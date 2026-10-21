@@ -5,9 +5,30 @@ const fs = require('node:fs');
 const path = require('node:path');
 const contracts = require('../scripts/verify-copilot-contracts.cjs');
 const { discover, root } = require('../scripts/discover-copilot-artifacts.cjs');
+const { desiredManifest, differences } = require('../scripts/sync-copilot-manifest.cjs');
 
 const inventory = discover();
-const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+const sourceManifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+const manifest = desiredManifest(sourceManifest, inventory);
+const expectedSkillContributions = [
+  '.github/skills/agent-question-resolution/SKILL.md',
+  '.github/skills/architecture-decision-records/SKILL.md',
+  '.github/skills/architecture-planning/SKILL.md',
+  '.github/skills/code-review/SKILL.md',
+  '.github/skills/codebase-research/SKILL.md',
+  '.github/skills/create-copilot-agent/SKILL.md',
+  '.github/skills/create-copilot-instruction/SKILL.md',
+  '.github/skills/create-copilot-prompt/SKILL.md',
+  '.github/skills/create-copilot-skill/SKILL.md',
+  '.github/skills/create-runbook/SKILL.md',
+  '.github/skills/local-git-checkpoints/SKILL.md',
+  '.github/skills/maintain-copilot-artifacts/SKILL.md',
+  '.github/skills/rpir-lifecycle-core/SKILL.md',
+  '.github/skills/rpir-stage-assurance/SKILL.md',
+  '.github/skills/safe-implementation/SKILL.md',
+  '.github/skills/test-design/SKILL.md',
+  '.github/skills/wiki-maintenance/SKILL.md'
+];
 const agentPaths = inventory.chatAgents;
 function readArtifact(relative) {
   return fs.readFileSync(path.join(root, relative), 'utf8').replace(/\r\n/g, '\n');
@@ -46,6 +67,22 @@ function agentPath(name) {
 // Positive controls: current discovered artifacts, tool boundaries, routes,
 // manifest parity, and all supported local links are structurally valid.
 assert.doesNotThrow(() => contracts.checkCustomizationContracts(inventory));
+assert.deepEqual(inventory.chatSkills, expectedSkillContributions,
+  'every contributed Skill must be its literal SKILL.md file path');
+assert.ok(inventory.chatSkills.every((entry) => fs.statSync(path.join(root, entry)).isFile()),
+  'every Skill contribution must resolve to a regular file');
+assert.deepEqual(manifest.contributes.chatSkills.map((entry) => entry.path), expectedSkillContributions);
+assert.deepEqual(manifest.files.filter((entry) => entry.startsWith('.github/skills/')),
+  expectedSkillContributions.map((entry) => path.posix.dirname(entry)),
+  'package inclusion must retain complete Skill payload roots');
+assert.deepEqual(differences(manifest, inventory), [], 'the generated manifest projection must be idempotent');
+const unrelatedFieldFixture = desiredManifest({
+  ...clone(sourceManifest),
+  customMetadata: { retained: true },
+  files: [...sourceManifest.files, 'vendor/custom-payload']
+}, inventory);
+assert.deepEqual(unrelatedFieldFixture.customMetadata, { retained: true });
+assert.ok(unrelatedFieldFixture.files.includes('vendor/custom-payload'));
 assert.doesNotThrow(() => contracts.checkManifestParity(manifest, inventory));
 for (const [relative, parsed] of agents) {
   assert.doesNotThrow(() => contracts.checkAgentMetadata(relative, parsed.values, parsed.blocks, agentNames));
@@ -54,7 +91,7 @@ for (const relative of inventory.chatPromptFiles) {
   const parsed = contracts.parseFrontmatterText(readArtifact(relative), relative);
   assert.doesNotThrow(() => contracts.checkPromptMetadata(relative, parsed.values, agentNames));
 }
-assert.equal(inventory.chatSkills.filter((entry) => entry === '.github/skills/local-git-checkpoints').length, 1);
+assert.equal(inventory.chatSkills.filter((entry) => entry === '.github/skills/local-git-checkpoints/SKILL.md').length, 1);
 assert.doesNotThrow(() => contracts.checkLocalLinks(
   '.github/skills/local-git-checkpoints/SKILL.md',
   '[checklist](references/checkpoint-checklist.md)'
@@ -399,16 +436,17 @@ assertRejected('wrong prompt route', () => contracts.checkPromptMetadata(
 
 // Isolate each defect to one manifest surface. Check the diagnostic so a
 // contribution failure cannot be masked by an earlier controlled-files failure.
-const checkpointSkill = '.github/skills/local-git-checkpoints';
-const adrSkill = '.github/skills/architecture-decision-records';
+const checkpointSkill = '.github/skills/local-git-checkpoints/SKILL.md';
+const adrSkill = '.github/skills/architecture-decision-records/SKILL.md';
 for (const skill of [checkpointSkill, adrSkill]) {
   for (const surface of ['files', 'contributes.chatSkills']) {
     for (const defect of ['missing', 'duplicate', 'misordered']) {
     const fixture = clone(manifest);
     const entries = surface === 'files' ? fixture.files : fixture.contributes.chatSkills;
+    const expectedPath = surface === 'files' ? path.posix.dirname(skill) : skill;
     const currentIndex = entries.findIndex((entry) => (
       typeof entry === 'string' ? entry : entry.path
-    ) === skill);
+    ) === expectedPath);
     assert.ok(currentIndex >= 0 && currentIndex + 1 < entries.length);
     if (defect === 'missing') entries.splice(currentIndex, 1);
     if (defect === 'duplicate') entries.push(clone(entries[currentIndex]));
@@ -426,6 +464,19 @@ for (const skill of [checkpointSkill, adrSkill]) {
     assertRejected(`${defect} skill in ${surface}`, () => contracts.checkManifestParity(fixture, inventory), diagnostic);
     }
   }
+}
+cases += 6;
+
+for (const [label, contribution] of [
+  ['directory-valued skill contribution', '.github/skills/local-git-checkpoints'],
+  ['doubled skill filename', '.github/skills/local-git-checkpoints/SKILL.md/SKILL.md']
+]) {
+  const fixture = clone(manifest);
+  const entry = fixture.contributes.chatSkills.find((item) => item.path === checkpointSkill);
+  assert.ok(entry);
+  entry.path = contribution;
+  assertRejected(label, () => contracts.checkManifestParity(fixture, inventory),
+    /contributes\.chatSkills does not match shared discovery inventory/);
 }
 
 assertRejected('unresolved Skill resource link', () => contracts.checkLocalLinks(

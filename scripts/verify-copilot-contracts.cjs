@@ -2,7 +2,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { classes, discover, inspectPath, normalize, root } = require('./discover-copilot-artifacts.cjs');
+const { classes, discover, inspectPath, normalize, root, skillPayloadRoots } = require('./discover-copilot-artifacts.cjs');
 
 const coordinatorTools = {
   Research: ['read', 'search', 'web', 'edit', 'agent'],
@@ -170,7 +170,9 @@ function readManifest() {
 function checkManifestParity(manifest, inventory) {
   const roots = classes.map((definition) => definition.directory);
   const controlled = (relative) => roots.some((directory) => relative === directory || relative.startsWith(`${directory}/`));
-  const expectedFiles = classes.flatMap((definition) => inventory[definition.name]);
+  const expectedFiles = classes.flatMap((definition) => (
+    definition.kind === 'skill' ? skillPayloadRoots(inventory[definition.name]) : inventory[definition.name]
+  ));
   const actualFiles = manifest.files.filter((entry) => controlled(normalize(entry)));
   if (!equal(actualFiles, expectedFiles)) fail('package.json controlled files do not match shared discovery inventory', 'PARITY-001');
   for (const definition of classes) {
@@ -267,7 +269,7 @@ function checkAgentMetadata(relative, values, blocks, agentNames) {
 
 function skillMarkdownResources(inventory) {
   const resources = new Set();
-  for (const skill of inventory.chatSkills) {
+  for (const skill of skillPayloadRoots(inventory.chatSkills)) {
     const base = sourcePath(skill);
     function visit(full, relative) {
       let stat;
@@ -690,11 +692,11 @@ function checkIncrementalRpirContract(sources = {}) {
 
 function checkCustomizationContracts(inventory) {
   const artifacts = classes.flatMap((definition) => definition.kind === 'skill'
-    ? inventory[definition.name].map((skill) => `${skill}/SKILL.md`)
+    ? inventory[definition.name]
     : inventory[definition.name]);
   const parsedByPath = new Map();
   const names = new Map();
-  const skillEntries = new Set(inventory.chatSkills.map((skill) => `${skill}/SKILL.md`));
+  const skillEntries = new Set(inventory.chatSkills);
   for (const relative of artifacts) {
     const parsed = parseFrontmatterText(readText(relative), relative);
     if (skillEntries.has(relative)) {

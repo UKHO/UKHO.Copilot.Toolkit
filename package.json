@@ -12,7 +12,7 @@
     "verify-copilot-contracts": "node scripts/verify-copilot-contracts.cjs",
     "test-copilot-contracts": "node tests/test-copilot-contracts.cjs",
     "test-vsix-boundary": "node tests/test-vsix-boundary.cjs",
-    "package": "node -e \"const fs=require('fs');const cp=require('child_process');const p=JSON.parse(fs.readFileSync('package.json','utf8'));const bin=process.platform==='win32'?'node_modules/@vscode/vsce/vsce':'node_modules/.bin/vsce';const r=cp.spawnSync(process.execPath,[bin,'package','--allow-missing-repository','--out',`${p.name}-${p.version}.vsix`],{stdio:'inherit'});process.exit(r.status===null?1:r.status)\"",
+    "package": "node scripts/package-vsix.cjs",
     "verify-package": "node scripts/verify-vsix-boundary.cjs"
   },
   "license": "MIT",
@@ -147,55 +147,55 @@
     ],
     "chatSkills": [
       {
-        "path": ".github/skills/agent-question-resolution"
+        "path": ".github/skills/agent-question-resolution/SKILL.md"
       },
       {
-        "path": ".github/skills/architecture-decision-records"
+        "path": ".github/skills/architecture-decision-records/SKILL.md"
       },
       {
-        "path": ".github/skills/architecture-planning"
+        "path": ".github/skills/architecture-planning/SKILL.md"
       },
       {
-        "path": ".github/skills/code-review"
+        "path": ".github/skills/code-review/SKILL.md"
       },
       {
-        "path": ".github/skills/codebase-research"
+        "path": ".github/skills/codebase-research/SKILL.md"
       },
       {
-        "path": ".github/skills/create-copilot-agent"
+        "path": ".github/skills/create-copilot-agent/SKILL.md"
       },
       {
-        "path": ".github/skills/create-copilot-instruction"
+        "path": ".github/skills/create-copilot-instruction/SKILL.md"
       },
       {
-        "path": ".github/skills/create-copilot-prompt"
+        "path": ".github/skills/create-copilot-prompt/SKILL.md"
       },
       {
-        "path": ".github/skills/create-copilot-skill"
+        "path": ".github/skills/create-copilot-skill/SKILL.md"
       },
       {
-        "path": ".github/skills/create-runbook"
+        "path": ".github/skills/create-runbook/SKILL.md"
       },
       {
-        "path": ".github/skills/local-git-checkpoints"
+        "path": ".github/skills/local-git-checkpoints/SKILL.md"
       },
       {
-        "path": ".github/skills/maintain-copilot-artifacts"
+        "path": ".github/skills/maintain-copilot-artifacts/SKILL.md"
       },
       {
-        "path": ".github/skills/rpir-lifecycle-core"
+        "path": ".github/skills/rpir-lifecycle-core/SKILL.md"
       },
       {
-        "path": ".github/skills/rpir-stage-assurance"
+        "path": ".github/skills/rpir-stage-assurance/SKILL.md"
       },
       {
-        "path": ".github/skills/safe-implementation"
+        "path": ".github/skills/safe-implementation/SKILL.md"
       },
       {
-        "path": ".github/skills/test-design"
+        "path": ".github/skills/test-design/SKILL.md"
       },
       {
-        "path": ".github/skills/wiki-maintenance"
+        "path": ".github/skills/wiki-maintenance/SKILL.md"
       }
     ]
   }
