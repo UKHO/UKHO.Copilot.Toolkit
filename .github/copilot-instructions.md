@@ -37,4 +37,10 @@ Current RPIR operating rules are owned by repository policy, phase agents, focus
 
 ## Packaging
 
-Packaging remains deferred; do not run packaging or overwrite either ignored VSIX artifact. A future package run requires owner confirmation and an authorized distinct output strategy.
+### Prospective local candidate preparation
+
+For an explicitly requested routine local release-preparation task, built-in VS Code Agent mode may follow the canonical [VSIX candidate preparation Run Book](../docs/run-books/vsix-packaging.md) only when this policy is effective for the session and the request, applicable platform permissions, Workspace Trust and managed policy permit the exact bounded effects. The Run Book is procedural guidance, not independent authority. The agent may propose release inputs, display their exact version, evidence-based summary, notes and affected fields, then update only the listed manifest/lockfile version fields and selected pending `CHANGELOG.md` notes after the engineer's explicit interactive confirmation; it may then prepare, verify, retain and hand off one local candidate using the implemented helpers. A refusal, unavailable interface, preimage drift, partial update, failed check or denial stops dependent preparation and is reported truthfully.
+
+This prospective routine is not a general source-repair or RPIR-development bypass. It does not authorize dependency installation, manifest synchronization, arbitrary source/customization edits, Git effects, installation/activation, manual testing, credentials, network/account queries, publication, backup, archive migration/pruning, replacement of existing candidates, or changes to Script Runner's tools or role. The agent stops after candidate handoff; human testing and publication remain separate. An explicit routine request and this policy do not self-upgrade a currently loaded session or bypass actual denial. No real package, Agent-runtime or activation check is authorized by policy editing itself.
+
+Real packaging remains deferred outside this prospective local-candidate task: do not run the legacy root package operation or overwrite either ignored VSIX artifact under this clause. The CI package job remains disabled. Any other package/release operation still requires owner confirmation and an authorized distinct output strategy.

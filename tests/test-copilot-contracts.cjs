@@ -1055,6 +1055,24 @@ assert.doesNotThrow(() => contracts.checkLocalLinks(
 assert.doesNotThrow(() => contracts.checkLocalLinks(
   '.github/skills/create-runbook/templates/runbook.md', runbookTemplate
 ));
-cases += 26;
+const repositoryPolicy = readArtifact('.github/copilot-instructions.md');
+const packagingPolicy = repositoryPolicy.split('\n## Packaging\n')[1] || '';
+const packagingWorkflow = readArtifact('.github/workflows/package.yml');
+assert.match(packagingPolicy, /^### Prospective local candidate preparation/m);
+assert.match(packagingPolicy, /built-in VS Code Agent mode may follow the canonical \[VSIX candidate preparation Run Book\]/);
+assert.match(packagingPolicy, /explicit interactive confirmation/);
+assert.match(packagingPolicy, /prepare, verify, retain and hand off one local candidate/);
+assert.match(packagingPolicy, /agent stops after candidate handoff/);
+assert.match(packagingPolicy, /do not self-upgrade a currently loaded session/);
+for (const prohibited of [
+  'dependency installation', 'manifest synchronization', 'arbitrary source/customization edits',
+  'Git effects', 'installation/activation', 'manual testing', 'credentials',
+  'network/account queries', 'publication', 'backup', 'archive migration/pruning',
+  "changes to Script Runner's tools or role"
+]) assert.ok(packagingPolicy.includes(prohibited), `Prospective packaging policy must retain prohibition: ${prohibited}`);
+assert.match(packagingWorkflow, /package:\s*\n\s+if: false/,
+  'the hosted package job remains disabled');
+assert.match(packagingPolicy, /Real packaging remains deferred outside this prospective local-candidate task/);
+cases += 38;
 
 console.log(`Passed ${cases} Copilot contract cases, including valid structure and rejected privilege/parity/link defects.`);
