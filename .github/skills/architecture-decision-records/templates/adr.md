@@ -3,6 +3,7 @@
 ## Record metadata
 
 - **Status:** <consumer convention; distinguish proposed decision state from delivery progress>
+- **Substantive version or snapshot:** <actual revision used for inspected Plan binding; not a floating latest>
 - **Authored:** <document creation/revision date>
 - **Decision date:** <actual decision date, or `Not yet decided`>
 - **Author(s):** <actual authors; do not infer>
@@ -19,6 +20,15 @@
 ## Decision and conditions
 
 <The selected direction, or the current proposed state. Separate recommendation from actual human agreement. State required conditions and which dependent work they constrain.>
+
+### <Identifiable choice ID or section — repeat for each grouped architectural choice>
+
+- **Choice and rationale:** <architectural commitment, drivers and evidence; keep each choice identifiable even when context is shared>
+- **Realistic alternatives and reasoning:** <option-specific benefits, trade-offs and reasons; link the alternatives table or a choice-specific subsection without hiding individual choices>
+- **Actual selection or pending state:** <selected direction with actual agreement evidence, or explicit proposal/pending decision; do not infer agreement>
+- **Conditions and affected Work Items:** <decision-critical conditions, dependent effects and existing associated Plan Work Item IDs; unresolved gaps need a resolution route, not invented coverage or a phase-wide veto>
+
+Reuse verified appropriate existing ADR coverage without duplication. Group choices only where shared context, rationale and governance are meaningful; independently changing status, authority or supersession favours separate records. Proportionality reduces detail, not choice coverage, including in small reversible spikes. Routine architecture-preserving coding does not require an ADR.
 
 ## Alternatives and reasoning
 
@@ -48,6 +58,7 @@
 
 - <Durable source references and substantive versions. Mark inaccessible/local-only RPIR links; retain rationale above.>
 - **Associated Plan:** <Plan path/ID and substantive version when one exists; the Plan remains the sole delivery hierarchy and acceptance authority.>
+- **Coverage binding:** <for each choice, the associated Plan identifies this ADR path/ID, identifiable section, inspected substantive version/snapshot, decision state, actual agreement evidence/conditions and affected Work Items; this is traceability, not another delivery register>
 - **Renderer or consumer convention:** <verified requirement, or `Not established`>
 
 ---

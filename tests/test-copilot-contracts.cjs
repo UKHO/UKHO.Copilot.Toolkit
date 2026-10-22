@@ -107,7 +107,21 @@ const adrPaths = {
   implement: '.github/agents/implement.agent.md',
   review: '.github/agents/review.agent.md',
   runner: '.github/agents/script-runner.agent.md',
-  lifecycleInstruction: '.github/instructions/lifecycle-records.instructions.md'
+  lifecycleInstruction: '.github/instructions/lifecycle-records.instructions.md',
+  researchSkill: '.github/skills/codebase-research/SKILL.md',
+  researchTemplate: '.github/skills/codebase-research/research-brief-template.md',
+  planning: '.github/skills/architecture-planning/SKILL.md',
+  planTemplate: '.github/skills/architecture-planning/implementation-plan-template.md',
+  safe: '.github/skills/safe-implementation/SKILL.md',
+  validation: '.github/skills/safe-implementation/validation-checklist.md',
+  implementationReport: '.github/skills/safe-implementation/implementation-report-template.md',
+  codeReview: '.github/skills/code-review/SKILL.md',
+  reviewReport: '.github/skills/code-review/review-report-template.md',
+  assuranceSkill: '.github/skills/rpir-stage-assurance/SKILL.md',
+  assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
+  readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md',
+  wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md',
+  wikiCatalogue: 'docs/Wiki/artifact-catalogue.md'
 };
 const adrSources = Object.fromEntries(Object.entries(adrPaths).map(([key, relative]) => [key, readArtifact(relative)]));
 assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract(adrSources));
@@ -136,8 +150,8 @@ cases += 1;
 // The Research checkpoint sentence owns its safeguards independently of ADR
 // discovery prose, paragraph layout, metadata and historical examples.
 const researchEquivalent = replaceOnce(executionSources.researchAgent,
-  'When a significant architectural decision is relevant,',
-  'For a relevant significant architectural choice,');
+  'Explicitly identify architectural choices after existing discovery/acknowledgment or explicit-deferral limits permit investigation.',
+  'Identify architectural choices explicitly once the existing discovery/acknowledgment or explicit-deferral boundary permits investigation.');
 const researchCheckpointSentence = executionSources.researchAgent.match(/Script Runner may observe,[^\n]*?\.(?=\s|$)/)?.[0];
 assert.ok(researchCheckpointSentence, 'Research fixture requires its normative checkpoint sentence');
 for (const researchAgent of [
@@ -395,14 +409,14 @@ for (const owner of ['skill', 'template']) {
 // Supported equivalent wording and satisfied-prerequisite controls. These are
 // contract-source fixtures, not execution of a governance/agent state machine.
 for (const [key, target, replacement] of [
-  ['plan', 'For relevant architectural choices,',
-    'Bind validation to the implementation candidate. For relevant architectural choices,'],
+  ['plan', 'against inspected ADR coverage using the',
+    'against inspected ADR coverage (bind delivery evidence to its source) using the'],
   ['plan', 'description: ', 'description: Bind delivery evidence to its source. '],
   ['implement', 'continuing independent approved work', 'allowing unrelated approved work to continue'],
   ['implement', 'material mismatch, unavailable content or an unsatisfied condition before dependent effects',
     'material version mismatch, missing content or unsatisfied decision conditions before dependent changes'],
-  ['plan', 'Bind its identity, substantive version, decision state, actual agreement evidence, conditions and dependent Work Items',
-    'Bind its path/ID, substantive snapshot, decision status, evidence of actual agreement, conditions and affected Work Items'],
+  ['plan', 'Bind each to actual ADR path/ID, identifiable section, inspected substantive version/snapshot, decision state, actual agreement evidence/conditions and affected Work Items',
+    'Bind each to actual ADR identity, identifiable section, inspected substantive snapshot, decision status, evidence of actual agreement/conditions and affected Work Items'],
   ['template', 'Unconditional Accepted requires all applicable required decision approvals and decision-critical conditions to be satisfied.',
     'Unconditional Accepted requires satisfied applicable required decision approvals and decision-critical conditions, with all prerequisites satisfied.'],
   ['template', '<consumer convention; distinguish proposed decision state from delivery progress>',
@@ -416,23 +430,27 @@ for (const [key, target, replacement] of [
 }
 
 for (const [label, target] of [
-  ['identity', 'its identity, '],
-  ['substantive version', 'substantive version, '],
+  ['identity', 'actual ADR path/ID, '],
+  ['section', 'identifiable section, '],
+  ['substantive version', 'inspected substantive version/snapshot, '],
   ['decision state', 'decision state, '],
-  ['agreement evidence', 'actual agreement evidence, '],
-  ['conditions', 'conditions and '],
-  ['dependent work', ' and dependent Work Items']
+  ['agreement evidence', 'actual agreement evidence/'],
+  ['conditions', '/conditions'],
+  ['dependent work', ' and affected Work Items']
 ]) {
-  const fixture = { ...adrSources, plan: replaceOnce(adrSources.plan, target, '') };
+  const binding = adrSources.plan.match(/\bBind each[^.]*\./)?.[0];
+  assert.ok(binding);
+  const fixture = { ...adrSources, plan: replaceOnce(adrSources.plan, binding, replaceOnce(binding, target, '')) };
   assertRejected(`Plan binding omits ${label}`, () => contracts.checkArchitectureDecisionRecordContract(fixture),
     (error) => error.contractId === 'ADR-CONTRACT-001' && error.message === `Plan ADR binding is missing ${label}`);
 }
 
-const planBindingSentence = 'Bind its identity, substantive version, decision state, actual agreement evidence, conditions and dependent Work Items;';
-const missingPlanBinding = replaceOnce(adrSources.plan, planBindingSentence, 'Record remaining ADR questions;');
+const planBindingSentence = 'Bind each to actual ADR path/ID, identifiable section, inspected substantive version/snapshot, decision state, actual agreement evidence/conditions and affected Work Items.';
+const missingPlanBinding = replaceOnce(adrSources.plan, planBindingSentence, 'Record remaining ADR questions.');
 for (const [label, plan, research] of [
   ['before ADR guidance in the same paragraph', replaceOnce(missingPlanBinding,
-    'For relevant architectural choices,', `${planBindingSentence} For relevant architectural choices,`), adrSources.research],
+    'Reconcile every architectural choice identified in Research',
+    `Reconcile every architectural choice identified in Research; ${planBindingSentence} Research`), adrSources.research],
   ['unrelated paragraph', replaceOnce(missingPlanBinding,
     '\n# Plan coordinator\n', `\n# Plan coordinator\n\n${planBindingSentence}\n`), adrSources.research],
   ['metadata', replaceOnce(missingPlanBinding, 'description: ', `description: ${planBindingSentence} `), adrSources.research],
@@ -443,6 +461,270 @@ for (const [label, plan, research] of [
     ...adrSources, plan, research
   }), (error) => error.contractId === 'ADR-CONTRACT-001' && error.message === 'Plan ADR binding is missing identity');
 }
+
+// Complete architecture coverage is a cross-owner contract, not a keyword
+// anywhere or a check that one valid bound ADR exists. All mutations below
+// use exact-once targets and require the intended coverage diagnostic.
+function rejectCoverage(label, key, target, replacement, diagnostic, diagnosticOwner = key) {
+  assertRejected(label, () => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], target, replacement)
+  }), (error) => error.contractId === 'ADR-COVERAGE-001' && error.message === `${diagnosticOwner}: ${diagnostic}`);
+}
+
+const downstreamCoverageOwners = [
+  'implement', 'safe', 'validation', 'implementationReport', 'review',
+  'codeReview', 'reviewReport', 'assuranceSkill', 'assurance'
+];
+const coverageDiagnostic = 'detect missing/partial choice coverage despite a valid bound ADR';
+const unexpectedDiagnostic = 'unexpected architecture requires engineer-directed Plan resolution before dependent effects with independent-work continuity';
+const routineDiagnostic = 'routine coding needs no ADR and material ambiguity needs engineer resolution';
+const gapRule = 'including missing or partial coverage even when a valid ADR is bound';
+const unexpectedRule = 'engineer-directed Plan resolution before dependent architectural effects';
+for (const key of downstreamCoverageOwners) {
+  for (const replacement of [
+    'assessing only ADR binding consistency',
+    'including only selected choices when a valid ADR is bound'
+  ]) rejectCoverage(`${key} omits complete or partial-coverage assessment`, key, gapRule, replacement, coverageDiagnostic);
+
+  const missing = replaceOnce(adrSources[key], gapRule, 'assessing only ADR binding consistency');
+  for (const [label, fixture] of [
+    ['history decoy', `${missing}\n\n## Historical example (not operating policy)\n\nAssess complete architectural choice coverage against Research, the approved Plan and actual changes, ${gapRule}.\n`],
+    ['metadata decoy', replaceOnce(missing, 'description: ', `description: ${gapRule}; `)]
+  ]) {
+    assertRejected(`${key} ${label} cannot satisfy completeness`, () => contracts.checkArchitectureDecisionRecordContract({
+      ...adrSources, [key]: fixture
+    }), (error) => error.contractId === 'ADR-COVERAGE-001' && error.message === `${key}: ${coverageDiagnostic}`);
+  }
+  assertRejected(`${key} wrong-owner coverage decoy`, () => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, [key]: missing,
+    template: `${adrSources.template}\n\n## Historical downstream example\n\n${gapRule}\n`
+  }), (error) => error.contractId === 'ADR-COVERAGE-001' && error.message === `${key}: ${coverageDiagnostic}`);
+
+  rejectCoverage(`${key} unexpected architecture is treated as routine discretion`, key, unexpectedRule,
+    'Implement-owned resolution before dependent architectural effects', unexpectedDiagnostic);
+  rejectCoverage(`${key} unexpected architecture loses dependent-effect guard`, key, unexpectedRule,
+    'engineer-directed Plan resolution after dependent architectural effects', unexpectedDiagnostic);
+  rejectCoverage(`${key} blanket stop replaces independent work`, key,
+    'before dependent architectural effects; continue independent approved work',
+    'before dependent architectural effects; stop all approved work', unexpectedDiagnostic);
+  rejectCoverage(`${key} routine coding ADR burden`, key,
+    'Routine naming, helper extraction and architecture-preserving repairs remain Implement-owned without ADR reference',
+    'Routine naming, helper extraction and architecture-preserving repairs require an ADR reference', routineDiagnostic);
+  rejectCoverage(`${key} classification ambiguity silently exempted`, key,
+    'resolve material classification ambiguity with the engineer using evidence',
+    'silently exempt material classification ambiguity', routineDiagnostic);
+
+  assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], gapRule,
+      'including missing/partial coverage even when a valid ADR is bound')
+  }));
+  cases += 1;
+}
+
+for (const [key, target, replacement] of [
+  ['skill', 'reconcile every architectural choice, including planning discoveries, against inspected ADR coverage by Plan',
+    'reconcile selected architectural choices, including planning discoveries, against inspected ADR coverage by Plan'],
+  ['research', 'Explicitly identify architectural choices after', 'Identify only selected choices after'],
+  ['researchSkill', 'Explicitly identify architectural choices only within', 'Identify only selected choices within'],
+  ['coverage', 'Identify all architectural choices after', 'Identify selected choices after'],
+  ['researchTemplate', 'Explicitly identify each architectural choice with', 'Identify selected choices with'],
+  ['plan', 'Reconcile every architectural choice identified in Research and every planning discovery',
+    'Reconcile selected architectural choices identified in Research and selected planning discoveries'],
+  ['planning', 'Reconcile every architectural choice from Research and every planning discovery',
+    'Reconcile selected architectural choices from Research and selected planning discoveries'],
+  ['planTemplate', 'Reconcile every architectural choice from Research and every planning discovery',
+    'Reconcile selected architectural choices from Research and selected planning discoveries'],
+  ['core', 'Plan reconciles all Research choices and planning discoveries to complete inspected ADR coverage',
+    'Plan reconciles selected Research choices and planning discoveries to complete inspected ADR coverage'],
+  ['repository', 'Plan reconciles every choice, including planning discoveries, to inspected ADR coverage',
+    'Plan reconciles selected choices, including planning discoveries, to inspected ADR coverage']
+]) {
+  rejectCoverage(`${key} partial upstream identification/reconciliation`, key, target, replacement,
+    'complete upfront choice identification/reconciliation is required');
+}
+
+// Add contradictions in a separate normative paragraph while preserving the
+// complete positive rule; wrong-owner/history controls above must still fail.
+const architectureBoundaries = [
+  ['skill', '## Inputs and outputs'],
+  ['coverage', '| Sample input |'],
+  ['template', '## Alternatives and reasoning'],
+  ['research', 'Only after actual acknowledgment or explicit deferral,'],
+  ['researchSkill', '## Outputs'],
+  ['researchTemplate', '## Recommendation and validation'],
+  ['plan', 'Create/revise only a directly associated Proposed ADR'],
+  ['planning', '### Resolve material planning gaps'],
+  ['planTemplate', '## Planned work'],
+  ['core', '## Contain allocation and effects'],
+  ['repository', '## Validation, references, and runtime limits'],
+  ['implement', 'Before every engineer-facing question,'],
+  ['safe', '### Incremental Plan progress'],
+  ['validation', '## Capabilities and effects'],
+  ['implementationReport', '## Validation'],
+  ['review', 'Before every engineer-facing question,'],
+  ['codeReview', '## Output and validation'],
+  ['reviewReport', '## Findings'],
+  ['assuranceSkill', '## Boundary'],
+  ['assurance', '## Stage-specific outcome']
+];
+for (const [key, boundary] of architectureBoundaries) {
+  for (const contradiction of [
+    'Small reversible spikes may skip ADR coverage.',
+    'Small projects are exempt from architectural coverage.',
+    'ADR coverage is selective.',
+    'A valid bound ADR is sufficient for all architectural choices.',
+    'Every routine coding choice requires an ADR.'
+  ]) rejectCoverage(`${key} additive contradiction: ${contradiction}`, key, boundary,
+    `${contradiction}\n\n${boundary}`, 'contradictory architectural coverage exemption or coding burden');
+}
+
+for (const [key, target, replacement] of [
+  ['plan', 'Reconcile every architectural choice', 'Reconcile all architectural choices'],
+  ['skill', 'Group related choices only where shared context, rationale and governance make this meaningful',
+    'Group related choices only where shared context, rationale and governance support meaningful reuse'],
+  ['coverage', 'Related choices may share a record', 'Group related choices in a shared record'],
+  ['template', 'Reuse verified appropriate existing ADR coverage without duplication.',
+    'Reuse verified applicable existing ADR coverage without duplicate records.'],
+  ['planTemplate', 'Inspect existing records for substantive applicability before reuse without duplicates.',
+    'Inspect existing records for substantive applicability before reuse without duplication.']
+]) {
+  assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], target, replacement)
+  }));
+  cases += 1;
+}
+
+for (const [key, target] of [
+  ['skill', "keeping each choice's alternatives, selection/pending state, reasoning, conditions and affected Work Items individually identifiable"],
+  ['coverage', "each choice must retain individually identifiable alternatives, reasoning, selection/pending state, conditions and affected Work Items"],
+  ['template', 'keep each choice identifiable even when context is shared'],
+  ['plan', "each choice's rationale, realistic alternatives/reasons, actual selection or explicit pending state, conditions and affected Work Items"],
+  ['planning', 'For each choice retain rationale, realistic alternatives and option-specific reasons, actual selection or explicit pending state, conditions and affected Work Item IDs'],
+  ['planTemplate', "Meaningful grouping preserves each choice's alternatives, reasoning, selection/pending state, conditions and affected work"],
+  ['repository', "each choice's reasoning, alternatives, selection/pending state, conditions and affected Work Items"]
+]) {
+  rejectCoverage(`${key} vague umbrella replaces individually meaningful grouped coverage`, key, target,
+    'a shared umbrella rationale covers the group', 'meaningful per-choice grouped/reused coverage is required');
+}
+
+// Mutate only the explicit per-choice clause/field, once. Leave all surrounding
+// owner text intact: nearby rationale/binding/context tokens must not mask a
+// missing grouped field. These are bounded authored-wording controls, not NLP.
+const groupedCoverageFixtures = [
+  ['skill', "keeping each choice's alternatives, selection/pending state, reasoning, conditions and affected Work Items individually identifiable",
+    ['reasoning', 'alternatives', 'selection/pending state', 'conditions', 'affected Work Items']],
+  ['coverage', 'each choice must retain individually identifiable alternatives, reasoning, selection/pending state, conditions and affected Work Items',
+    ['reasoning', 'alternatives', 'selection/pending state', 'conditions', 'affected Work Items']],
+  ['plan', "Preserve each choice's rationale, realistic alternatives/reasons, actual selection or explicit pending state, conditions and affected Work Items.",
+    ['rationale', 'realistic alternatives/reasons', 'actual selection or explicit pending state', 'conditions', 'affected Work Items']],
+  ['planning', 'For each choice retain rationale, realistic alternatives and option-specific reasons, actual selection or explicit pending state, conditions and affected Work Item IDs.',
+    ['rationale', 'realistic alternatives and option-specific reasons', 'actual selection or explicit pending state', 'conditions', 'affected Work Item IDs']],
+  ['planTemplate', "Meaningful grouping preserves each choice's alternatives, reasoning, selection/pending state, conditions and affected work",
+    ['reasoning', 'alternatives', 'selection/pending state', 'conditions', 'affected work']],
+  ['core', "grouped coverage must retain each choice's rationale, alternatives, selection/pending state, conditions and affected Work Items, not hide choices in a vague umbrella record.",
+    ['rationale', 'alternatives', 'selection/pending state', 'conditions', 'affected Work Items']],
+  ['repository', "meaningful grouping must preserve each choice's reasoning, alternatives, selection/pending state, conditions and affected Work Items, not hide choices in an umbrella record.",
+    ['reasoning', 'alternatives', 'selection/pending state', 'conditions', 'affected Work Items']],
+  ['template', null, ['Choice and rationale', 'Realistic alternatives and reasoning', 'Actual selection or pending state', 'Conditions', 'affected Work Items']]
+];
+const groupedFieldNames = ['rationale/reasoning', 'alternatives', 'selection/pending state', 'conditions', 'affected work'];
+const groupedFieldEquivalents = ['reasoning', 'realistic alternatives', 'selection or explicit pending state', 'conditions', 'affected work'];
+const groupedFieldWeakening = ['group-wide motivation', 'a common option', 'selection only', 'unqualified context', 'unmapped delivery'];
+for (const [key, clause, targets] of groupedCoverageFixtures) {
+  for (const [index, target] of targets.entries()) {
+    const templateLabel = index < 3 ? target : 'Conditions and affected Work Items';
+    const owned = clause || adrSources.template.split('\n').find((line) => line.startsWith(`- **${templateLabel}:**`));
+    assert.ok(owned, `${key} requires its literal grouped field`);
+    for (const [label, replacement] of [['removal', ''], ['weakening', groupedFieldWeakening[index]]]) {
+      const mutated = replaceOnce(owned, target, replacement);
+      rejectCoverage(`${key} independent grouped ${groupedFieldNames[index]} ${label}`, key,
+        owned, mutated, `grouped per-choice coverage is missing ${groupedFieldNames[index]}`);
+    }
+    // Field-level equivalent phrasing remains valid, including existing ADR
+    // reuse and meaningful grouping; never require one document per choice.
+    const equivalent = key === 'template'
+      ? [
+          ['Choice and rationale', 'Choice and reasoning'],
+          ['Realistic alternatives and reasoning', 'Alternatives and rationale'],
+          ['Actual selection or pending state', 'Selection or explicit pending state'],
+          ['Conditions', 'conditions'], ['affected Work Items', 'affected work']
+        ][index][1]
+      : groupedFieldEquivalents[index];
+    const rewritten = replaceOnce(owned, target, equivalent === target ? `${target} (choice-specific)` : equivalent);
+    assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({
+      ...adrSources, [key]: replaceOnce(adrSources[key], owned, rewritten)
+    }));
+    cases += 1;
+  }
+}
+
+// Remove only individual traceability, retaining all grouped field names and
+// every other per-choice rule elsewhere in the same owner.
+for (const [key, clause, target, replacement] of [
+  ['skill', groupedCoverageFixtures[0][1], 'each choice', 'the group'],
+  ['coverage', groupedCoverageFixtures[1][1], 'each choice', 'the group'],
+  ['plan', 'Group only where shared context, rationale and governance are meaningful, keeping every individual choice traceable;',
+    'every individual choice', 'the group'],
+  ['planning', 'Group choices only where shared context, rationale and governance are clear, preserving each choice individually rather than hiding omissions in an umbrella record.',
+    'each choice individually', 'the group collectively'],
+  ['planTemplate', groupedCoverageFixtures[4][1], 'each choice', 'the group'],
+  ['core', groupedCoverageFixtures[5][1], 'each choice', 'the group'],
+  ['repository', groupedCoverageFixtures[6][1], 'each choice', 'the group'],
+  ['template', 'keep each choice identifiable even when context is shared', 'each choice', 'the group']
+]) {
+  rejectCoverage(`${key} grouped fields lose individual traceability`, key, clause,
+    replaceOnce(clause, target, replacement), 'meaningful per-choice grouped/reused coverage is required');
+}
+
+rejectCoverage('assurance Plan checks only existing bindings', 'assurance',
+  'Reconcile every Research architectural choice and planning discovery',
+  'Check only existing ADR bindings', 'assess every choice and truthful gaps, not only bound-record consistency', 'assurance Plan');
+
+for (const [key, target, replacement] of [
+  ['readme', 'Plan reconciles every choice, including planning discoveries, to inspected ADR coverage',
+    'Plan reconciles selected choices, including planning discoveries, to inspected ADR coverage'],
+  ['wikiRpir', 'Plan reconciles every choice, including planning discoveries, to inspected ADR coverage',
+    'Plan reconciles selected choices, including planning discoveries, to inspected ADR coverage'],
+  ['wikiEvidence', 'Plan reconciles every choice, including planning discoveries, to inspected ADR coverage',
+    'Plan reconciles selected choices, including planning discoveries, to inspected ADR coverage'],
+  ['wikiCatalogue', 'Plan reconciles every choice, including planning discoveries, to complete inspected ADR coverage',
+    'Plan reconciles selected choices, including planning discoveries, to complete inspected ADR coverage']
+]) rejectCoverage(`${key} user summary retains selective coverage`, key, target, replacement,
+  'user guidance must describe complete coverage and static/runtime limits');
+
+for (const [key, target, diagnostic] of [
+  ['skill', 'explicitly engineer-selected, verified contained destination',
+    'ADR Skill is missing phase, ownership, or effect safeguards'],
+  ['skill', 'Do not recursively create unselected ancestors',
+    'ADR Skill is missing phase, ownership, or effect safeguards'],
+  ['core', 'Do not recursively create unselected ancestor directories',
+    'Lifecycle core ADR exception lacks Plan-only authority, guarded effects, preservation, or version binding'],
+  ['core', 'identity, containment, absence/collision and effective permission',
+    'Lifecycle core ADR exception lacks Plan-only authority, guarded effects, preservation, or version binding'],
+  ['core', 'save without overwrite',
+    'Lifecycle core ADR exception lacks Plan-only authority, guarded effects, preservation, or version binding'],
+  ['core', 'no unrelated source/document/register edits',
+    'Lifecycle core ADR exception lacks Plan-only authority, guarded effects, preservation, or version binding']
+]) {
+  assertRejected(`${key} complete coverage must preserve ${target}`, () => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], target, 'safeguard omitted')
+  }), (error) => error.contractId === 'ADR-CONTRACT-001' && error.message === diagnostic);
+}
+
+// Directory authority never substitutes for a separately guarded file effect;
+// complete coverage never licenses accepted-history rewrites.
+for (const [target, diagnostic] of [
+  ['Preserve accepted and superseded substantive history.', 'ADR skill must preserve accepted history'],
+  ['Check each ADR file effect separately for identity, containment, absence/collision, effective permission, saved result, and readback.',
+    'ADR skill must guard each file effect separately'],
+  ['Directory creation does not grant file creation.', 'Lifecycle core must separate directory and file authority']
+]) {
+  const key = target.startsWith('Directory') ? 'core' : 'skill';
+  assertRejected(`governance regression: ${target}`, () => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], target, '')
+  }), (error) => error.contractId === 'ADR-CONTRACT-001' && error.message === diagnostic);
+}
+
 assertRejected('broken ADR resource link', () => contracts.checkLocalLinks(
   adrPaths.skill, '[missing](references/not-present.md)'
 ));

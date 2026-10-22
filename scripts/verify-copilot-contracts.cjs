@@ -301,6 +301,223 @@ function coordinatorBody(text, role) {
   return (text.split(`\n# ${role} coordinator\n`)[1] || '').split(/^#{1,2} /m)[0];
 }
 
+// Heading-bounded sections and anchored paragraphs/fields keep historical,
+// metadata and wrong-owner decoys out of normative contract assertions.
+function section(text, heading) {
+  const lines = text.split('\n');
+  const start = lines.indexOf(heading);
+  if (start < 0) return '';
+  const depth = heading.match(/^#+/)[0].length;
+  const end = lines.findIndex((line, index) => index > start &&
+    new RegExp(`^#{1,${depth}} `).test(line));
+  return lines.slice(start + 1, end < 0 ? undefined : end).join('\n');
+}
+
+function paragraph(text, start) {
+  return text.split(/\n\s*\n/).find((part) => part.trimStart().startsWith(start)) || '';
+}
+
+function field(text, label) {
+  return text.split('\n').find((line) => line.startsWith(`- **${label}:**`)) || '';
+}
+
+function requireCoverageRule(text, patterns, owner, rule) {
+  if (patterns.some((pattern) => !pattern.test(text))) {
+    fail(`${owner}: ${rule}`, 'ADR-COVERAGE-001');
+  }
+}
+
+function rejectArchitectureExemption(text, owner) {
+  // Deliberately bounded contradiction vocabulary, not general NLP. Evaluate
+  // normative owners only; quoted history outside their section is not policy.
+  if (/(?:small|reversible|spike)[^.!?\n]*(?:may|can) (?:skip|omit|ignore)[^.!?\n]*(?:ADR|architectur|coverage)/i.test(text) ||
+      /(?:small|reversible|spike)[^.!?\n]*(?<!not )\b(?:are|is) exempt/i.test(text) ||
+      /(?:ADR|architectural) coverage is (?:optional|selective)/i.test(text) ||
+      /(?:only (?:some|selected) architectural choices|(?:every|all) (?:minor |routine )?coding choices? (?:must|require|needs?)[^.!?\n]*ADR)/i.test(text) ||
+      /(?:a|one) valid (?:bound )?ADR[^.!?\n]*(?:is sufficient|establishes complete coverage)/i.test(text)) {
+    fail(`${owner}: contradictory architectural coverage exemption or coding burden`, 'ADR-COVERAGE-001');
+  }
+}
+
+function checkCompleteArchitectureCoverage(source) {
+  const owners = {
+    skill: section(source.skill, '## Purpose and consumers'),
+    coverage: source.coverage.split('\n| Sample input')[0],
+    research: paragraph(coordinatorBody(source.research, 'Research'), 'Explicitly identify architectural choices'),
+    researchSkill: section(source.researchSkill, '## Procedure'),
+    researchTemplate: section(source.researchTemplate, '### ADR inputs and remaining gaps'),
+    plan: paragraph(coordinatorBody(source.plan, 'Plan'), 'Reconcile '),
+    planning: section(source.planning, '## Procedure'),
+    planTemplate: field(section(source.planTemplate, '## Outcome and boundaries'), 'Architectural choice coverage and ADR binding'),
+    core: section(source.core, '### Planning-stage ADR authorship exception'),
+    repository: section(source.repository, '### Planning-stage architecture decisions')
+  };
+  for (const [owner, text] of Object.entries(owners)) {
+    const identification = ['coverage', 'research', 'researchSkill'].includes(owner);
+    requireCoverageRule(text, owner === 'researchTemplate' ? [
+      /Explicitly identify each architectural choice/i,
+      /Plan adds planning discoveries[^.!?\n]*binds inspected ADR path\/ID/i
+    ] : identification ? [
+      /identify (?:all )?architectural choices/i,
+      /discovery\/acknowledgment or explicit-deferral/i
+    ] : [
+      /(?:reconcile|reconciles)[^.!?\n]*(?:every|all)[^.!?\n]*(?:architectural choice|Research choice|choice)/i,
+      /planning discover/i,
+      /inspected[^.!?\n]*(?:ADR |choice |choice-to-ADR )?coverage|coverage[^.!?\n]*inspected ADR|bind the inspected ADR path\/ID/i
+    ], owner, 'complete upfront choice identification/reconciliation is required');
+    requireCoverageRule(text, [
+      /[Pp]roportionality (?:governs|controls)[^.!?\n]*detail[^.!?\n]*not (?:architectural )?coverage/i,
+      /small[^.!?\n]*(?:reversible|spike)/i
+    ], owner, 'proportional detail must not exempt small/reversible architecture');
+    rejectArchitectureExemption(text, owner);
+  }
+
+  const representation = {
+    skill: section(source.skill, '## Complete coverage and reuse'),
+    coverage: section(source.coverage, '## Choice identification and Plan reconciliation'),
+    template: section(source.template, '## Decision and conditions'),
+    plan: owners.plan,
+    planning: owners.planning,
+    planTemplate: owners.planTemplate,
+    core: owners.core,
+    repository: owners.repository
+  };
+  for (const [owner, text] of Object.entries(representation)) {
+    requireCoverageRule(text, [
+      /(?:each|every|individual)[^.!?\n]*choice/i,
+      /(?:reuse|reusing|reused)/i, /(?:duplicate|duplication)/i,
+      /[Gg]roup|Related choices may share a record/i,
+      /(?:individually|individual choice|each choice|every individual choice)/i,
+      /umbrella|keep each choice identifiable/i
+    ], owner, 'meaningful per-choice grouped/reused coverage is required');
+    const groupedRule = text.match(/(?:Group related choices|Related choices may share a record|Group only where|Group choices only|Meaningful grouping|grouped coverage must|meaningful grouping must)[^.!?\n]*[.!?]/i)?.[0] || '';
+    requireCoverageRule(owner === 'template' ? text : groupedRule, owner === 'template' ? [
+      /repeat for each grouped architectural choice/i,
+      /keep each choice identifiable even when context is shared/i
+    ] : [/(?:each choice|every individual choice)/i], owner,
+    'meaningful per-choice grouped/reused coverage is required');
+    // Some owners explicitly define the per-choice fields before referring to
+    // them in the grouping sentence. Inspect only that anchored clause, never
+    // the whole section or the group's shared-context/rationale preamble.
+    const perChoice = owner === 'template'
+      ? section(text, '### <Identifiable choice ID or section — repeat for each grouped architectural choice>')
+      : owner === 'plan' || owner === 'planning'
+        ? text.match(/(?:Preserve each choice's|For each choice retain)[^.!?\n]*[.!?]/i)?.[0] || ''
+        : groupedRule.match(/(?:each choice|every individual choice)[^.!?\n]*/i)?.[0] || '';
+    requireCoverageRule(perChoice, [/(?:each choice|For each choice|\*\*Choice and)/i], owner,
+      'meaningful per-choice grouped/reused coverage is required');
+    const groupedFields = owner === 'template' ? [
+      ['rationale/reasoning', /^- \*\*Choice and (?:rationale|reasoning):\*\*/im],
+      ['alternatives', /^- \*\*(?:Realistic )?alternatives and (?:reasoning|rationale):\*\*/im],
+      ['selection/pending state', /^- \*\*(?:Actual )?selection or (?:explicit )?pending state:\*\*/im],
+      ['conditions', /^- \*\*conditions\b[^*\n]*:\*\*/im],
+      ['affected work', /^- \*\*[^*\n]*\baffected (?:Work Items|work):\*\*/im]
+    ] : [
+      ['rationale/reasoning', /\b(?:rationale|reasoning)\b/i],
+      ['alternatives', /\balternatives\b/i],
+      ['selection/pending state', /\bselection(?:\/| or (?:explicit )?)pending state\b/i],
+      ['conditions', /\bconditions\b/i],
+      ['affected work', /\baffected (?:Work Items?(?: IDs)?|work)\b/i]
+    ];
+    for (const [label, pattern] of groupedFields) {
+      requireCoverageRule(perChoice, [pattern], owner, `grouped per-choice coverage is missing ${label}`);
+    }
+    rejectArchitectureExemption(text, owner);
+  }
+
+  const downstream = {
+    implement: paragraph(coordinatorBody(source.implement, 'Implement'), 'Assess complete architectural choice coverage'),
+    safe: paragraph(section(source.safe, '## Procedure'), 'Assess complete architectural choice coverage'),
+    validation: section(source.validation, '## Scope and recovery').split('\n')
+      .find((line) => line.startsWith('- [ ] Assess complete architectural choice coverage')) || '',
+    implementationReport: field(section(source.implementationReport, '## Delivered outcome and progress'), 'Architectural choice coverage and ADR evidence'),
+    review: paragraph(coordinatorBody(source.review, 'Review'), 'Independently assess complete architectural choice coverage'),
+    codeReview: section(source.codeReview, '## Procedure').split('\n')
+      .find((line) => line.trimStart().startsWith('Independently assess complete architectural choice coverage')) || '',
+    reviewReport: field(section(source.reviewReport, '## Disposition and comparison'), 'Architectural choice coverage and ADR comparison'),
+    assuranceSkill: section(source.assuranceSkill, '## Assessment').split('\n')
+      .find((line) => line.trimStart().startsWith('Assess complete architectural choice coverage')) || '',
+    assurance: section(source.assurance, '## Delivery and material boundaries').split('\n')
+      .find((line) => line.startsWith('- [ ] Assess complete architectural choice coverage')) || ''
+  };
+  for (const [owner, text] of Object.entries(downstream)) {
+    requireCoverageRule(text, [
+      /assess complete architectural choice coverage against Research, the approved Plan and actual changes/i,
+      /(?:missing or partial|missing\/partial) coverage even when a valid ADR is bound/i
+    ], owner, 'detect missing/partial choice coverage despite a valid bound ADR');
+    requireCoverageRule(text, [
+      /(?:For )?unexpected uncovered or changed architecture,[^.!?\n]*engineer-directed Plan resolution before dependent architectural effects/i,
+      /continue independent approved work/i
+    ], owner, 'unexpected architecture requires engineer-directed Plan resolution before dependent effects with independent-work continuity');
+    requireCoverageRule(text, [
+      /Routine naming, helper extraction and architecture-preserving repairs remain Implement-owned without ADR reference/i,
+      /resolve material classification ambiguity with the engineer using evidence/i
+    ], owner, 'routine coding needs no ADR and material ambiguity needs engineer resolution');
+    rejectArchitectureExemption(text, owner);
+  }
+  const assurancePlan = section(source.assurance, '## Stage-specific outcome').split('\n')
+    .find((line) => line.startsWith('- **Plan:**')) || '';
+  requireCoverageRule(assurancePlan, [
+    /[Rr]econcile every Research architectural choice and planning discovery/i,
+    /inspected ADR path\/ID, identifiable section, substantive version\/state, actual agreement\/conditions and affected Work Items/i,
+    /valid ADR for some choices does not cover omissions/i,
+    /gap[^.!?\n]*dependent effects[^.!?\n]*resolution route/i,
+    /evidence-supported routine-only disposition/i
+  ], 'assurance Plan', 'assess every choice and truthful gaps, not only bound-record consistency');
+
+  const routine = {
+    skill: section(source.skill, '## Purpose and consumers'),
+    research: owners.research, researchSkill: owners.researchSkill, researchTemplate: owners.researchTemplate,
+    plan: paragraph(coordinatorBody(source.plan, 'Plan'), 'Topology,'),
+    planning: owners.planning,
+    planTemplate: field(section(source.planTemplate, '## Outcome and boundaries'), 'Architecture boundaries and unresolved conditions'),
+    core: owners.core, repository: owners.repository
+  };
+  for (const [owner, text] of Object.entries(routine)) {
+    requireCoverageRule(text, [
+      /[Nn]aming[^.!?\n]*helper extraction[^.!?\n]*architecture-preserving[^.!?\n]*(?:without|need no) ADR reference/i,
+      /classification ambiguity[^.!?\n]*engineer|ambiguity[^.!?\n]*engineer/i
+    ], owner, 'preserve the routine-coding boundary and evidence-led ambiguity route');
+    rejectArchitectureExemption(text, owner);
+  }
+  for (const [owner, text] of [
+    ['readme', section(source.readme, '### Complete upfront architectural coverage')],
+    ['wikiRpir', section(source.wikiRpir, '## Complete upfront architectural coverage')],
+    ['wikiEvidence', section(source.wikiEvidence, '### Architecture decision records are supplementary')],
+    ['wikiCatalogue', section(source.wikiCatalogue, '### Skills').split('\n')
+      .find((line) => line.includes('](../../.github/skills/architecture-decision-records/SKILL.md)')) || '']
+  ]) {
+    requireCoverageRule(text, [
+      /Research[^.!?\n]*identif[^.!?\n]*architectural choices/i,
+      /Plan reconciles every choice[^.!?\n]*planning discoveries[^.!?\n]*inspected ADR coverage/i,
+      /[Pp]roportionality governs detail, not coverage/i,
+      /missing\/partial coverage even (?:when a valid ADR is bound|with a valid binding)/i,
+      /[Uu]nexpected uncovered or changed architecture[^.!?\n]*engineer-directed Plan resolution before dependent/i,
+      /independent approved work continues/i,
+      /routine[^.!?\n]*without ADR reference/i,
+      /(?:static|Static)[^.!?\n]*(?:do not|does not|not proof)[^.!?\n]*(?:semantic completeness|installed)/i
+    ], owner, 'user guidance must describe complete coverage and static/runtime limits');
+    rejectArchitectureExemption(text, owner);
+  }
+  // Scan the entire bounded normative scope too, so an additive exemption in
+  // a second paragraph cannot hide behind the still-correct owning paragraph.
+  for (const [owner, text] of Object.entries({
+    ...owners, ...representation, ...routine,
+    planTemplate: section(source.planTemplate, '## Outcome and boundaries'),
+    implement: coordinatorBody(source.implement, 'Implement'),
+    review: coordinatorBody(source.review, 'Review'),
+    research: coordinatorBody(source.research, 'Research'),
+    plan: coordinatorBody(source.plan, 'Plan'),
+    safe: section(source.safe, '## Procedure'),
+    validation: section(source.validation, '## Scope and recovery'),
+    implementationReport: section(source.implementationReport, '## Delivered outcome and progress'),
+    codeReview: section(source.codeReview, '## Procedure'),
+    reviewReport: section(source.reviewReport, '## Disposition and comparison'),
+    assuranceSkill: section(source.assuranceSkill, '## Assessment'),
+    assurance: section(source.assurance, '## Delivery and material boundaries')
+  })) rejectArchitectureExemption(text, owner);
+}
+
 function checkArchitectureDecisionRecordContract(sources = {}) {
   const paths = {
     skill: '.github/skills/architecture-decision-records/SKILL.md',
@@ -313,7 +530,21 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
     implement: '.github/agents/implement.agent.md',
     review: '.github/agents/review.agent.md',
     runner: '.github/agents/script-runner.agent.md',
-    lifecycleInstruction: '.github/instructions/lifecycle-records.instructions.md'
+    lifecycleInstruction: '.github/instructions/lifecycle-records.instructions.md',
+    researchSkill: '.github/skills/codebase-research/SKILL.md',
+    researchTemplate: '.github/skills/codebase-research/research-brief-template.md',
+    planning: '.github/skills/architecture-planning/SKILL.md',
+    planTemplate: '.github/skills/architecture-planning/implementation-plan-template.md',
+    safe: '.github/skills/safe-implementation/SKILL.md',
+    validation: '.github/skills/safe-implementation/validation-checklist.md',
+    implementationReport: '.github/skills/safe-implementation/implementation-report-template.md',
+    codeReview: '.github/skills/code-review/SKILL.md',
+    reviewReport: '.github/skills/code-review/review-report-template.md',
+    assuranceSkill: '.github/skills/rpir-stage-assurance/SKILL.md',
+    assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
+    readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md',
+    wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md',
+    wikiCatalogue: 'docs/Wiki/artifact-catalogue.md'
   };
   const source = Object.fromEntries(Object.entries(paths).map(([key, relative]) => [key, sources[key] ?? readText(relative)]));
   const metadata = parseFrontmatterText(source.skill, paths.skill).values;
@@ -323,15 +554,22 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
   for (const resource of ['references/research-input-coverage.md', 'templates/adr.md']) {
     if (!source.skill.includes(`](${resource})`)) fail(`ADR Skill must directly link ${resource}`, 'ADR-CONTRACT-001');
   }
+  const adrEffects = section(source.skill, '## Authority and effect safeguards');
+  requireADRRule(adrEffects, [/Preserve accepted and superseded substantive history\./i],
+    'ADR skill must preserve accepted history');
+  requireADRRule(adrEffects, [
+    /Check each ADR file effect separately for identity, containment, absence\/collision, effective permission, saved result, and readback\./i
+  ], 'ADR skill must guard each file effect separately');
   requireADRRule(source.skill, [
-    /selective|relevant architectural choice/i,
     /Research[\s\S]*Plan[\s\S]*Implement[\s\S]*Review/i,
     /not a fifth RPIR phase|not an authority grant/i,
     /only a Proposed ADR directly associated with its active planning objective/i,
     /explicitly engineer-selected, verified contained destination/i,
     /Do not recursively create unselected ancestors/i,
     /absence\/collision[\s\S]*effective permission[\s\S]*readback/i
-  ], 'ADR Skill is missing selective applicability, phase, ownership, or effect safeguards');
+  ], 'ADR Skill is missing phase, ownership, or effect safeguards');
+
+  checkCompleteArchitectureCoverage(source);
 
   const expectedInputs = [
     '1.1', '1.2', '1.3', '1.4', '1.5',
@@ -385,7 +623,9 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
     ], `ADR ${owner}: outstanding prerequisites require Proposed or a qualified/pending state`);
   }
 
-  const adrException = source.core.split('### Planning-stage ADR authorship exception')[1]?.split('\n### ')[0] || '';
+  const adrException = section(source.core, '### Planning-stage ADR authorship exception');
+  requireADRRule(adrException, [/Directory creation does not grant file creation\./i],
+    'Lifecycle core must separate directory and file authority');
   requireADRRule(adrException, [
     /Only the Plan coordinator may/i,
     /during active planning/i,
@@ -396,7 +636,7 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
     /identity, containment, absence\/collision and effective permission/i,
     /save without overwrite[\s\S]*readback/i,
     /no unrelated source\/document\/register edits/i,
-    /actual path\/ID and substantive inspected version/i
+    /actual path\/ID, identifiable section and substantive version or snapshot/i
   ], 'Lifecycle core ADR exception lacks Plan-only authority, guarded effects, preservation, or version binding');
   requireADRRule(source.repository, [
     /Plan remains source\/configuration-read-only except for the narrow, associated Proposed-ADR exception/i,
@@ -415,7 +655,8 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
     .match(/\bBind\b[^.;\n]*[.;]/i)?.[0] || '';
   for (const [label, pattern] of [
     ['identity', /identity|path\/ID/i],
-    ['substantive version', /substantive (?:version|revision|snapshot)/i],
+    ['section', /identifiable section/i],
+    ['substantive version', /(?:inspected )?substantive (?:version|revision|snapshot)/i],
     ['decision state', /decision (?:state|status)/i],
     ['agreement evidence', /actual agreement evidence|evidence of actual agreement/i],
     ['conditions', /conditions/i],
@@ -423,8 +664,8 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
   ]) {
     requireADRRule(planBinding, [pattern], `Plan ADR binding is missing ${label}`);
   }
-  requireADRRule(source.research, [
-    /ADR input coverage map/i,
+  requireADRRule(paragraph(coordinatorBody(source.research, 'Research'), 'Explicitly identify architectural choices'), [
+    /\]\(\.\.\/skills\/architecture-decision-records\/references\/research-input-coverage\.md\)/i,
     /compact \*\*ADR inputs and remaining gaps\*\*/i,
     /Research never authors a standalone ADR/i
   ], 'Research guidance must reuse ADR coverage and hand over gaps without ADR authorship');

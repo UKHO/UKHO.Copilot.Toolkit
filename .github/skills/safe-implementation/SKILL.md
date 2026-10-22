@@ -23,6 +23,8 @@ Use this skill to keep implementation within the approved scope.
 4. Re-read changed files, inspect the diff, links and principal output, and apply the [validation checklist](./validation-checklist.md). Seek fresh independent Review after corrections.
 5. Report actual files, behavior, correction history, four validation states and limitations. A partial report is a checkpoint, not successful delivery.
 
+Assess complete architectural choice coverage against Research, the approved Plan and actual changes, including missing or partial coverage even when a valid ADR is bound. For unexpected uncovered or changed architecture, obtain engineer-directed Plan resolution before dependent architectural effects; continue independent approved work. Routine naming, helper extraction and architecture-preserving repairs remain Implement-owned without ADR reference; resolve material classification ambiguity with the engineer using evidence. Use the [ADR capability](../architecture-decision-records/SKILL.md); no Implement or worker ADR authorship is granted.
+
 For a Plan-bound ADR, inspect its exact identity and substantive version/snapshot, decision state, actual agreement evidence, conditions and dependent Work Items before affected changes. Resolve material mismatch, unavailable content or unsatisfied conditions before dependent effects; continue independent approved work. Do not adopt a floating newer version or revise an ADR without applicable scope.
 
 ### Incremental Plan progress
