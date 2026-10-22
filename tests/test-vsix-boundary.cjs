@@ -11,7 +11,8 @@ const {
 const { expectedTarget: expectedPackageTarget, packageVsix, validateArguments } = require('../scripts/package-vsix.cjs');
 const {
   applyConfirmedReleaseInputs, candidateLayout, inspectCandidate, prepareCandidate,
-  prepareAfterReleaseInputUpdate, safePath, validateArguments: validatePreparationArguments
+  confirmReleaseInputsInteractively, prepareAfterReleaseInputUpdate, safePath,
+  validateArguments: validatePreparationArguments
 } = require('../scripts/prepare-vsix.cjs');
 
 const baseContentUrl = 'https://github.com/UKHO/UKHO.Copilot.Toolkit/blob/main/';
@@ -790,7 +791,10 @@ function releaseInputFixture() {
   const expectedPendingNotes = changelogText.slice(start, end);
   const version = '2.4.8';
   const proposedNotes = `### ${version} review candidate\n\n- Fixture release notes.\n- The version-derived package is ${currentManifest.name}-${version}.vsix.\n`;
-  return { repositoryRoot, currentManifest, currentLock, changelogText, expectedPendingNotes, proposedNotes, version };
+  return {
+    repositoryRoot, currentManifest, currentLock, changelogText, expectedPendingNotes, proposedNotes,
+    version, changeSummary: 'Fixture evidence supports a compatible feature release.'
+  };
 }
 
 function releaseSnapshot(fixture) {
@@ -832,6 +836,7 @@ try {
     ...successfulReleaseFixture,
     confirm: (proposal) => {
       assert.equal(proposal.version, successfulReleaseFixture.version);
+      assert.equal(proposal.changeSummary, successfulReleaseFixture.changeSummary);
       assert.equal(proposal.changes[3].before, successfulReleaseFixture.expectedPendingNotes);
       assert.equal(proposal.changes[3].after, successfulReleaseFixture.proposedNotes);
       assert.deepEqual(proposal.changes.map((change) => change.field), [
@@ -892,7 +897,21 @@ assert.deepEqual(validatePreparationArguments(['inspect', '--candidate', 'Releas
 });
 assert.throws(() => validatePreparationArguments(['inspect', '--latest']), /Usage/);
 assert.throws(() => validatePreparationArguments(['status', '--write']), /Usage/);
+assert.deepEqual(validatePreparationArguments([
+  'release-inputs', '--version', '2.4.8', '--change-summary', 'Evidence-based summary',
+  '--expected-pending-notes', 'old exact notes', '--proposed-notes', '### 2.4.8 review candidate\n\nNew exact notes.'
+]), {
+  command: 'release-inputs', version: '2.4.8', changeSummary: 'Evidence-based summary',
+  expectedPendingNotes: 'old exact notes',
+  proposedNotes: '### 2.4.8 review candidate\n\nNew exact notes.'
+});
+let nonInteractivePrompt = '';
+assert.equal(confirmReleaseInputsInteractively({ version: '2.4.8' }, {
+  input: { isTTY: false }, output: { isTTY: false, write: (text) => { nonInteractivePrompt += text; } }
+}), false);
+assert.equal(nonInteractivePrompt, '', 'non-interactive confirmation neither prompts nor authorizes edits');
+assert.equal(require('../package.json').scripts['confirm-release-inputs'], 'node scripts/prepare-vsix.cjs release-inputs');
 assert.equal(require('../package.json').scripts.package, 'node scripts/package-vsix.cjs', 'legacy no-argument package interface remains unchanged');
-cases += 6;
+cases += 9;
 
 console.log(`Passed ${cases} VSIX verification, packaging, candidate preparation, and release-input fixture cases.`);

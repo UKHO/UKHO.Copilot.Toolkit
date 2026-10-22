@@ -1,192 +1,143 @@
-# VSIX packaging Run Book
+# VSIX candidate preparation Run Book
 
 ## Purpose
 
-This Run Book gives **repository maintainers** the human process for reviewing the Toolkit's static VSIX packaging inputs. It is not Script Runner command-selection input or consumer installation guidance; consumers should continue to use the root [`README.md`](../../README.md).
+This Run Book describes the bounded, repository-local process for proposing release inputs, preparing and inspecting a retained VSIX candidate, and handing a tested artifact to its human owner. It is written so built-in VS Code Agent mode can follow the documented routine only when the applicable repository policy and the engineer's request authorize that exact task. The Run Book itself is not permission, a policy exception, Script Runner input, or a way around Workspace Trust, tool permissions, or managed policy.
 
 ## Scope
 
-The Run Book is repository-local and does not become part of the installed extension. The package manifest includes selected `.github/` customization content, the root `package.json`, `README.md`, `CHANGELOG.md`, and `LICENSE`; `docs/` and `scripts/` are intentionally excluded from the VSIX boundary. Lifecycle records and other prohibited repository content are also excluded. This Run Book explains how to manage packaging; it does not change the package boundary.
+The preparation workflow is limited to a confirmed release-input change (only when a supported interface exists), then one locally retained candidate and its verification/status sidecars. It stops before installation, manual testing, publication, distribution, credentials, Git operations, RPIR records, dependency installation, manifest synchronization, source repair, cleanup of retained attempts, or backup operations. Human testing, publication decisions, and backup are separate responsibilities; this page does not select a publication method or authorize those effects.
 
-## Script responsibilities
+The `confirm-release-inputs` operation below is separate from candidate preparation. It changes only the listed release inputs after an interactive exact-proposal confirmation; it never starts packaging. Preparation can proceed only when intended inputs already exist and are consistent, and all applicable authorization and runtime prerequisites are satisfied.
 
-### Discover the customization inventory
+## Operating mode and authority
 
-`scripts/discover-copilot-artifacts.cjs` discovers from the fixed repository root (the parent of `scripts/`) and only the configured customization roots:
+This is a specifically Agent-followable procedure only when a separate applicable policy or explicit authorization covers the exact routine preparation task and its local effects. Current repository policy still holds packaging; this Run Book and implementation of its interfaces do not lift that hold or authorize a present operation. The approved [implementation Plan](../copilot/021-local-vsix-archive-and-marketplace-release/001-implementation-plan.md) describes the intended future boundary, not current runtime permission. This page is never Script Runner command-selection input and does not change its tools or authority.
 
-- `.github/instructions`, for files ending in `.instructions.md`;
-- `.github/agents`, for files ending in `.agent.md`;
-- `.github/prompts`, for files ending in `.prompt.md`; and
-- `.github/skills`, for sorted regular-file contribution paths ending in `SKILL.md`. Each contributed file is separate from its containing Skill directory, which remains the recursive package-inclusion root.
+## Audience
 
-It rejects unsafe or ambiguous paths such as symbolic links, traversal, unsupported entries, and duplicate normalized contribution paths. Its direct interface reports the sorted inventory as JSON. The same discovery implementation is used by synchronization and boundary verification, so it is an inspection aid for the supported roots, not a broad repository scanner.
+Repository maintainers and, when separately authorized, built-in VS Code Agent mode operating from the repository root. The engineer remains responsible for confirming any proposed release-input edits, conducting later manual testing, deciding whether to publish, and maintaining backups.
 
-### Check or deliberately synchronize the manifest
+## Prerequisites
 
-`scripts/sync-copilot-manifest.cjs` discovers file-valued contribution entries, derives the containing Skill directories for `package.json.files`, reads the manifest, and compares both projections. Its default mode is a non-mutating `check`: drift is reported and the check fails without writing the manifest. Synchronization is a separate, deliberate explicit `sync` mode and writes `package.json` only after the inventory and manifest have been read successfully. Importing the module for fixture tests does not run its CLI.
-
-Synchronization controls exactly these five manifest locations:
-
-1. `package.json.files` entries under the four discovered customization roots, collectively;
-2. `package.json.contributes.chatInstructions`;
-3. `package.json.contributes.chatAgents`;
-4. `package.json.contributes.chatPromptFiles`; and
-5. `package.json.contributes.chatSkills`.
-
-The synchronizer retains unrelated `files` entries and unrelated manifest fields. In particular, it does not select versions, alter release notes, publish or distribute an extension, install anything, or change consumer workspaces. Any resulting `package.json` change must be inspected before packaging.
-
-### Verify the packaged boundary
-
-`scripts/verify-vsix-boundary.cjs` reuses shared discovery and checks that file-valued contribution metadata matches it, that each complete Skill payload remains inside the manifest `files` boundary, and that prohibited content is absent. It reads only the repository-root, version-derived VSIX; it does not fall back to `Releases/` or another archive. It checks identity, engine and contribution metadata, exact expected members, source bytes for all included files (including binary resources), ZIP CRC/bounds/compression and local/central names, changelog equality, and the README link. The pinned `vsce` README relative-link rewrite is checked against its expected source-derived output. Verification is read-only and does not repair inputs.
-
-### Check contributed customization structure
-
-`scripts/verify-copilot-contracts.cjs` reuses the fixed-root discovery inventory to check manifest/discovery parity, supported frontmatter structure, duplicate customization names, supported repository-local inline Markdown links, prompt routes, declared coordinator tools/delegates, and manual `send: false` handoffs. It also checks Markdown resources nested under discovered Skills once, without requiring resource frontmatter. The check is read-only and bounded to structural metadata; it does not assert authored policy wording or validate runtime discovery or installed-VSIX behavior. Static structure cannot establish conversation compliance, installed loading, platform permissions or runtime safety.
-
-`npm run test-vsix-boundary` is a separate fixture suite for archive verification and packaging safety. Its 50 cases include in-memory ZIPs and bounded temporary-directory tests for the helper; it does not invoke real `vsce` packaging, write a retained candidate or test installed behavior. It is not part of routine authoring CI.
-
-## Human process
-
-Repository maintainers use every interface from the repository root: `c:\Repos\UKHO.Copilot.Toolkit`. The command examples in this section are human guidance only, not Script Runner selection or execution authority.
-
-### Toolkit packaging operation metadata
-
-The following constrained metadata records the six Toolkit-specific packaging interfaces maintained by this repository. Their IDs, classifications, prohibitions and other fields are **packaging verification data only**, never Script Runner command eligibility, an operation allow-list or execution authorization. VS Code Workspace Trust, permissions, and managed organization policy control approval behavior.
-
-<!-- vsix-packaging-operation-metadata:start -->
-```json
-[
-	{
-		"id": "toolkit-verify-copilot-contracts",
-		"classification": "read-only",
-		"packagingIdentity": "none",
-		"command": "npm run verify-copilot-contracts",
-		"cwd": ".",
-		"arguments": [],
-		"outputsOrWrites": [],
-		"effects": ["Checks supported fixed-root customization structure and manifest parity without workspace mutation."],
-		"prerequisites": ["Repository root is the fixed working directory."],
-		"stopBehavior": "On failure, inspect results and effects, correct a permitted local cause and rerun relevant checks; reconcile uncertain destructive or external completion before repetition, respect denial, and keep dependent work unmet until prerequisites pass.",
-		"prohibitedEffects": ["No dependency installation, secrets, authentication, publishing, deployment, release/tag, remote mutation, global configuration, external-path write, shell composition, redirection, substitution, aliases, wildcards, traversal, npx, arbitrary interpreter or script target, recursive deletion, or safety-control bypass."]
-	},
-	{
-		"id": "toolkit-discover-copilot-artifacts",
-		"classification": "read-only",
-		"packagingIdentity": "none",
-		"command": "node scripts/discover-copilot-artifacts.cjs",
-		"cwd": ".",
-		"arguments": [],
-		"outputsOrWrites": [],
-		"effects": ["Reports the sorted customization inventory as JSON without workspace mutation."],
-		"prerequisites": ["Workspace Trust.", "Repository root is the fixed working directory."],
-		"stopBehavior": "On failure, inspect results and effects, correct a permitted local cause and rerun relevant checks; reconcile uncertain destructive or external completion before repetition, respect denial, and keep dependent work unmet until prerequisites pass.",
-		"prohibitedEffects": ["No dependency installation, secrets, authentication, publishing, deployment, release/tag, remote mutation, global configuration, external-path write, shell composition, redirection, substitution, aliases, wildcards, traversal, npx, arbitrary interpreter or script target, recursive deletion, or safety-control bypass."]
-	},
-	{
-		"id": "toolkit-check-copilot-manifest",
-		"classification": "read-only",
-		"packagingIdentity": "none",
-		"command": "node scripts/sync-copilot-manifest.cjs check",
-		"cwd": ".",
-		"arguments": [],
-		"outputsOrWrites": [],
-		"effects": ["Checks the discovered inventory against controlled manifest values without writing package.json."],
-		"prerequisites": ["Workspace Trust.", "Repository root is the fixed working directory."],
-		"stopBehavior": "On failure, inspect results and effects, correct a permitted local cause and rerun relevant checks; reconcile uncertain destructive or external completion before repetition, respect denial, and keep dependent work unmet until prerequisites pass.",
-		"prohibitedEffects": ["No dependency installation, secrets, authentication, publishing, deployment, release/tag, remote mutation, global configuration, external-path write, shell composition, redirection, substitution, aliases, wildcards, traversal, npx, arbitrary interpreter or script target, recursive deletion, or safety-control bypass."]
-	},
-	{
-		"id": "toolkit-sync-copilot-manifest",
-		"classification": "packaging-controlled-write",
-		"packagingIdentity": "ukho-copilot-toolkit",
-		"command": "node scripts/sync-copilot-manifest.cjs sync",
-		"cwd": ".",
-		"arguments": [],
-		"outputsOrWrites": ["package.json.files entries under .github/instructions, .github/agents, .github/prompts, and .github/skills collectively", "package.json.contributes.chatInstructions", "package.json.contributes.chatAgents", "package.json.contributes.chatPromptFiles", "package.json.contributes.chatSkills", "One contained, transient, randomly named atomic temporary path that is removed after replacement or failure handling"],
-		"effects": ["Synchronizes only the declared packaging manifest locations after the declared prerequisite probe comparison succeeds."],
-		"prerequisites": ["Workspace Trust.", "Fixed root cwd.", "Readable, parseable package.json whose name is exactly ukho-copilot-toolkit.", "Declared fixed toolkit-discover-copilot-artifacts probe captures complete sorted JSON inventory.", "Immediately before sync, rerun that exact probe and require byte-for-byte equality; the synchronizer's existing immediate discover() comparison/write remains a second check."],
-		"stopBehavior": "On failure, inspect results and effects, correct a permitted local cause and rerun relevant checks; reconcile uncertain destructive or external completion before repetition, respect denial, and keep dependent work unmet until prerequisites pass.",
-		"prohibitedEffects": ["No dependency installation, secrets, authentication, publishing, deployment, release/tag, remote mutation, global configuration, external-path write, shell composition, redirection, substitution, aliases, wildcards, traversal, npx, arbitrary interpreter or script target, recursive deletion, or safety-control bypass."]
-	},
-	{
-		"id": "toolkit-package-vsix",
-		"classification": "build/test",
-		"packagingIdentity": "none",
-		"command": "npm run package",
-		"cwd": ".",
-		"arguments": [],
-		"outputsOrWrites": ["Repository-root ukho-copilot-toolkit-<package.json version>.vsix, derived as ${name}-${version}.vsix and created only when absent.", "One uniquely created contained temporary build directory and VSIX, removed after publication or failure handling."],
-		"effects": ["Runs pinned @vscode/vsce against a uniquely owned temporary output, then publishes by exclusive copy to the absent version-derived repository-root target; never overwrites an archive or falls back to another path."],
-		"prerequisites": ["Workspace Trust.", "Fixed root cwd.", "Readable, parseable package.json whose name is ukho-copilot-toolkit and version is the approved internal version.", "Declared package helper and fixed local @vscode/vsce executable exist at pinned version 3.9.2.", "Local package dependencies exist; do not install dependencies for this operation.", "Version-derived repository-root target is absent; all existing archives, including Releases/ukho-copilot-toolkit-1.0.0.vsix, are preserved.", "Immediately preceding successful requested toolkit-check-copilot-manifest operation with no requested intervening operation; at that check capture complete package.json bytes and declared fixed discovery-probe sorted JSON.", "Immediately before packaging, reread/reprobe and require byte-for-byte equality."],
-		"stopBehavior": "On failure, inspect results and effects, correct a permitted local cause and rerun relevant checks; reconcile uncertain destructive or external completion before repetition, respect denial, and keep dependent work unmet until prerequisites pass.",
-		"prohibitedEffects": ["No dependency installation, secrets, authentication, publishing, deployment, release/tag, remote mutation, global configuration, external-path write, shell composition, redirection, substitution, aliases, wildcards, traversal, npx, arbitrary interpreter or script target, recursive deletion, or safety-control bypass."]
-	},
-	{
-		"id": "toolkit-verify-vsix-boundary",
-		"classification": "read-only",
-		"packagingIdentity": "none",
-		"command": "npm run verify-package",
-		"cwd": ".",
-		"arguments": [],
-		"outputsOrWrites": [],
-		"effects": ["Verifies the exact version-derived repository-root VSIX against identity, engine/contribution metadata, expected boundary, source bytes, archive integrity and README/changelog contracts without workspace mutation; never searches Releases/ or another archive."],
-		"prerequisites": ["Workspace Trust.", "Repository root is the fixed working directory.", "The exact expected version-derived root VSIX exists as a regular file."],
-		"stopBehavior": "On failure, inspect results and effects, correct a permitted local cause and rerun relevant checks; reconcile uncertain destructive or external completion before repetition, respect denial, and keep dependent work unmet until prerequisites pass.",
-		"prohibitedEffects": ["No dependency installation, secrets, authentication, publishing, deployment, release/tag, remote mutation, global configuration, external-path write, shell composition, redirection, substitution, aliases, wildcards, traversal, npx, arbitrary interpreter or script target, recursive deletion, or safety-control bypass."]
-	}
-]
-```
-<!-- vsix-packaging-operation-metadata:end -->
+- The exact repository root is `c:\Repos\UKHO.Copilot.Toolkit`; use it as the current working directory (cwd) for every command below. Do not run these commands from a subdirectory or substitute another checkout.
+- Current repository policy and the engineer's request authorize the specific bounded routine. This document does not confer that authorization. Actual tool permissions, Workspace Trust, and managed policy still apply; stop on denial.
+- A credible release baseline and change summary are available. If the public/release baseline, compatibility classification, or intended version is uncertain, ask the engineer for evidence or a decision; do not infer Marketplace history or select a version by guesswork.
+- Do not install dependencies. `npm run prepare-vsix` requires the existing local dependency and the pinned `@vscode/vsce` version **3.9.2**; a missing or mismatched tool is a stop condition, not permission to install or upgrade it.
+- The chosen release inputs are already present and consistent, or the separate confirmed-input operation below is available and its exact edits are explicitly authorized by the engineer.
+- No real build, retained real candidate, extension installation/activation, or Agent-mode runtime trial was performed to author this Run Book. Its commands and described outcomes are source-inspected, not runtime-demonstrated here.
 
 ## Preparation
 
-1. Inspect the relevant customization roots, current `package.json`, source scripts, workflow, and proposed change.
-2. Establish the current-state prerequisites for the intended human process. For synchronization, capture the complete sorted discovery inventory, then rerun the probe immediately before synchronization and require byte-for-byte equality. If synchronization is authorized and needed, inspect its manifest changes and obtain a fresh successful manifest check afterward. For packaging, use that fresh check (or a current check if no sync was needed) immediately before the separately authorized package operation and confirm `package.json` and discovery inventory have not changed before packaging.
-3. Confirm the repository root, Workspace Trust, local package dependencies, and expected outputs before the applicable step.
+1. Inspect the existing `CHANGELOG.md`, `package.json`, and `package-lock.json` as evidence. Reuse the existing Semantic Versioning convention: breaking changes propose a major increment, compatible features a minor increment, and compatible fixes a patch increment. Do not assume that the current version is publicly released or available; resolve an uncertain baseline with the engineer.
+2. Prepare a written proposal showing the current and proposed numeric version, the evidence-based change classification/rationale, the exact proposed release-note text, and the exact fields that would change:
+   - `package.json.version`;
+   - `package-lock.json.version`;
+   - `package-lock.json.packages[""].version`; and
+   - only the selected pending release notes in the `CHANGELOG.md` `## Unreleased` section. The helper contract requires the current pending text to match exactly once inside that section; the replacement must begin with `### <version> review candidate`, include `ukho-copilot-toolkit-<version>.vsix`, and must not introduce another `##` section.
+3. Require the engineer's explicit confirmation of that exact proposal before any such write. Preserve package identity, publisher, engine, dependencies, all other manifest/lockfile entries, unrelated changelog text, historical notes, and user edits. A changed preimage invalidates the confirmation; rejection/cancellation means no writes. Do not silently bump again for another attempt at the same intended release.
+4. If release inputs need to change and the exact proposal has an evidence-based classification and baseline, use the separate confirmation command below. It displays the proposed version, summary, exact before/after values and affected fields, then requires the engineer to type the displayed confirmation phrase. A non-interactive invocation or any response other than the exact phrase makes no release-input edits. This command does not build or package.
+5. Do not continue if prerequisites fail or if any required write has partial, uncertain, or mismatched results. Reconcile actual state; never overwrite user changes or blindly retry a consequential operation.
 
 ## Ordered process
 
-These interfaces form the documented order for an explicitly authorized local candidate operation; this Run Book is not that authorization. The selected `1.0.0` candidate is the repository-root `ukho-copilot-toolkit-1.0.0.vsix`; the existing `Releases/ukho-copilot-toolkit-1.0.0.vsix` archive is preserved. A collision at the root target stops packaging rather than allowing overwrite or relocation. The authored checks-only CI workflow runs one structural check; its packaging job remains disabled. Marketplace/remote publication and distribution remain outside this operation.
+All commands in this section are exact implemented package interfaces, run from `c:\Repos\UKHO.Copilot.Toolkit`. Command examples are documentation, not authorization to execute them.
 
-1. `npm run verify-copilot-contracts` — checks supported customization structure and manifest parity without workspace mutation.
-2. `node scripts/discover-copilot-artifacts.cjs` — reports the sorted customization inventory as JSON without repository mutation.
-3. `node scripts/sync-copilot-manifest.cjs check` — performs the non-mutating manifest check; use discovery and this check to decide whether sync is needed.
-4. **Only if separately authorized and needed:** `node scripts/sync-copilot-manifest.cjs sync` — synchronizes only the bounded manifest locations after the declared probe comparison succeeds. Inspect its changes, then repeat step 3 successfully before step 5. If no sync was needed, use the successful step 3 check immediately before step 5.
-5. **Only after the approved Plan transition and its guards:** `npm run package` — invokes the pinned tool through `scripts/package-vsix.cjs`, which builds in a unique temporary directory and uses exclusive publication to the absent version-derived root target after the fresh successful manifest check and immediate current-state comparison.
-6. `npm run verify-package` — checks that exact version-derived root VSIX against the manifest, complete payload bytes, metadata and archive-integrity contracts; it does not fall back to the preserved `Releases/` file.
+### 0. Propose and confirm release-input edits, only if needed
 
-Inspect with discovery and check before any deliberately authorized sync; inspect any resulting controlled manifest change and recheck successfully afterward. Whether or not sync was needed, require a fresh successful check immediately before a separately authorized package and post-package verification. On a local failure, inspect diagnostics and effects, correct a permitted cause and rerun relevant checks before dependent steps. Do not weaken a failing check or assume a failed prerequisite passed. A failed consequential write or uncertain destructive/external completion needs reconciliation before repetition; an actual denial is not a fallback opportunity. This Run Book never selects commands for Runner or grants sync/packaging authority.
+If the intended release inputs are already correct and consistent, do not bump them merely to create another attempt; continue to step 1. Otherwise determine a supported numeric version from the inspected release baseline and change evidence. Do not guess public availability or rewrite historical entries. Supply the exact current pending notes and intended replacement notes, with the evidence-based change summary, to this implemented interface:
+
+- Command shape: `npm run confirm-release-inputs -- --version <numeric-version> --change-summary <evidence-based-summary> --expected-pending-notes <exact-current-text> --proposed-notes <exact-replacement-text>`
+- cwd: `c:\Repos\UKHO.Copilot.Toolkit`
+- Implemented mapping: `npm run confirm-release-inputs` invokes `node scripts/prepare-vsix.cjs release-inputs`.
+
+Quote argument values for the active shell so their complete text is passed unchanged. The proposed notes must start with `### <version> review candidate`, identify `ukho-copilot-toolkit-<version>.vsix`, and remain within the existing `## Unreleased` section. The operation independently reads the current manifest, lockfile, and changelog; its displayed proposal includes the current/proposed version, supplied change summary, exact old/new notes, and all four allowed field locations. Review that complete proposal. Only the engineer's interactive `CONFIRM <version>` response applies those bounded changes. A non-interactive invocation or any other response makes no changes. The operation checks current preimages, saves and reads back each selected input, validates the three version fields, and reports partial state without rollback if an update fails. It never invokes packaging. On rejection, drift, partial save, mismatch, or denial, do not run step 1; inspect actual state and resolve it without overwriting user changes.
+
+After a successful update, inspect the three version values and selected changelog notes, then run `node scripts/sync-copilot-manifest.cjs check` as a non-mutating contribution-parity check. This check does not validate release-version consistency; inspect those fields separately. Do not run `sync`.
+
+### 1. Prepare one candidate
+
+When release inputs already match the intended release, applicable policy and the engineer's request authorize preparation, and all helper preconditions are satisfied, run:
+
+- Command: `npm run prepare-vsix`
+- cwd: `c:\Repos\UKHO.Copilot.Toolkit`
+- Implemented mapping: `npm run prepare-vsix` invokes `node scripts/prepare-vsix.cjs prepare`.
+
+This operation performs its own preflight of the repository, package/lock identity and version, shared-discovery/manifest parity, local `@vscode/vsce` 3.9.2, selected repository-local `Releases/` root, and relevant build inputs. It allocates a fresh exclusive candidate directory, builds with the pinned local tool, checks for input drift, retains the exact output bytes, performs fresh verification against captured build inputs, and emits a JSON result. It does not synchronize the manifest, install dependencies, update release inputs, fall back to the repository-root VSIX, or select a “latest” candidate.
+
+New candidates use `Releases/YYYY-MM-DD/HHmmssZ-<unique-id>/`, for example `Releases/2026-10-22/143000Z-<id>/`. The date and time derive from one captured UTC instant; allocation is exclusive. Existing folders and legacy root archives are preserved. Each attempt is independent, including another attempt at the same version; never reuse or overwrite a prior attempt.
+
+A successfully prepared candidate contains `candidate.json`, `verification-evidence.json`, and `status.json`, plus its VSIX. A failed or partial attempt may contain only the files successfully retained before failure. The VSIX filename is version-derived (for example, `ukho-copilot-toolkit-1.0.0.vsix`). The JSON result reports candidate ID/directory, VSIX path, packaged identity, SHA-256, byte length, checks, outcome, verification state, and any error. Inspect the actual result; do not infer success from a folder's existence. A failure or partial retained attempt remains evidence and must not be described as a verified candidate or deleted as “cleanup.”
+
+### 2. Inspect an explicit candidate
+
+To inspect a candidate, supply its exact candidate-directory path—never a wildcard, “latest” alias, or guessed fallback:
+
+- Command: `npm run inspect-vsix-candidate -- --candidate <explicit-candidate-directory>`
+- cwd: `c:\Repos\UKHO.Copilot.Toolkit`
+- Implemented mapping: `npm run inspect-vsix-candidate -- --candidate <explicit-candidate-directory>` invokes `node scripts/prepare-vsix.cjs inspect --candidate <explicit-candidate-directory>`.
+
+Inspection uses **historical** verification against that candidate's retained evidence; it does not verify against today's checkout or search another location. Read the JSON output and confirm the explicit directory, candidate ID, VSIX filename, retained metadata, hash/size, verification result, and human-reported status. Historical verification establishes consistency with retained evidence, not independent provenance or proof against coordinated alteration of both artifact and evidence. It is not a manual-test result.
+
+The legacy `npm run package` and `npm run verify-package` interfaces remain root-only. They do not prepare or inspect archived candidates, do not fall back to `Releases/`, and are held outside this archive workflow. Do not substitute them for either candidate command.
+
+### 3. Return the preparation handoff and stop
+
+For a verified candidate, report the JSON-observed candidate ID, exact absolute VSIX path, packaged name/publisher/version, SHA-256, byte length, checks, and actual outcome. State that manual testing is **not tested** and publication is **not published** unless a later human has recorded otherwise. If preparation is failed, partial, unverified, or output is unavailable, report that state and stop; do not initiate source repair, installation, manual testing, or publication.
+
+### 4. Human status updates after separate activity
+
+Preparation initializes `status.json` beside the candidate. It is a human-reported status record, not build evidence. After a human separately conducts a test or resolves a publication outcome, the human may edit only this candidate's `status.json`, preserving its schema, candidate ID, and `artifact` identity. Keep `artifact.fileName`, `artifact.sha256`, and `artifact.sizeBytes` exactly bound to `candidate.json` and the retained VSIX. Record actual dates and concise notes; do not change the VSIX, `candidate.json`, or `verification-evidence.json` to accommodate a status entry. The inspector reports status as human-reported and reports malformed or mismatched status as unavailable/invalid rather than success.
+
+For example, retain the other existing JSON fields and use these field values only when factually true:
+
+- **Manual test passed:** `"manualTest": { "outcome": "passed", "date": "YYYY-MM-DD", "notes": "Human test summary; candidate ID and hash checked." }`
+- **Manual test failed:** `"manualTest": { "outcome": "failed", "date": "YYYY-MM-DD", "notes": "Observed failure; candidate retained." }`
+- **Publication not performed:** `"publication": { "outcome": "not published", "date": null, "notes": "No publication occurred." }`
+- **Publication completion uncertain:** `"publication": { "outcome": "pending/unknown", "date": null, "notes": "Reconcile actual external completion before retry or claim." }`
+- **Publication confirmed by the responsible human:** `"publication": { "outcome": "published", "date": "YYYY-MM-DD", "notes": "Human-reported outcome; identify the exact candidate/hash." }`
+
+Do not convert a failure to pass, or pending/unknown to published, without truthful human evidence. Reconcile uncertain external completion before retrying a publication activity. No publication command, credential route, or publication method is supplied here.
 
 ## Expected results
 
-Independent checks-only CI runs the read-only structural check without creating a VSIX. The archive-verification/package-safety fixture suite is invoked separately and is not a routine CI job. The local process checks the manifest boundary, synchronizes only the declared locations when deliberately needed, creates a distinct absent root VSIX through temporary output and exclusive publication, then verifies that exact artifact. The JSON metadata is packaging-interface documentation; it does not prescribe Script Runner commands or grant execution authority.
+A successful preparation returns a verified, uniquely retained candidate and exact-artifact handoff while leaving manual-test status `not tested` and publication status `not published`. A later candidate inspection requires its explicit directory and reports historical evidence consistency plus any human-reported status. The workflow does not prove an actual build or runtime behavior merely because commands and helper code are documented.
 
 ## Diagnostics and failure disposition
 
-A failed check or missing prerequisite blocks its dependent step, not in-boundary diagnosis. Inspect the actual output and effects, correct a supported local problem (including an invocation error) and recheck; preserve the original acceptance criteria. If a consequential sync or package operation failed or its completion is uncertain, reconcile its artifact and external effects before considering further action; do not blindly replay it. A real permission denial, unexpected write or unresolved relevant external effect stops the affected operation. Raise material scope, release-output or permission choices to the owner. Report failed, unavailable and not-run results without relabeling them as success.
+- A missing pinned tool, unreadable/unsafe path, inconsistent version/lock metadata, manifest/discovery mismatch, input drift, build failure, verification failure, or metadata/status persistence failure blocks the dependent operation. Inspect actual JSON/error and retained candidate state; do not install, synchronize, repair source, remove an attempt, or repeat an uncertain write.
+- A confirmed-input refusal, preimage drift, partial update, or version mismatch blocks preparation. Preserve the actual saved state and user edits; return the exact discrepancy for engineer resolution. The `confirm-release-inputs` CLI reports the actual changed files and does not start preparation when the update is incomplete.
+- An invalid or missing explicit candidate path, malformed evidence, artifact hash/size mismatch, or failed historical verification is not a successful handoff. Do not choose another candidate automatically.
+- If publication may have completed but the result is uncertain, keep status `pending/unknown` and reconcile with the responsible human before any retry or success claim.
+- Stop the affected task on permission denial or unresolved material identity. Do not evade the denial through Script Runner, an improvised Node script, alternate path, generic version command, or another write route.
 
 ## Safety limits
 
-- Do not bypass a failed prerequisite or treat an unperformed recheck as passed; diagnose and revalidate a corrected local failure before dependent work.
-- Do not edit the VSIX archive directly or treat archive contents as a substitute for correcting source inputs. Never overwrite an existing output, verify a different same-version archive, or fall back to `Releases/` when the selected root input is missing.
-- Do not distribute, publish, install, or release a VSIX as part of this process.
-- Do not treat synchronization as broad manifest rewriting: its mutation surface is limited to the five locations listed above.
-- Do not change `README.md` consumer guidance as part of this Run Book. The maintainer documentation remains separate from installation, support, and rollback instructions.
-- The Run Book does not override Workspace Trust, VS Code permissions, or managed organization policy. Native Windows is not sandbox containment.
+- This Run Book does not authorize install/activation, manual testing, publication/distribution, credential access, network/account queries, Git operations, RPIR lifecycle work, dependency installation, manifest synchronization, general source repair, archive replacement/pruning, backup execution, or changing the VSIX/evidence to fit a status claim.
+- The confirmed-input exception is limited to the three version fields and selected pending `Unreleased` notes listed above, only after the operation displays the exact proposal and receives interactive engineer confirmation, then passes current-preimage checks, readback, and cross-file consistency validation. It is separate from preparation and cannot authorize broader edits.
+- A failure does not authorize a repair. A new candidate is a new attempt; a rebuild never inherits verification or testing from an older candidate.
+- The pinned packaging tool is `@vscode/vsce` **3.9.2**. Do not upgrade or replace it in this workflow.
+- Script Runner's role and tools do not change. A Run Book does not select commands for Script Runner or grant it source-write capability.
+- Keep all prior candidate folders and legacy archives unchanged. Never publish a different same-version file or overwrite an existing artifact.
+
+## Human testing, exact-file promotion, and backup responsibility
+
+Manual testing and publication are separate human activities outside the preparation task. Before any separately authorized human publication, select the exact candidate that passed the relevant manual test and compare its candidate ID, explicit absolute VSIX path, packaged identity/version, SHA-256, and byte length with the test record and retained `status.json`. Re-inspect that exact directory using the historical inspection command and stop if identity, hash, size, evidence, or test binding differs. Do not rebuild, edit, substitute a same-version file, or reuse another candidate's test result during promotion. A rebuild creates a new candidate and requires fresh verification and fresh manual testing. This Run Book specifies no upload command or publisher method.
+
+The maintainer owns backup outside this workflow. Preserve each candidate directory as a whole—including its VSIX, `candidate.json`, `verification-evidence.json`, and `status.json`—and retain candidates without automatic pruning. Local `Releases/` storage is not a backup or durability guarantee. No backup service, destination, schedule, copy, or restore is specified or claimed. After a separately managed restore, inspect the restored explicit candidate and check artifact integrity against its retained evidence before relying on it; this does not establish independent provenance.
 
 ## Validation and limitations
 
-This Run Book records the package interfaces, controlled manifest boundary and human recovery sequence. The [authored workflow](../../.github/workflows/package.yml) defines one structural-check job and a disabled package job. The structural check uses bounded frontmatter and supported inline Markdown-link syntax; it is not a complete YAML/Markdown parser, does not assert substantive policy wording and does not establish conversation behavior, installed loading, permissions or runtime safety. The [archive/package-safety fixture suite](../../tests/test-vsix-boundary.cjs) covers in-memory archive cases and temporary helper cases, not a real VSIX build. This Run Book does not itself claim that sync, package, or archive verification against a real candidate has been executed. Runtime discovery, Windows replacement behavior, installed-extension checks, hosted CI and cross-platform equivalence remain unvalidated here.
+The package scripts define `confirm-release-inputs`, `prepare-vsix`, and `inspect-vsix-candidate`; source inspection confirms their argument contracts and bounded effects. The confirmation interface requires a TTY and an exact interactive response; its release-input update is non-atomic across files, so any partial result blocks preparation and must be reconciled truthfully. The existing root-only `package` and `verify-package` operations are not archive substitutes.
 
-The workflow retains the checks-only job layout and release hold, but no hosted CI execution is established here; this Run Book does not enable a release. Neither local script results nor a workflow definition establish installed-agent effectiveness, cross-platform validation or release readiness. This page alone is not a passing validation result.
+Static documentation/contract checks can validate authored structure and links, not actual VSIX creation, installed discovery, Agent-mode behavior, permissions, publication, or backup. No real build, installed/runtime trial, manual test, publication, backup, or restore is claimed by this Run Book. Real packaging/runtime validation remains subject to separate authorization and applicable repository policy.
 
 ## Sources
 
-- [`scripts/discover-copilot-artifacts.cjs`](../../scripts/discover-copilot-artifacts.cjs) — fixed-root inventory.
-- [`scripts/sync-copilot-manifest.cjs`](../../scripts/sync-copilot-manifest.cjs) — controlled synchronization boundary.
-- [`scripts/verify-copilot-contracts.cjs`](../../scripts/verify-copilot-contracts.cjs) — bounded customization-structure validation.
-- [`tests/test-vsix-boundary.cjs`](../../tests/test-vsix-boundary.cjs) — archive-verification and packaging-safety fixture suite.
-- [`scripts/verify-vsix-boundary.cjs`](../../scripts/verify-vsix-boundary.cjs) — post-package boundary validation.
-- [`package.json`](../../package.json) — package identity and scripts.
-- [`README.md`](../../README.md) and [workflow](../../.github/workflows/package.yml) — consumer guidance and automation context.
+- [`scripts/prepare-vsix.cjs`](../../scripts/prepare-vsix.cjs) — implemented confirmed-release-input, prepare, and explicit-inspect CLI operations; candidate allocation and status validation.
+- [`scripts/verify-vsix-boundary.cjs`](../../scripts/verify-vsix-boundary.cjs) — fresh and historical candidate verification contracts.
+- [`package.json`](../../package.json) — exact npm scripts, package identity, engine, and pinned `@vscode/vsce` 3.9.2.
+- [`CHANGELOG.md`](../../CHANGELOG.md) — existing Semantic Versioning convention and release-note history.
+- [`tests/test-vsix-boundary.cjs`](../../tests/test-vsix-boundary.cjs) — fixture coverage; it does not demonstrate a real VSIX build.
+- [Run Book authoring Skill](../../.github/skills/create-runbook/SKILL.md) and [template](../../.github/skills/create-runbook/templates/runbook.md) — scoped authoring requirements and anatomy.
 

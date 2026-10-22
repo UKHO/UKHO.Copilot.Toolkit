@@ -585,7 +585,7 @@ function inspectReleasePreimages(repositoryRoot) {
 }
 
 function applyConfirmedReleaseInputs({
-  repositoryRoot = path.resolve(__dirname, '..'), version, expectedPendingNotes, proposedNotes,
+  repositoryRoot = path.resolve(__dirname, '..'), version, changeSummary, expectedPendingNotes, proposedNotes,
   confirm, replaceFile
 } = {}) {
   const report = { outcome: 'not-changed', changed: [], files: {}, error: null, packagingAllowed: false };
@@ -593,6 +593,7 @@ function applyConfirmedReleaseInputs({
   const staged = [];
   try {
     assertVersion(version);
+    if (typeof changeSummary !== 'string' || !changeSummary.trim()) fail('An evidence-based change summary is required for release-input confirmation');
     if (typeof confirm !== 'function') fail('An explicit confirmation callback is required; absence means no writes');
     preimages = inspectReleasePreimages(path.resolve(repositoryRoot));
     const nextManifest = updateJsonVersion(preimages.manifest, version, 'package.json');
@@ -606,6 +607,7 @@ function applyConfirmedReleaseInputs({
     };
     const proposal = {
       version,
+      changeSummary,
       changes: [
         { file: 'package.json', field: 'version', before: preimages.manifest.version, after: version },
         { file: 'package-lock.json', field: 'version', before: preimages.lock.version, after: version },
@@ -706,22 +708,62 @@ function prepareAfterReleaseInputUpdate({ releaseInputResult, ...prepareOptions 
 }
 
 function validateArguments(args) {
-  if (!Array.isArray(args) || args.length === 0) fail('Usage: prepare-vsix | inspect-vsix-candidate --candidate <explicit-directory>');
+  if (!Array.isArray(args) || args.length === 0) {
+    fail('Usage: prepare-vsix | inspect-vsix-candidate --candidate <explicit-directory> | confirm-release-inputs --version <numeric-version> --change-summary <evidence> --expected-pending-notes <exact-text> --proposed-notes <exact-text>');
+  }
   if (args[0] === 'prepare' && args.length === 1) return { command: 'prepare' };
   if (args[0] === 'inspect' && args.length === 3 && args[1] === '--candidate' && args[2]) {
     return { command: 'inspect', candidateDirectory: args[2] };
   }
-  fail('Usage: prepare-vsix | inspect-vsix-candidate --candidate <explicit-directory>');
+  if (args[0] === 'release-inputs' && args.length === 9 &&
+      args[1] === '--version' && args[2] &&
+      args[3] === '--change-summary' && args[4] &&
+      args[5] === '--expected-pending-notes' && args[6] &&
+      args[7] === '--proposed-notes' && args[8]) {
+    return {
+      command: 'release-inputs', version: args[2],
+      changeSummary: args[4], expectedPendingNotes: args[6], proposedNotes: args[8]
+    };
+  }
+  fail('Usage: prepare-vsix | inspect-vsix-candidate --candidate <explicit-directory> | confirm-release-inputs --version <numeric-version> --change-summary <evidence> --expected-pending-notes <exact-text> --proposed-notes <exact-text>');
+}
+
+function confirmReleaseInputsInteractively(proposal, { input = process.stdin, output = process.stdout } = {}) {
+  if (!input.isTTY || !output.isTTY) return false;
+  output.write('Exact release-input proposal (no files have been changed):\n');
+  output.write(`${JSON.stringify(proposal, null, 2)}\n`);
+  output.write(`Type CONFIRM ${proposal.version} to apply only these edits: `);
+  const descriptor = input.fd;
+  if (!Number.isInteger(descriptor)) return false;
+  const chunks = [];
+  const byte = Buffer.alloc(1);
+  while (true) {
+    const count = fs.readSync(descriptor, byte, 0, 1, null);
+    if (count === 0) return false;
+    if (byte[0] === 10) break;
+    if (byte[0] !== 13) chunks.push(byte[0]);
+  }
+  return Buffer.from(chunks).toString('utf8').trim() === `CONFIRM ${proposal.version}`;
 }
 
 function main(args = process.argv.slice(2)) {
   const command = validateArguments(args);
-  const result = command.command === 'prepare'
-    ? prepareCandidate()
-    : inspectCandidate({ candidateDirectory: command.candidateDirectory, mode: 'historical' });
+  let result;
+  if (command.command === 'prepare') result = prepareCandidate();
+  else if (command.command === 'inspect') result = inspectCandidate({ candidateDirectory: command.candidateDirectory, mode: 'historical' });
+  else {
+    result = applyConfirmedReleaseInputs({
+      version: command.version,
+      changeSummary: command.changeSummary,
+      expectedPendingNotes: command.expectedPendingNotes,
+      proposedNotes: command.proposedNotes,
+      confirm: (proposal) => confirmReleaseInputsInteractively(proposal)
+    });
+  }
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   if (command.command === 'prepare' && result.outcome !== 'prepared-verified') process.exitCode = 1;
   if (command.command === 'inspect' && result.verified !== true) process.exitCode = 1;
+  if (command.command === 'release-inputs' && result.packagingAllowed !== true) process.exitCode = 1;
 }
 
 if (require.main === module) {
@@ -735,5 +777,6 @@ if (require.main === module) {
 module.exports = {
   CANDIDATE_SCHEMA, EVIDENCE_FILE, METADATA_FILE, STATUS_FILE, STATUS_SCHEMA,
   allocateCandidate, applyConfirmedReleaseInputs, candidateLayout, inspectCandidate,
-  makeStatus, prepareAfterReleaseInputUpdate, prepareCandidate, safePath, validateArguments, validateBuildInputs
+  confirmReleaseInputsInteractively, makeStatus, prepareAfterReleaseInputUpdate, prepareCandidate,
+  safePath, validateArguments, validateBuildInputs
 };

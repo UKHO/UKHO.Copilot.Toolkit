@@ -15,7 +15,8 @@
     "package": "node scripts/package-vsix.cjs",
     "verify-package": "node scripts/verify-vsix-boundary.cjs",
     "prepare-vsix": "node scripts/prepare-vsix.cjs prepare",
-    "inspect-vsix-candidate": "node scripts/prepare-vsix.cjs inspect"
+    "inspect-vsix-candidate": "node scripts/prepare-vsix.cjs inspect",
+    "confirm-release-inputs": "node scripts/prepare-vsix.cjs release-inputs"
   },
   "license": "MIT",
   "devDependencies": {

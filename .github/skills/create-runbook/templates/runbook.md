@@ -12,6 +12,10 @@
 
 <Who uses this Run Book and the expected level of context.>
 
+## Operating mode and authority
+
+<State whether this Run Book is human-followed by default or is specifically Agent-followable. For an Agent-followable procedure, cite the separate applicable policy/authorization, its exact outcome/effect boundary, and the conditions that stop the task. The Run Book itself never grants authority, permission, or Script Runner command-selection input.>
+
 ## Prerequisites
 
 - <Required repository state, access, knowledge, or preceding work.>

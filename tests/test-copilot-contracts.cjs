@@ -1000,4 +1000,61 @@ assertRejected('escaping Skill resource link', () => contracts.checkLocalLinks(
   '[outside](../../../../README.md)'
 ));
 
+// The packaging Run Book must describe only implemented interfaces and keep
+// confirmed release-input writes separately bounded and interactive.
+const runbookPath = 'docs/run-books/vsix-packaging.md';
+const runbook = readArtifact(runbookPath);
+const runbookSkill = readArtifact('.github/skills/create-runbook/SKILL.md');
+const runbookTemplate = readArtifact('.github/skills/create-runbook/templates/runbook.md');
+const packagingScripts = JSON.parse(readArtifact('package.json')).scripts;
+const prepareVsix = require('../scripts/prepare-vsix.cjs');
+assert.equal(packagingScripts['prepare-vsix'], 'node scripts/prepare-vsix.cjs prepare');
+assert.equal(packagingScripts['inspect-vsix-candidate'], 'node scripts/prepare-vsix.cjs inspect');
+assert.equal(packagingScripts['confirm-release-inputs'], 'node scripts/prepare-vsix.cjs release-inputs');
+assert.deepEqual(prepareVsix.validateArguments(['prepare']), { command: 'prepare' });
+assert.deepEqual(prepareVsix.validateArguments(['inspect', '--candidate', 'candidate']), {
+  command: 'inspect', candidateDirectory: 'candidate'
+});
+assert.deepEqual(prepareVsix.validateArguments([
+  'release-inputs', '--version', '2.4.8', '--change-summary', 'Evidence summary',
+  '--expected-pending-notes', 'old notes', '--proposed-notes', 'new notes'
+]), {
+  command: 'release-inputs', version: '2.4.8', changeSummary: 'Evidence summary',
+  expectedPendingNotes: 'old notes', proposedNotes: 'new notes'
+});
+assert.equal(typeof prepareVsix.applyConfirmedReleaseInputs, 'function',
+  'the confirmed-input helper API exists separately from an operational CLI');
+for (const [label, text] of [
+  ['Run Book', runbook],
+  ['authoring Skill', runbookSkill],
+  ['authoring template', runbookTemplate]
+]) {
+  assert.match(text, /Run Book itself|Run Books?.*never|does not confer/i,
+    `${label} must not make itself authority`);
+}
+assert.match(runbook, /npm run prepare-vsix/);
+assert.match(runbook, /npm run inspect-vsix-candidate -- --candidate <explicit-candidate-directory>/);
+assert.match(runbook, /Releases\/YYYY-MM-DD\/HHmmssZ-<unique-id>\//);
+assert.match(runbook, /candidate\.json.*verification-evidence\.json.*status\.json/s);
+assert.match(runbook, /pending\/unknown/);
+assert.match(runbook, /exact candidate.*SHA-256/s);
+assert.match(runbook, /maintainer owns backup outside this workflow/i);
+assert.match(runbook, /npm run confirm-release-inputs/);
+assert.match(runbook, /--change-summary .*--expected-pending-notes .*--proposed-notes/);
+assert.match(runbook, /interactive `CONFIRM <version>` response/i);
+assert.match(runbook, /partial state without rollback/i);
+assert.match(runbook, /current pending text to match exactly once.*replacement must begin with/s);
+assert.match(runbook, /## Operating mode and authority/);
+assert.match(runbookSkill, /specifically authorized.*Agent-followable/is);
+assert.match(runbookSkill, /never Script Runner command-selection input/i);
+assert.match(runbookTemplate, /## Operating mode and authority/);
+assert.doesNotThrow(() => contracts.checkLocalLinks(runbookPath, runbook));
+assert.doesNotThrow(() => contracts.checkLocalLinks(
+  '.github/skills/create-runbook/SKILL.md', runbookSkill
+));
+assert.doesNotThrow(() => contracts.checkLocalLinks(
+  '.github/skills/create-runbook/templates/runbook.md', runbookTemplate
+));
+cases += 26;
+
 console.log(`Passed ${cases} Copilot contract cases, including valid structure and rejected privilege/parity/link defects.`);
