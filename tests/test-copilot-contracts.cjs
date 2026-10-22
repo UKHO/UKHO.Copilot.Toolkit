@@ -133,6 +133,49 @@ const executionSources = Object.fromEntries(Object.entries(executionPaths).map((
 assert.doesNotThrow(() => contracts.checkIncrementalRpirContract(executionSources));
 cases += 1;
 
+// The Research checkpoint sentence owns its safeguards independently of ADR
+// discovery prose, paragraph layout, metadata and historical examples.
+const researchEquivalent = replaceOnce(executionSources.researchAgent,
+  'When a significant architectural decision is relevant,',
+  'For a relevant significant architectural choice,');
+const researchCheckpointSentence = executionSources.researchAgent.match(/Script Runner may observe,[^\n]*?\.(?=\s|$)/)?.[0];
+assert.ok(researchCheckpointSentence, 'Research fixture requires its normative checkpoint sentence');
+for (const researchAgent of [
+  researchEquivalent,
+  replaceOnce(researchEquivalent, ' Script Runner may observe,', '\n\nScript Runner may observe,'),
+  replaceOnce(researchEquivalent, 'separately granted local Git index/history checkpoint',
+    'separately authorized local Git index/history checkpoint'),
+  replaceOnce(researchEquivalent, 'eligible Research brief after physical save/readback',
+    'eligible Research brief following physical save/readback')
+]) {
+  assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources, researchAgent }));
+  cases += 1;
+}
+for (const target of [
+  'separately granted local Git index/history checkpoint',
+  'eligible Research brief after physical save/readback'
+]) {
+  const missing = replaceOnce(researchEquivalent, target, 'safeguard omitted');
+  for (const [label, researchAgent, reviewAgent] of [
+    ['missing safeguard', missing, executionSources.reviewAgent],
+    ['historical decoy', `${missing}\n\n## Historical example (not operating policy)\n\n${researchCheckpointSentence}\n`, executionSources.reviewAgent],
+    ['metadata decoy', replaceOnce(missing, 'description: ', `description: ${researchCheckpointSentence} `), executionSources.reviewAgent],
+    ['wrong-subject decoy', replaceOnce(missing, ' Script Runner may observe,',
+      ` Unrelated documentation quotes: ${researchCheckpointSentence} Script Runner may observe,`), executionSources.reviewAgent],
+    ['wrong-owner decoy', missing, `${executionSources.reviewAgent}\n\n## Historical Research example\n\n${researchCheckpointSentence}\n`]
+  ]) {
+    assertRejected(`Research ${label}: ${target}`, () => contracts.checkIncrementalRpirContract({
+      ...executionSources, researchAgent, reviewAgent
+    }), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' &&
+      error.message === 'Research must retain its separately authorized saved-brief checkpoint route');
+  }
+}
+assertRejected('Research checkpoint moved entirely to history', () => contracts.checkIncrementalRpirContract({
+  ...executionSources,
+  researchAgent: `${replaceOnce(researchEquivalent, researchCheckpointSentence, 'Research remains read-only outside its records.')}\n\n## Historical example (not operating policy)\n\n${researchCheckpointSentence}\n`
+}), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' &&
+  error.message === 'Research must retain its separately authorized saved-brief checkpoint route');
+
 for (const [label, key, mutate, diagnostic] of [
   ['duplicate grant reintroduced in checkpoint owner', 'checklist', (text) => replaceOnce(text,
     'no separate grant exchange is required', 'a separate grant exchange is required'),
@@ -352,6 +395,9 @@ for (const owner of ['skill', 'template']) {
 // Supported equivalent wording and satisfied-prerequisite controls. These are
 // contract-source fixtures, not execution of a governance/agent state machine.
 for (const [key, target, replacement] of [
+  ['plan', 'For relevant architectural choices,',
+    'Bind validation to the implementation candidate. For relevant architectural choices,'],
+  ['plan', 'description: ', 'description: Bind delivery evidence to its source. '],
   ['implement', 'continuing independent approved work', 'allowing unrelated approved work to continue'],
   ['implement', 'material mismatch, unavailable content or an unsatisfied condition before dependent effects',
     'material version mismatch, missing content or unsatisfied decision conditions before dependent changes'],
@@ -380,6 +426,22 @@ for (const [label, target] of [
   const fixture = { ...adrSources, plan: replaceOnce(adrSources.plan, target, '') };
   assertRejected(`Plan binding omits ${label}`, () => contracts.checkArchitectureDecisionRecordContract(fixture),
     (error) => error.contractId === 'ADR-CONTRACT-001' && error.message === `Plan ADR binding is missing ${label}`);
+}
+
+const planBindingSentence = 'Bind its identity, substantive version, decision state, actual agreement evidence, conditions and dependent Work Items;';
+const missingPlanBinding = replaceOnce(adrSources.plan, planBindingSentence, 'Record remaining ADR questions;');
+for (const [label, plan, research] of [
+  ['before ADR guidance in the same paragraph', replaceOnce(missingPlanBinding,
+    'For relevant architectural choices,', `${planBindingSentence} For relevant architectural choices,`), adrSources.research],
+  ['unrelated paragraph', replaceOnce(missingPlanBinding,
+    '\n# Plan coordinator\n', `\n# Plan coordinator\n\n${planBindingSentence}\n`), adrSources.research],
+  ['metadata', replaceOnce(missingPlanBinding, 'description: ', `description: ${planBindingSentence} `), adrSources.research],
+  ['history', `${missingPlanBinding}\n\n## Historical example (not operating policy)\n\n${planBindingSentence}\n`, adrSources.research],
+  ['wrong owner', missingPlanBinding, `${adrSources.research}\n\n## Historical Plan example\n\n${planBindingSentence}\n`]
+]) {
+  assertRejected(`Plan ADR binding decoy in ${label}`, () => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, plan, research
+  }), (error) => error.contractId === 'ADR-CONTRACT-001' && error.message === 'Plan ADR binding is missing identity');
 }
 assertRejected('broken ADR resource link', () => contracts.checkLocalLinks(
   adrPaths.skill, '[missing](references/not-present.md)'

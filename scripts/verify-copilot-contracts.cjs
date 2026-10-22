@@ -295,6 +295,12 @@ function requireADRRule(text, patterns, diagnostic) {
   if (patterns.some((pattern) => !pattern.test(text))) fail(diagnostic, 'ADR-CONTRACT-001');
 }
 
+// Coordinator rules belong to the normative body, not metadata or appended
+// historical/example sections. This is a bounded selector, not a Markdown parser.
+function coordinatorBody(text, role) {
+  return (text.split(`\n# ${role} coordinator\n`)[1] || '').split(/^#{1,2} /m)[0];
+}
+
 function checkArchitectureDecisionRecordContract(sources = {}) {
   const paths = {
     skill: '.github/skills/architecture-decision-records/SKILL.md',
@@ -401,7 +407,12 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
     /directly associated Proposed ADR/i,
     /Plan `edit` is limited to its working Plan, an eligible guarded Research status update, and the exact associated Proposed-ADR exception/i
   ], 'Plan coordinator guidance is missing associated-ADR ownership or binding safeguards');
-  const planBinding = source.plan.match(/\bBind\b[^.;\n]*[.;]/i)?.[0] || '';
+  const adrSkillLink = '](../skills/architecture-decision-records/SKILL.md)';
+  const planADR = coordinatorBody(source.plan, 'Plan').split(/\n\s*\n/)
+    .find((paragraph) => paragraph.includes(adrSkillLink)) || '';
+  // Ignore unrelated binding sentences before the owning ADR guidance.
+  const planBinding = planADR.slice(planADR.indexOf(adrSkillLink) + adrSkillLink.length)
+    .match(/\bBind\b[^.;\n]*[.;]/i)?.[0] || '';
   for (const [label, pattern] of [
     ['identity', /identity|path\/ID/i],
     ['substantive version', /substantive (?:version|revision|snapshot)/i],
@@ -571,8 +582,11 @@ function checkIncrementalRpirContract(sources = {}) {
     /both routes retain identical candidate, ownership, validation, helper and permission safeguards/i
   ], 'Script Runner must retain separately bounded phase-record authority with the same safeguards');
   rejectDuplicateGrant(runner, 'Script Runner authority');
-  requireExecutionRule(source.researchAgent.match(/^When a significant architectural decision[^\n]*/m)?.[0] || '', [
-    /separately granted local Git index\/history checkpoint/i, /eligible Research brief after physical save\/readback/i
+  const researchCheckpoint = coordinatorBody(source.researchAgent, 'Research')
+    .match(/(?:^|[.!?]\s+)(Script Runner\b[^\n]*?\.(?=\s|$))/i)?.[1] || '';
+  requireExecutionRule(researchCheckpoint, [
+    /separately (?:granted|authorized) local Git index\/history checkpoint/i,
+    /eligible Research brief (?:after|following) physical save\/readback/i
   ], 'Research must retain its separately authorized saved-brief checkpoint route');
 
   const implement = source.implementAgent.match(/^Own the permitted direct edit[^\n]*/m)?.[0] || '';
