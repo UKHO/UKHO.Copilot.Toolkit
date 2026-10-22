@@ -13,7 +13,9 @@
     "test-copilot-contracts": "node tests/test-copilot-contracts.cjs",
     "test-vsix-boundary": "node tests/test-vsix-boundary.cjs",
     "package": "node scripts/package-vsix.cjs",
-    "verify-package": "node scripts/verify-vsix-boundary.cjs"
+    "verify-package": "node scripts/verify-vsix-boundary.cjs",
+    "prepare-vsix": "node scripts/prepare-vsix.cjs prepare",
+    "inspect-vsix-candidate": "node scripts/prepare-vsix.cjs inspect"
   },
   "license": "MIT",
   "devDependencies": {

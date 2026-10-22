@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const crypto = require('crypto');
 const { isDeepStrictEqual } = require('node:util');
 const { discover, inspectPath, skillPayloadRoots } = require('./discover-copilot-artifacts.cjs');
 
@@ -34,9 +35,26 @@ const prohibited = [
   '/poc/',
   '\\poc\\'
 ];
+const EVIDENCE_SCHEMA = 'ukho.vsix-verification-evidence';
+const EVIDENCE_SCHEMA_VERSION = 1;
+const VERIFICATION_POLICY = 'ukho-vsix-package-boundary';
+const VERIFICATION_POLICY_VERSION = 1;
+const README_TRANSFORMATION = 'vsce-relative-markdown-links-v1';
+const PINNED_TOOL_IDENTITY = Object.freeze({ name: '@vscode/vsce', version: '3.9.2' });
 
 function fail(message) {
   throw new Error(message);
+}
+
+function assertPackageIdentity(manifest, context = 'package.json') {
+  if (!manifest || manifest.name !== 'ukho-copilot-toolkit' || manifest.publisher !== 'ukho' ||
+      !isSupportedVersion(manifest.version) || manifest.engines?.vscode !== '^1.130.0') {
+    fail(`${context} identity must remain ukho.ukho-copilot-toolkit with a numeric prepared version and VS Code engine ^1.130.0`);
+  }
+}
+
+function isSupportedVersion(version) {
+  return typeof version === 'string' && /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/.test(version);
 }
 
 function normalize(value) {
@@ -89,10 +107,7 @@ function readManifest() {
   if (typeof manifest.name !== 'string' || !manifest.name || typeof manifest.publisher !== 'string' || !manifest.publisher || typeof manifest.version !== 'string' || !manifest.version) {
     fail('package.json name, publisher and version are required');
   }
-  if (manifest.name !== 'ukho-copilot-toolkit' || manifest.publisher !== 'ukho' || manifest.version !== '1.0.0' ||
-      manifest.engines?.vscode !== '^1.130.0') {
-    fail('package.json identity and VS Code engine constraint differ from the approved 1.0.0 package contract');
-  }
+  assertPackageIdentity(manifest);
   const discovered = discover();
   const contributions = [];
   for (const name of contributionNames) {
@@ -139,9 +154,7 @@ function readManifest() {
 }
 
 function expectedVsixPath(manifest, repositoryRoot = root) {
-  if (manifest.name !== 'ukho-copilot-toolkit' || manifest.publisher !== 'ukho' || manifest.version !== '1.0.0') {
-    fail('package.json identity must remain ukho.ukho-copilot-toolkit version 1.0.0');
-  }
+  assertPackageIdentity(manifest);
   return path.join(repositoryRoot, `${manifest.name}-${manifest.version}.vsix`);
 }
 
@@ -450,6 +463,7 @@ function verifyPayloadBytes(buffer, boundary, sourceFiles, manifest) {
 }
 
 function verifyArchiveContents(buffer, boundary, manifest, sourceChangelog, sourceFiles) {
+  assertPackageIdentity(manifest);
   const expected = new Set(['[Content_Types].xml', 'extension.vsixmanifest']);
   for (const file of boundary) expected.add(archiveName(file));
   const actual = archiveMembers(buffer);
@@ -482,6 +496,207 @@ function verifyArchive(boundary, expectedVsix, manifest, sourceChangelog, source
   verifyArchiveContents(archive, boundary, manifest, sourceChangelog, sourceFiles);
 }
 
+function sha256(bytes) {
+  return crypto.createHash('sha256').update(bytes).digest('hex');
+}
+
+function stableStringify(value) {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function sourceMemberEvidence(boundary, sourceFiles) {
+  if (!(boundary instanceof Set) || !(sourceFiles instanceof Map)) {
+    fail('Build inputs require a boundary Set and sourceFiles Map');
+  }
+  const members = [...boundary].sort().map((relative) => {
+    normalize(relative);
+    const bytes = sourceFiles.get(relative);
+    if (!Buffer.isBuffer(bytes)) fail(`Build input bytes are unavailable for ${relative}`);
+    return { name: relative, sha256: sha256(bytes), length: bytes.length };
+  });
+  if (members.length !== sourceFiles.size || [...sourceFiles.keys()].some((name) => !boundary.has(name))) {
+    fail('Build input source bytes do not exactly match the package boundary');
+  }
+  return members;
+}
+
+function evidenceCore(evidence) {
+  const { integrity, ...core } = evidence;
+  return core;
+}
+
+function sealEvidence(core) {
+  return {
+    ...core,
+    integrity: { algorithm: 'sha256', digest: sha256(Buffer.from(stableStringify(core), 'utf8')) }
+  };
+}
+
+function buildEvidenceInputs(buildInputs) {
+  if (!buildInputs || typeof buildInputs !== 'object') fail('Fresh verification requires captured buildInputs');
+  const { manifest, boundary, sourceChangelog, sourceFiles } = buildInputs;
+  assertPackageIdentity(manifest, 'Captured package.json');
+  if (typeof sourceChangelog !== 'string') fail('Build inputs require sourceChangelog text');
+  const sourceMembers = sourceMemberEvidence(boundary, sourceFiles);
+  const changelogBytes = sourceFiles.get('CHANGELOG.md');
+  if (!Buffer.isBuffer(changelogBytes) || !changelogBytes.equals(Buffer.from(sourceChangelog, 'utf8'))) {
+    fail('Build input sourceChangelog does not match captured CHANGELOG.md bytes');
+  }
+  return { manifest, boundary, sourceChangelog, sourceFiles, sourceMembers };
+}
+
+function captureBuildEvidence({ archiveBytes, buildInputs, toolIdentity = PINNED_TOOL_IDENTITY } = {}) {
+  if (!Buffer.isBuffer(archiveBytes)) fail('Evidence capture requires archiveBytes as a Buffer');
+  const inputs = buildEvidenceInputs(buildInputs);
+  if (!isDeepStrictEqual(toolIdentity, PINNED_TOOL_IDENTITY)) {
+    fail('Verification tool identity must be the pinned @vscode/vsce 3.9.2');
+  }
+  verifyArchiveContents(archiveBytes, inputs.boundary, inputs.manifest, inputs.sourceChangelog, inputs.sourceFiles);
+  const members = [...archiveMembers(archiveBytes)].sort().map((name) => {
+    const bytes = readArchiveMemberBuffer(archiveBytes, name);
+    return { name, sha256: sha256(bytes), length: bytes.length };
+  });
+  const core = {
+    schema: EVIDENCE_SCHEMA,
+    schemaVersion: EVIDENCE_SCHEMA_VERSION,
+    policy: { id: VERIFICATION_POLICY, version: VERIFICATION_POLICY_VERSION },
+    tool: { ...PINNED_TOOL_IDENTITY },
+    captured: {
+      identity: { name: inputs.manifest.name, publisher: inputs.manifest.publisher, version: inputs.manifest.version },
+      manifest: JSON.parse(JSON.stringify(inputs.manifest)),
+      boundary: [...inputs.boundary].sort(),
+      sourceMembers: inputs.sourceMembers,
+      readmeTransformation: {
+        id: README_TRANSFORMATION,
+        baseContentUrl: inputs.manifest.vsce?.baseContentUrl
+      },
+      expectedMembers: members
+    },
+    trustLimit: 'The digest detects accidental or partial evidence changes, not an adversary who can alter both evidence and its digest. Historical verification establishes consistency with retained evidence, not independent provenance or source fidelity.'
+  };
+  return sealEvidence(core);
+}
+
+function validateEvidence(evidence) {
+  if (!evidence || typeof evidence !== 'object' || evidence.schema !== EVIDENCE_SCHEMA ||
+      evidence.schemaVersion !== EVIDENCE_SCHEMA_VERSION) fail('Missing or unsupported VSIX verification evidence schema');
+  if (!evidence.integrity || evidence.integrity.algorithm !== 'sha256' ||
+      !/^[a-f0-9]{64}$/.test(evidence.integrity.digest || '') ||
+      sha256(Buffer.from(stableStringify(evidenceCore(evidence)), 'utf8')) !== evidence.integrity.digest) {
+    fail('VSIX verification evidence is missing, inconsistent or tampered (integrity digest mismatch)');
+  }
+  if (!isDeepStrictEqual(evidence.policy, { id: VERIFICATION_POLICY, version: VERIFICATION_POLICY_VERSION }) ||
+      !isDeepStrictEqual(evidence.tool, PINNED_TOOL_IDENTITY)) fail('Unsupported verification policy or pinned tool identity in evidence');
+  const captured = evidence.captured;
+  if (!captured || !Array.isArray(captured.boundary) || !Array.isArray(captured.sourceMembers) ||
+      !Array.isArray(captured.expectedMembers) || !captured.manifest || typeof captured.readmeTransformation !== 'object') {
+    fail('VSIX verification evidence is incomplete');
+  }
+  assertPackageIdentity(captured.manifest, 'Evidence manifest');
+  const identity = { name: captured.manifest.name, publisher: captured.manifest.publisher, version: captured.manifest.version };
+  if (!isDeepStrictEqual(captured.identity, identity)) fail('Evidence identity does not match its captured manifest');
+  if (!isDeepStrictEqual(captured.readmeTransformation, {
+    id: README_TRANSFORMATION, baseContentUrl: captured.manifest.vsce?.baseContentUrl
+  })) fail('Evidence README transformation policy is missing or inconsistent');
+  const boundary = new Set(captured.boundary);
+  if (boundary.size !== captured.boundary.length || captured.boundary.some((name) => normalize(name) !== name)) {
+    fail('Evidence package boundary is invalid or duplicated');
+  }
+  const sourceByName = new Map();
+  for (const item of captured.sourceMembers) {
+    if (!item || typeof item.name !== 'string' || !boundary.has(item.name) || sourceByName.has(item.name) ||
+        !/^[a-f0-9]{64}$/.test(item.sha256 || '') || !Number.isSafeInteger(item.length) || item.length < 0) {
+      fail('Evidence source-member inventory is invalid');
+    }
+    sourceByName.set(item.name, item);
+  }
+  if (sourceByName.size !== boundary.size) fail('Evidence source-member inventory is incomplete');
+  const expectedNames = new Set(['[Content_Types].xml', 'extension.vsixmanifest', ...[...boundary].map(archiveName)]);
+  const expectedByName = new Map();
+  for (const item of captured.expectedMembers) {
+    if (!item || typeof item.name !== 'string' || expectedByName.has(item.name) ||
+        !/^[a-f0-9]{64}$/.test(item.sha256 || '') || !Number.isSafeInteger(item.length) || item.length < 0) {
+      fail('Evidence packaged-member inventory is invalid');
+    }
+    expectedByName.set(item.name, item);
+  }
+  if (expectedByName.size !== expectedNames.size || [...expectedNames].some((name) => !expectedByName.has(name))) {
+    fail('Evidence packaged-member inventory is inconsistent with its package boundary');
+  }
+  for (const [relative, source] of sourceByName) {
+    const packagedName = archiveName(relative);
+    const packaged = expectedByName.get(packagedName);
+    if (relative !== 'README.md' && (packaged.sha256 !== source.sha256 || packaged.length !== source.length)) {
+      fail(`Evidence packaged payload does not match captured source bytes for ${relative}`);
+    }
+  }
+  return { captured, boundary, expectedByName, sourceByName };
+}
+
+function assertArchiveMatchesEvidence(archiveBytes, evidenceData) {
+  const actualNames = archiveMembers(archiveBytes);
+  const expectedNames = new Set(evidenceData.expectedByName.keys());
+  const missing = [...expectedNames].filter((name) => !actualNames.has(name));
+  const unexpected = [...actualNames].filter((name) => !expectedNames.has(name));
+  if (missing.length || unexpected.length) {
+    fail(`Historical VSIX boundary mismatch; missing: ${missing.join(', ') || 'none'}; unexpected: ${unexpected.join(', ') || 'none'}`);
+  }
+  for (const [name, expected] of evidenceData.expectedByName) {
+    const bytes = readArchiveMemberBuffer(archiveBytes, name);
+    if (bytes.length !== expected.length || sha256(bytes) !== expected.sha256) {
+      fail(`Historical VSIX member does not match retained evidence: ${name}`);
+    }
+  }
+  const manifest = evidenceData.captured.manifest;
+  verifyPackagedIdentity(archiveBytes, manifest);
+  const changelog = evidenceData.sourceByName.get('CHANGELOG.md');
+  const packagedChangelog = readArchiveMemberBuffer(archiveBytes, 'extension/changelog.md');
+  if (!changelog || packagedChangelog.length !== changelog.length || sha256(packagedChangelog) !== changelog.sha256) {
+    fail('Historical packaged CHANGELOG.md does not match captured source evidence');
+  }
+  const candidateHeading = `### ${manifest.version} review candidate`;
+  const candidateFilename = `${manifest.name}-${manifest.version}.vsix`;
+  const changelogText = packagedChangelog.toString('utf8');
+  if (!changelogText.includes(candidateHeading) || !changelogText.includes(candidateFilename)) {
+    fail('Historical packaged CHANGELOG.md is missing its captured candidate narrative');
+  }
+}
+
+function verifyCandidate({ archiveBytes, evidence, mode, buildInputs } = {}) {
+  if (!Buffer.isBuffer(archiveBytes)) fail('Candidate verification requires archiveBytes as a Buffer');
+  if (mode !== 'fresh' && mode !== 'historical') fail('Candidate verification mode must be fresh or historical');
+  const evidenceData = validateEvidence(evidence);
+  if (mode === 'fresh') {
+    const inputs = buildEvidenceInputs(buildInputs);
+    if (!isDeepStrictEqual(inputs.manifest, evidenceData.captured.manifest) ||
+        !isDeepStrictEqual([...inputs.boundary].sort(), evidenceData.captured.boundary) ||
+        !isDeepStrictEqual(inputs.sourceMembers, evidenceData.captured.sourceMembers)) {
+      fail('Fresh build inputs differ from the inputs captured in verification evidence');
+    }
+    verifyArchiveContents(archiveBytes, inputs.boundary, inputs.manifest, inputs.sourceChangelog, inputs.sourceFiles);
+    assertArchiveMatchesEvidence(archiveBytes, evidenceData);
+    return { verified: true, mode, claim: 'source-fidelity-and-evidence-consistency', trustLimit: evidence.trustLimit };
+  }
+  assertArchiveMatchesEvidence(archiveBytes, evidenceData);
+  return { verified: true, mode, claim: 'historical-artifact-evidence-consistency-only', trustLimit: evidence.trustLimit };
+}
+
+function verifySelectedCandidate({ candidatePath, evidence, mode, buildInputs } = {}) {
+  if (typeof candidatePath !== 'string' || !candidatePath) fail('An explicit candidatePath is required; no fallback candidate is searched');
+  let stat;
+  try { stat = fs.lstatSync(candidatePath); }
+  catch (error) {
+    if (error.code === 'ENOENT') fail(`Explicit selected candidate is unavailable: ${candidatePath}`);
+    throw error;
+  }
+  if (stat.isSymbolicLink() || !stat.isFile()) fail('Explicit selected candidate must be a regular non-symbolic-link file');
+  return verifyCandidate({ archiveBytes: fs.readFileSync(candidatePath), evidence, mode, buildInputs });
+}
+
 function main() {
   try {
     const { manifest, boundary, contributions, changelog, sourceFiles } = readManifest();
@@ -497,6 +712,7 @@ function main() {
 if (require.main === module) main();
 
 module.exports = {
-  archiveMembers, expectedPackagedReadme, expectedVsixPath, parseVsixIdentity,
-  readArchiveMember, readArchiveMemberBuffer, verifyArchive, verifyArchiveContents
+  archiveMembers, captureBuildEvidence, expectedPackagedReadme, expectedVsixPath, parseVsixIdentity,
+  readArchiveMember, readArchiveMemberBuffer, readManifest, verifyArchive, verifyArchiveContents,
+  verifyCandidate, verifySelectedCandidate
 };

@@ -5,9 +5,14 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const {
-  expectedPackagedReadme, expectedVsixPath, verifyArchive, verifyArchiveContents
+  captureBuildEvidence, expectedPackagedReadme, expectedVsixPath, verifyArchive,
+  verifyArchiveContents, verifyCandidate, verifySelectedCandidate
 } = require('../scripts/verify-vsix-boundary.cjs');
 const { expectedTarget: expectedPackageTarget, packageVsix, validateArguments } = require('../scripts/package-vsix.cjs');
+const {
+  applyConfirmedReleaseInputs, candidateLayout, inspectCandidate, prepareCandidate,
+  prepareAfterReleaseInputUpdate, safePath, validateArguments: validatePreparationArguments
+} = require('../scripts/prepare-vsix.cjs');
 
 const baseContentUrl = 'https://github.com/UKHO/UKHO.Copilot.Toolkit/blob/main/';
 const changelog = [
@@ -117,8 +122,95 @@ function verify(entries = validEntries(), sourceChangelog = changelog, files = s
   verifyArchiveContents(zip(entries), boundary, manifest, sourceChangelog, files);
 }
 
+function preparedFixture(version) {
+  const preparedManifest = { ...manifest, version };
+  const preparedChangelog = changelog.replaceAll('1.0.0', version);
+  const preparedFiles = new Map([...sourceFiles].map(([name, bytes]) => [name, Buffer.from(bytes)]));
+  preparedFiles.set('package.json', Buffer.from(`${JSON.stringify(preparedManifest, null, 2)}\n`));
+  preparedFiles.set('CHANGELOG.md', Buffer.from(preparedChangelog));
+  const entries = validEntries();
+  entries['extension/package.json'] = preparedFiles.get('package.json');
+  entries['extension/changelog.md'] = preparedChangelog;
+  entries['extension.vsixmanifest'] = identity.replace('Version="1.0.0"', `Version="${version}"`);
+  const archiveBytes = zip(entries);
+  return {
+    archiveBytes,
+    entries,
+    buildInputs: { manifest: preparedManifest, boundary: new Set(boundary), sourceChangelog: preparedChangelog, sourceFiles: preparedFiles }
+  };
+}
+
 assert.doesNotThrow(() => verify(), 'valid archive must pass');
 cases += 1;
+
+const prepared = preparedFixture('2.4.7');
+const evidence = captureBuildEvidence({ archiveBytes: prepared.archiveBytes, buildInputs: prepared.buildInputs });
+assert.equal(evidence.captured.identity.version, '2.4.7');
+assert.ok(evidence.captured.expectedMembers.some((member) => member.name === 'extension/resources/ukho-icon.png' && member.length === 5));
+assert.equal(verifyCandidate({ archiveBytes: prepared.archiveBytes, evidence, mode: 'fresh', buildInputs: prepared.buildInputs }).claim,
+  'source-fidelity-and-evidence-consistency');
+assert.equal(verifyCandidate({ archiveBytes: prepared.archiveBytes, evidence, mode: 'historical' }).claim,
+  'historical-artifact-evidence-consistency-only');
+cases += 3;
+
+const changedCheckout = {
+  ...prepared.buildInputs,
+  sourceFiles: new Map(prepared.buildInputs.sourceFiles)
+};
+changedCheckout.sourceFiles.set(skillFiles[1], Buffer.from('# changed checkout\n'));
+assertRejected('fresh verification detects changed checkout inputs', () => verifyCandidate({
+  archiveBytes: prepared.archiveBytes, evidence, mode: 'fresh', buildInputs: changedCheckout
+}), /Fresh build inputs differ/);
+assert.doesNotThrow(() => verifyCandidate({ archiveBytes: prepared.archiveBytes, evidence, mode: 'historical' }),
+  'historical verification must not require current checkout bytes');
+cases += 1;
+
+const tamperedEvidence = JSON.parse(JSON.stringify(evidence));
+tamperedEvidence.captured.expectedMembers.find((member) => member.name === `extension/${skillFiles[1]}`).sha256 = '0'.repeat(64);
+assertRejected('tampered evidence digest fails closed', () => verifyCandidate({
+  archiveBytes: prepared.archiveBytes, evidence: tamperedEvidence, mode: 'historical'
+}), /integrity digest mismatch/);
+assertRejected('missing historical evidence fails closed', () => verifyCandidate({
+  archiveBytes: prepared.archiveBytes, mode: 'historical'
+}), /evidence schema/);
+const missingEvidenceData = JSON.parse(JSON.stringify(evidence));
+delete missingEvidenceData.captured.sourceMembers;
+assertRejected('missing evidence inventory fails closed', () => verifyCandidate({
+  archiveBytes: prepared.archiveBytes, evidence: missingEvidenceData, mode: 'historical'
+}), /integrity digest mismatch/);
+assertRejected('tampered archive member fails historical consistency', () => {
+  const entries = { ...prepared.entries };
+  entries[`extension/${skillFiles[1]}`] = '# altered retained member\n';
+  verifyCandidate({ archiveBytes: zip(entries), evidence, mode: 'historical' });
+}, new RegExp(`Historical VSIX member does not match retained evidence: extension/${skillFiles[1].replaceAll('.', '\\.').replaceAll('/', '\\/')}`));
+assertRejected('unpinned verification tool identity rejected', () => captureBuildEvidence({
+  archiveBytes: prepared.archiveBytes,
+  buildInputs: prepared.buildInputs,
+  toolIdentity: { name: '@vscode/vsce', version: '3.9.3' }
+}), /pinned @vscode\/vsce 3\.9\.2/);
+cases += 4;
+
+assertRejected('non-numeric prepared version rejected', () => expectedVsixPath({ ...manifest, version: '1.2.3-rc.1' }), /numeric prepared version/);
+assertRejected('wrong captured package identity rejected', () => captureBuildEvidence({
+  archiveBytes: prepared.archiveBytes,
+  buildInputs: { ...prepared.buildInputs, manifest: { ...prepared.buildInputs.manifest, publisher: 'other' } }
+}), /numeric prepared version/);
+const wrongVersion = preparedFixture('2.4.8');
+assertRejected('candidate version differs from evidence identity', () => verifyCandidate({
+  archiveBytes: wrongVersion.archiveBytes, evidence, mode: 'historical'
+}), /Historical VSIX member does not match retained evidence: extension\.vsixmanifest/);
+cases += 3;
+
+const unsafeEntries = validEntries();
+unsafeEntries['extension/../outside.txt'] = 'unsafe';
+assertRejected('unsafe ZIP traversal path rejected', () => verifyArchiveContents(zip(unsafeEntries), boundary, manifest, changelog, sourceFiles),
+  /Invalid or aliased path/);
+assertRejected('unapproved README transformation is rejected', () => {
+  const entries = validEntries();
+  entries['extension/readme.md'] = Buffer.from(expectedPackagedReadme(readme, baseContentUrl).replace('Skill](https:', 'Skill](https:') + 'tampered');
+  verifyArchiveContents(zip(entries), boundary, manifest, changelog, sourceFiles);
+}, /differs beyond the pinned vsce relative-link transformation/);
+cases += 2;
 
 const negatives = [
   ['mismatched packaged name', (entries) => { entries['extension/package.json'] = JSON.stringify({ ...manifest, name: 'other' }); }, /package\.json name does not match/],
@@ -204,7 +296,17 @@ try {
     verifyArchive(boundary, path.join(fixtureRoot, 'Releases', path.basename(expected)), manifest,
       changelog, sourceFiles, fixtureRoot);
   }, /must be the version-derived repository-root VSIX/);
-  cases += 2;
+  const selected = path.join(fixtureRoot, 'selected candidate.vsix');
+  fs.writeFileSync(selected, prepared.archiveBytes, { flag: 'wx' });
+  assert.equal(verifySelectedCandidate({ candidatePath: selected, evidence, mode: 'historical' }).verified, true);
+  const generalizedExpected = expectedVsixPath(prepared.buildInputs.manifest, fixtureRoot);
+  fs.writeFileSync(generalizedExpected, prepared.archiveBytes, { flag: 'wx' });
+  assert.doesNotThrow(() => verifyArchive(prepared.buildInputs.boundary, generalizedExpected,
+    prepared.buildInputs.manifest, prepared.buildInputs.sourceChangelog, prepared.buildInputs.sourceFiles, fixtureRoot));
+  assertRejected('selected candidate does not fall back to another file', () => verifySelectedCandidate({
+    candidatePath: path.join(fixtureRoot, 'missing candidate.vsix'), evidence, mode: 'historical'
+  }), /Explicit selected candidate is unavailable/);
+  cases += 5;
 } finally {
   fs.rmSync(fixtureRoot, { recursive: true, force: true });
 }
@@ -296,4 +398,501 @@ try {
   fs.rmSync(absentOutputRoot, { recursive: true, force: true });
 }
 
-console.log(`Passed ${cases} VSIX verification and packaging cases, including diagnostic-specific archive and collision controls.`);
+function preparationFixture(version = '2.4.7') {
+  const repositoryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ukho preparation path with spaces '));
+  const preparedManifest = {
+    ...manifest,
+    version,
+    devDependencies: { '@vscode/vsce': '3.9.2' }
+  };
+  const preparedChangelog = changelog.replaceAll('1.0.0', version);
+  const preparedFiles = new Map([...sourceFiles].map(([name, bytes]) => [name, Buffer.from(bytes)]));
+  preparedFiles.set('package.json', Buffer.from(`${JSON.stringify(preparedManifest, null, 2)}\n`));
+  preparedFiles.set('CHANGELOG.md', Buffer.from(preparedChangelog));
+  const inputs = {
+    manifest: preparedManifest,
+    boundary: new Set(preparedFiles.keys()),
+    contributions: Object.entries(preparedManifest.contributes).flatMap(([name, entries]) => entries.map((entry) => ({ name, relative: entry.path }))),
+    sourceChangelog: preparedChangelog,
+    sourceFiles: preparedFiles
+  };
+
+  for (const directory of ['Releases', '.github/instructions', '.github/agents', '.github/prompts', '.github/skills']) {
+    fs.mkdirSync(path.join(repositoryRoot, directory), { recursive: true });
+  }
+  for (const [relative, bytes] of preparedFiles) {
+    const file = path.join(repositoryRoot, relative);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, bytes);
+  }
+  const lock = {
+    name: preparedManifest.name,
+    version,
+    lockfileVersion: 3,
+    requires: true,
+    packages: {
+      '': { name: preparedManifest.name, version, devDependencies: { '@vscode/vsce': '3.9.2' } },
+      'node_modules/@vscode/vsce': { version: '3.9.2' }
+    }
+  };
+  fs.writeFileSync(path.join(repositoryRoot, 'package-lock.json'), `${JSON.stringify(lock, null, 2)}\n`);
+  const vsceDirectory = path.join(repositoryRoot, 'node_modules', '@vscode', 'vsce');
+  fs.mkdirSync(vsceDirectory, { recursive: true });
+  fs.writeFileSync(path.join(vsceDirectory, 'package.json'), JSON.stringify({ version: '3.9.2' }));
+  fs.writeFileSync(path.join(vsceDirectory, 'vsce'), 'injected fixture executable');
+  fs.writeFileSync(path.join(repositoryRoot, 'Releases', 'legacy-preserve.txt'), 'keep this pre-existing file');
+  return { repositoryRoot, inputs, preparedManifest, preparedChangelog };
+}
+
+function archiveForBuildInputs(inputs) {
+  const entries = { '[Content_Types].xml': '<Types/>', 'extension.vsixmanifest': identity.replace('Version="1.0.0"', `Version="${inputs.manifest.version}"`) };
+  for (const [relative, content] of inputs.sourceFiles) {
+    const packagedPath = relative === 'README.md' ? 'readme.md'
+      : relative === 'CHANGELOG.md' ? 'changelog.md'
+        : relative === 'LICENSE' ? 'LICENSE.txt' : relative;
+    entries[`extension/${packagedPath}`] = relative === 'README.md'
+      ? Buffer.from(expectedPackagedReadme(content.toString('utf8'), baseContentUrl))
+      : content;
+  }
+  return zip(entries);
+}
+
+function fakeBuilder(request) {
+  fs.writeFileSync(request.outputPath, archiveForBuildInputs(request.buildInputs), { flag: 'wx' });
+  return { status: 0 };
+}
+
+const preparationRoot = preparationFixture();
+try {
+  const beforeLegacy = fs.readFileSync(path.join(preparationRoot.repositoryRoot, 'Releases', 'legacy-preserve.txt'));
+  let clockCalls = 0;
+  const preparedCandidate = prepareCandidate({
+    repositoryRoot: preparationRoot.repositoryRoot,
+    loadBuildInputs: () => preparationRoot.inputs,
+    runBuilder: fakeBuilder,
+    clock: () => { clockCalls += 1; return new Date('2026-10-22T23:59:59.999Z'); },
+    idFactory: () => 'happy-path',
+    temporaryRoot: preparationRoot.repositoryRoot
+  });
+  assert.equal(preparedCandidate.outcome, 'prepared-verified');
+  assert.equal(preparedCandidate.verified, true);
+  assert.equal(preparedCandidate.candidateId, '2026-10-22/235959Z-happy-path');
+  assert.equal(clockCalls, 1, 'one captured instant determines both UTC date and time');
+  assert.equal(preparedCandidate.packagedIdentity.version, preparationRoot.preparedManifest.version);
+  assert.equal(preparedCandidate.sha256, require('node:crypto').createHash('sha256').update(fs.readFileSync(preparedCandidate.vsixPath)).digest('hex'));
+  assert.equal(preparedCandidate.sizeBytes, fs.statSync(preparedCandidate.vsixPath).size);
+  assert.equal(fs.readFileSync(path.join(preparationRoot.repositoryRoot, 'Releases', 'legacy-preserve.txt')).toString(), beforeLegacy.toString());
+  assert.deepEqual(fs.readdirSync(preparationRoot.repositoryRoot).filter((name) => name.startsWith('.ukho-vsix-prepare-')), []);
+  const candidateStatusPath = path.join(preparedCandidate.candidateDirectory, 'status.json');
+  const statusBeforeInspection = fs.readFileSync(candidateStatusPath);
+  const inspected = inspectCandidate({ candidateDirectory: preparedCandidate.candidateDirectory, mode: 'historical' });
+  assert.equal(inspected.verified, true);
+  assert.equal(inspected.humanStatus.manualTest.outcome, 'not tested');
+  assert.equal(inspected.humanStatus.publication.outcome, 'not published');
+  assert.equal(inspected.humanStatus.humanReported, true);
+  assert.ok(fs.readFileSync(candidateStatusPath).equals(statusBeforeInspection), 'inspection is read-only');
+  cases += 12;
+
+  const humanStatus = JSON.parse(statusBeforeInspection.toString('utf8'));
+  humanStatus.publication.outcome = 'pending/unknown';
+  fs.writeFileSync(candidateStatusPath, `${JSON.stringify(humanStatus, null, 2)}\n`);
+  const pending = inspectCandidate({ candidateDirectory: preparedCandidate.candidateDirectory, mode: 'historical' });
+  assert.equal(pending.humanStatus.publicationDisposition, 'pending/unknown; reconcile before any retry or claim');
+  humanStatus.artifact.sha256 = '0'.repeat(64);
+  fs.writeFileSync(candidateStatusPath, `${JSON.stringify(humanStatus, null, 2)}\n`);
+  assert.equal(inspectCandidate({ candidateDirectory: preparedCandidate.candidateDirectory, mode: 'historical' }).humanStatus.state,
+    'malformed-or-mismatched');
+  fs.writeFileSync(candidateStatusPath, '{malformed');
+  assert.equal(inspectCandidate({ candidateDirectory: preparedCandidate.candidateDirectory, mode: 'historical' }).humanStatus.state,
+    'malformed-or-unavailable');
+  cases += 3;
+} finally {
+  fs.rmSync(preparationRoot.repositoryRoot, { recursive: true, force: true });
+}
+
+const collisionFixture = preparationFixture();
+try {
+  const releases = path.join(collisionFixture.repositoryRoot, 'Releases');
+  const instant = new Date('2026-10-22T23:59:59.999Z');
+  const racing = candidateLayout(releases, instant, 'race');
+  const collision = candidateLayout(releases, instant, 'reused');
+  fs.mkdirSync(collision.directory, { recursive: true });
+  fs.writeFileSync(path.join(collision.directory, 'protected.txt'), 'do not alter');
+  const ids = ['race', 'reused', 'unique-a'];
+  const result = prepareCandidate({
+    repositoryRoot: collisionFixture.repositoryRoot,
+    loadBuildInputs: () => collisionFixture.inputs,
+    runBuilder: fakeBuilder,
+    clock: () => instant,
+    idFactory: () => {
+      const id = ids.shift();
+      if (id === 'race') {
+        const contender = candidateLayout(releases, instant, id);
+        fs.mkdirSync(contender.directory);
+        fs.writeFileSync(path.join(contender.directory, 'racing-owner.txt'), 'concurrent contender owns this path');
+      }
+      return id;
+    },
+    temporaryRoot: collisionFixture.repositoryRoot
+  });
+  assert.equal(result.outcome, 'prepared-verified');
+  assert.equal(result.candidateId, '2026-10-22/235959Z-unique-a');
+  assert.equal(fs.readFileSync(path.join(racing.directory, 'racing-owner.txt')).toString(), 'concurrent contender owns this path');
+  assert.equal(fs.readFileSync(path.join(collision.directory, 'protected.txt')).toString(), 'do not alter');
+  const second = prepareCandidate({
+    repositoryRoot: collisionFixture.repositoryRoot,
+    loadBuildInputs: () => collisionFixture.inputs,
+    runBuilder: fakeBuilder,
+    clock: () => instant,
+    idFactory: () => 'unique-b',
+    temporaryRoot: collisionFixture.repositoryRoot
+  });
+  assert.equal(second.packagedIdentity.version, result.packagedIdentity.version, 'same-release retry does not bump the manifest');
+  assert.notEqual(second.candidateDirectory, result.candidateDirectory);
+  assert.equal(fs.readdirSync(path.join(releases, '2026-10-22')).length, 4);
+  cases += 6;
+} finally {
+  fs.rmSync(collisionFixture.repositoryRoot, { recursive: true, force: true });
+}
+
+const utcBoundaryFixture = preparationFixture();
+try {
+  const boundaryResult = prepareCandidate({
+    repositoryRoot: utcBoundaryFixture.repositoryRoot,
+    loadBuildInputs: () => utcBoundaryFixture.inputs,
+    runBuilder: fakeBuilder,
+    clock: () => new Date('2026-10-22T00:30:00+02:00'),
+    idFactory: () => 'utc-boundary',
+    temporaryRoot: utcBoundaryFixture.repositoryRoot
+  });
+  assert.equal(boundaryResult.candidateId, '2026-10-21/223000Z-utc-boundary');
+  assert.equal(boundaryResult.outcome, 'prepared-verified');
+  cases += 2;
+} finally {
+  fs.rmSync(utcBoundaryFixture.repositoryRoot, { recursive: true, force: true });
+}
+
+for (const failure of [
+  { name: 'builder failure', runBuilder: () => ({ status: 7 }), message: /build failed/, expected: 'failed-retained-attempt' },
+  { name: 'missing builder output', runBuilder: () => ({ status: 0 }), message: /Pinned @vscode\/vsce output/, expected: 'failed-retained-attempt' }
+]) {
+  const fixture = preparationFixture();
+  try {
+    const failed = prepareCandidate({
+      repositoryRoot: fixture.repositoryRoot,
+      loadBuildInputs: () => fixture.inputs,
+      runBuilder: failure.runBuilder,
+      clock: () => new Date('2026-10-22T00:00:00Z'),
+      idFactory: () => failure.name.replaceAll(' ', '-'),
+      temporaryRoot: fixture.repositoryRoot
+    });
+    assert.equal(failed.outcome, failure.expected, failure.name);
+    assert.match(failed.error, failure.message);
+    const metadata = JSON.parse(fs.readFileSync(path.join(failed.candidateDirectory, 'candidate.json'), 'utf8'));
+    assert.equal(metadata.preparation.verified, false);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(failed.candidateDirectory, 'status.json'), 'utf8')).manualTest.outcome, 'not tested');
+    assert.equal(inspectCandidate({ candidateDirectory: failed.candidateDirectory }).verified, false);
+    cases += 4;
+  } finally {
+    fs.rmSync(fixture.repositoryRoot, { recursive: true, force: true });
+  }
+}
+
+const driftFixture = preparationFixture();
+try {
+  const changedInputs = { ...driftFixture.inputs, sourceFiles: new Map(driftFixture.inputs.sourceFiles) };
+  driftFixture.activeInputs = driftFixture.inputs;
+  const drift = prepareCandidate({
+    repositoryRoot: driftFixture.repositoryRoot,
+    loadBuildInputs: () => driftFixture.activeInputs,
+    runBuilder: fakeBuilder,
+    clock: () => new Date('2026-10-22T12:00:00Z'),
+    idFactory: () => 'drift',
+    temporaryRoot: driftFixture.repositoryRoot,
+    hooks: { afterBuild: () => {
+      changedInputs.sourceFiles.set('README.md', Buffer.from('# changed after capture\n'));
+      driftFixture.activeInputs = changedInputs;
+    } }
+  });
+  assert.equal(drift.outcome, 'failed-retained-attempt');
+  assert.match(drift.error, /changed between capture and build/);
+  assert.equal(fs.existsSync(drift.vsixPath), false, 'input drift prevents candidate copy');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(drift.candidateDirectory, 'candidate.json'), 'utf8')).preparation.verified, false);
+  cases += 4;
+} finally {
+  fs.rmSync(driftFixture.repositoryRoot, { recursive: true, force: true });
+}
+
+for (const drift of [
+  { id: 'lockfile-drift', file: 'package-lock.json' },
+  { id: 'tool-drift', file: path.join('node_modules', '@vscode', 'vsce', 'vsce') }
+]) {
+  const fixture = preparationFixture();
+  try {
+    const changed = prepareCandidate({
+      repositoryRoot: fixture.repositoryRoot,
+      loadBuildInputs: () => fixture.inputs,
+      runBuilder: fakeBuilder,
+      clock: () => new Date('2026-10-22T12:30:00Z'),
+      idFactory: () => drift.id,
+      temporaryRoot: fixture.repositoryRoot,
+      hooks: { afterBuild: () => fs.appendFileSync(path.join(fixture.repositoryRoot, drift.file), '\n') }
+    });
+    assert.equal(changed.outcome, 'failed-retained-attempt');
+    assert.match(changed.error, /lockfile, or pinned tool inputs changed/);
+    assert.equal(fs.existsSync(changed.vsixPath), false);
+    cases += 3;
+  } finally {
+    fs.rmSync(fixture.repositoryRoot, { recursive: true, force: true });
+  }
+}
+
+const invalidArchiveFixture = preparationFixture();
+try {
+  const invalid = prepareCandidate({
+    repositoryRoot: invalidArchiveFixture.repositoryRoot,
+    loadBuildInputs: () => invalidArchiveFixture.inputs,
+    runBuilder: ({ outputPath }) => { fs.writeFileSync(outputPath, Buffer.from('not a VSIX'), { flag: 'wx' }); return { status: 0 }; },
+    clock: () => new Date('2026-10-22T13:00:00Z'),
+    idFactory: () => 'verification-failure',
+    temporaryRoot: invalidArchiveFixture.repositoryRoot
+  });
+  assert.equal(invalid.outcome, 'partial-unverified');
+  assert.equal(fs.existsSync(invalid.vsixPath), true, 'verification failure retains exact candidate bytes');
+  assert.equal(invalid.verified, false);
+  const metadata = JSON.parse(fs.readFileSync(path.join(invalid.candidateDirectory, 'candidate.json'), 'utf8'));
+  assert.equal(metadata.preparation.verified, false);
+  assert.equal(metadata.artifact.sha256, invalid.sha256);
+  const inspection = inspectCandidate({ candidateDirectory: invalid.candidateDirectory, mode: 'historical' });
+  assert.equal(inspection.verified, false);
+  assert.equal(inspection.candidateId, invalid.candidateId);
+  assert.equal(inspection.humanStatus.state, 'reported', 'verification failure does not hide separate human status');
+  cases += 8;
+} finally {
+  fs.rmSync(invalidArchiveFixture.repositoryRoot, { recursive: true, force: true });
+}
+
+const missingToolFixture = preparationFixture();
+try {
+  fs.rmSync(path.join(missingToolFixture.repositoryRoot, 'node_modules', '@vscode', 'vsce'), { recursive: true, force: true });
+  const missingTool = prepareCandidate({
+    repositoryRoot: missingToolFixture.repositoryRoot,
+    loadBuildInputs: () => missingToolFixture.inputs,
+    runBuilder: fakeBuilder,
+    clock: () => new Date('2026-10-22T13:30:00Z'),
+    idFactory: () => 'missing-tool',
+    temporaryRoot: missingToolFixture.repositoryRoot
+  });
+  assert.equal(missingTool.outcome, 'failed-preflight');
+  assert.match(missingTool.error, /Pinned @vscode\/vsce package metadata/);
+  assert.equal(missingTool.candidateId, null, 'missing tool fails before allocating an archive attempt');
+  cases += 3;
+} finally {
+  fs.rmSync(missingToolFixture.repositoryRoot, { recursive: true, force: true });
+}
+
+const copyFailureFixture = preparationFixture();
+try {
+  const partialCopy = prepareCandidate({
+    repositoryRoot: copyFailureFixture.repositoryRoot,
+    loadBuildInputs: () => copyFailureFixture.inputs,
+    runBuilder: fakeBuilder,
+    copyCandidate: (source, target) => {
+      const bytes = fs.readFileSync(source);
+      fs.writeFileSync(target, bytes.subarray(0, 10), { flag: 'wx' });
+      throw new Error('injected partial copy failure');
+    },
+    clock: () => new Date('2026-10-22T14:00:00Z'),
+    idFactory: () => 'copy-failure',
+    temporaryRoot: copyFailureFixture.repositoryRoot
+  });
+  assert.equal(partialCopy.outcome, 'failed-retained-attempt');
+  assert.equal(fs.statSync(partialCopy.vsixPath).size, 10);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(partialCopy.candidateDirectory, 'candidate.json'), 'utf8')).preparation.verified, false);
+  cases += 3;
+} finally {
+  fs.rmSync(copyFailureFixture.repositoryRoot, { recursive: true, force: true });
+}
+
+const metadataFailureFixture = preparationFixture();
+try {
+  const metadataFailure = prepareCandidate({
+    repositoryRoot: metadataFailureFixture.repositoryRoot,
+    loadBuildInputs: () => metadataFailureFixture.inputs,
+    runBuilder: fakeBuilder,
+    clock: () => new Date('2026-10-22T15:00:00Z'),
+    idFactory: () => 'metadata-failure',
+    temporaryRoot: metadataFailureFixture.repositoryRoot,
+    hooks: { beforePersist: () => { throw new Error('injected metadata persistence failure'); } }
+  });
+  assert.equal(metadataFailure.outcome, 'partial-unverified');
+  assert.equal(metadataFailure.verified, false);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(metadataFailure.candidateDirectory, 'candidate.json'), 'utf8')).preparation.verified, false);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(metadataFailure.candidateDirectory, 'status.json'), 'utf8')).publication.outcome, 'not published');
+  const inspectedPartial = inspectCandidate({ candidateDirectory: metadataFailure.candidateDirectory, mode: 'historical' });
+  assert.equal(inspectedPartial.artifactVerified, true);
+  assert.equal(inspectedPartial.verified, false, 'complete preparation metadata is required for candidate verified state');
+  cases += 6;
+} finally {
+  fs.rmSync(metadataFailureFixture.repositoryRoot, { recursive: true, force: true });
+}
+
+const pathFixture = preparationFixture();
+try {
+  assert.throws(() => safePath(path.join(pathFixture.repositoryRoot, '..', 'outside'), { directory: true }), /cannot be safely inspected|does not exist|Path/);
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'ukho outside releases '));
+  try {
+    const escaped = prepareCandidate({
+      repositoryRoot: pathFixture.repositoryRoot,
+      archiveRoot: outside,
+      loadBuildInputs: () => pathFixture.inputs,
+      runBuilder: fakeBuilder,
+      temporaryRoot: pathFixture.repositoryRoot
+    });
+    assert.equal(escaped.outcome, 'failed-preflight');
+    assert.match(escaped.error, /inside the repository root/);
+    assert.equal(escaped.candidateId, null);
+    cases += 1;
+  } finally { fs.rmSync(outside, { recursive: true, force: true }); }
+  const linkedReleases = path.join(pathFixture.repositoryRoot, 'LinkedReleases');
+  let symlinkAvailable = true;
+  try { fs.symlinkSync(path.join(pathFixture.repositoryRoot, 'Releases'), linkedReleases, 'junction'); }
+  catch (error) { symlinkAvailable = false; if (!['EPERM', 'EACCES', 'ERROR_PRIVILEGE_NOT_HELD'].includes(error.code)) throw error; }
+  if (symlinkAvailable) {
+    const linked = prepareCandidate({
+      repositoryRoot: pathFixture.repositoryRoot,
+      archiveRoot: linkedReleases,
+      loadBuildInputs: () => pathFixture.inputs,
+      runBuilder: fakeBuilder,
+      temporaryRoot: pathFixture.repositoryRoot
+    });
+    assert.equal(linked.outcome, 'failed-preflight');
+    assert.match(linked.error, /symbolic links|inside the repository root/);
+    cases += 1;
+  }
+} finally {
+  fs.rmSync(pathFixture.repositoryRoot, { recursive: true, force: true });
+}
+
+function releaseInputFixture() {
+  const repositoryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ukho release inputs with spaces '));
+  const currentManifest = { ...manifest, version: '1.0.0', devDependencies: { '@vscode/vsce': '3.9.2' } };
+  const currentLock = {
+    name: currentManifest.name, version: currentManifest.version, lockfileVersion: 3, requires: true,
+    packages: { '': { name: currentManifest.name, version: currentManifest.version, devDependencies: { '@vscode/vsce': '3.9.2' } }, 'node_modules/@vscode/vsce': { version: '3.9.2', integrity: 'fixture' } }
+  };
+  fs.writeFileSync(path.join(repositoryRoot, 'package.json'), `${JSON.stringify(currentManifest, null, 2)}\n`);
+  fs.writeFileSync(path.join(repositoryRoot, 'package-lock.json'), `${JSON.stringify(currentLock, null, 2)}\n`);
+  fs.writeFileSync(path.join(repositoryRoot, 'CHANGELOG.md'), fs.readFileSync(path.join(__dirname, '..', 'CHANGELOG.md')));
+  const changelogText = fs.readFileSync(path.join(repositoryRoot, 'CHANGELOG.md'), 'utf8');
+  const start = changelogText.indexOf('### 1.0.0 review candidate');
+  const end = changelogText.indexOf('\n### ', start + 1);
+  const expectedPendingNotes = changelogText.slice(start, end);
+  const version = '2.4.8';
+  const proposedNotes = `### ${version} review candidate\n\n- Fixture release notes.\n- The version-derived package is ${currentManifest.name}-${version}.vsix.\n`;
+  return { repositoryRoot, currentManifest, currentLock, changelogText, expectedPendingNotes, proposedNotes, version };
+}
+
+function releaseSnapshot(fixture) {
+  return ['package.json', 'package-lock.json', 'CHANGELOG.md'].map((name) => fs.readFileSync(path.join(fixture.repositoryRoot, name)));
+}
+
+for (const confirm of [undefined, () => false, () => null]) {
+  const fixture = releaseInputFixture();
+  try {
+    const before = releaseSnapshot(fixture);
+    const update = applyConfirmedReleaseInputs({ ...fixture, confirm });
+    assert.equal(update.packagingAllowed, false);
+    assert.ok(releaseSnapshot(fixture).every((bytes, index) => bytes.equals(before[index])));
+    cases += 2;
+  } finally { fs.rmSync(fixture.repositoryRoot, { recursive: true, force: true }); }
+}
+
+const driftReleaseFixture = releaseInputFixture();
+try {
+  const update = applyConfirmedReleaseInputs({
+    ...driftReleaseFixture,
+    confirm: () => {
+      fs.appendFileSync(path.join(driftReleaseFixture.repositoryRoot, 'CHANGELOG.md'), '\nEngineer edit during confirmation.\n');
+      return true;
+    }
+  });
+  assert.equal(update.outcome, 'preimage-drift');
+  assert.equal(update.packagingAllowed, false);
+  assert.match(fs.readFileSync(path.join(driftReleaseFixture.repositoryRoot, 'CHANGELOG.md'), 'utf8'), /Engineer edit during confirmation/);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(driftReleaseFixture.repositoryRoot, 'package.json'), 'utf8')).version, '1.0.0');
+  cases += 3;
+} finally { fs.rmSync(driftReleaseFixture.repositoryRoot, { recursive: true, force: true }); }
+
+const successfulReleaseFixture = releaseInputFixture();
+try {
+  const beforeManifest = JSON.parse(fs.readFileSync(path.join(successfulReleaseFixture.repositoryRoot, 'package.json'), 'utf8'));
+  const beforeLock = JSON.parse(fs.readFileSync(path.join(successfulReleaseFixture.repositoryRoot, 'package-lock.json'), 'utf8'));
+  const update = applyConfirmedReleaseInputs({
+    ...successfulReleaseFixture,
+    confirm: (proposal) => {
+      assert.equal(proposal.version, successfulReleaseFixture.version);
+      assert.equal(proposal.changes[3].before, successfulReleaseFixture.expectedPendingNotes);
+      assert.equal(proposal.changes[3].after, successfulReleaseFixture.proposedNotes);
+      assert.deepEqual(proposal.changes.map((change) => change.field), [
+        'version', 'version', 'packages[""].version', 'selected pending Unreleased notes'
+      ]);
+      return true;
+    }
+  });
+  const afterManifest = JSON.parse(fs.readFileSync(path.join(successfulReleaseFixture.repositoryRoot, 'package.json'), 'utf8'));
+  const afterLock = JSON.parse(fs.readFileSync(path.join(successfulReleaseFixture.repositoryRoot, 'package-lock.json'), 'utf8'));
+  const afterChangelog = fs.readFileSync(path.join(successfulReleaseFixture.repositoryRoot, 'CHANGELOG.md'), 'utf8');
+  assert.equal(update.outcome, 'updated-and-validated');
+  assert.equal(update.packagingAllowed, true);
+  assert.equal(afterManifest.version, successfulReleaseFixture.version);
+  assert.equal(afterLock.version, successfulReleaseFixture.version);
+  assert.equal(afterLock.packages[''].version, successfulReleaseFixture.version);
+  const expectedManifest = { ...beforeManifest, version: successfulReleaseFixture.version };
+  const expectedLock = { ...beforeLock, version: successfulReleaseFixture.version, packages: { ...beforeLock.packages, '': { ...beforeLock.packages[''], version: successfulReleaseFixture.version } } };
+  assert.deepEqual(afterManifest, expectedManifest);
+  assert.deepEqual(afterLock, expectedLock);
+  assert.equal(afterChangelog, successfulReleaseFixture.changelogText.replace(successfulReleaseFixture.expectedPendingNotes, successfulReleaseFixture.proposedNotes));
+  cases += 7;
+} finally { fs.rmSync(successfulReleaseFixture.repositoryRoot, { recursive: true, force: true }); }
+
+const partialReleaseFixture = releaseInputFixture();
+try {
+  const update = applyConfirmedReleaseInputs({
+    ...partialReleaseFixture,
+    confirm: () => true,
+    replaceFile: (item) => {
+      if (item.name === 'lock') throw new Error('injected second-file replacement failure');
+      fs.renameSync(item.temp, item.file);
+    }
+  });
+  assert.equal(update.outcome, 'partial');
+  assert.equal(update.packagingAllowed, false);
+  assert.equal(update.changed.includes('manifest'), true);
+  assert.equal(update.changed.includes('lock'), false);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(partialReleaseFixture.repositoryRoot, 'package.json'), 'utf8')).version, partialReleaseFixture.version);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(partialReleaseFixture.repositoryRoot, 'package-lock.json'), 'utf8')).version, '1.0.0');
+  assert.deepEqual(fs.readdirSync(partialReleaseFixture.repositoryRoot).filter((name) => name.endsWith('.release-input.tmp')), []);
+  let builderCalled = false;
+  const blocked = prepareAfterReleaseInputUpdate({
+    releaseInputResult: update,
+    runBuilder: () => { builderCalled = true; return { status: 0 }; }
+  });
+  assert.equal(blocked.outcome, 'failed-preflight');
+  assert.equal(blocked.verified, false);
+  assert.equal(builderCalled, false, 'partial release-input updates cannot start packaging');
+  cases += 9;
+} finally { fs.rmSync(partialReleaseFixture.repositoryRoot, { recursive: true, force: true }); }
+
+assert.equal(require('../package.json').scripts['prepare-vsix'], 'node scripts/prepare-vsix.cjs prepare');
+assert.equal(require('../package.json').scripts['inspect-vsix-candidate'], 'node scripts/prepare-vsix.cjs inspect');
+assert.deepEqual(validatePreparationArguments(['prepare']), { command: 'prepare' });
+assert.deepEqual(validatePreparationArguments(['inspect', '--candidate', 'Releases/2026-10-22/120000Z-id']), {
+  command: 'inspect', candidateDirectory: 'Releases/2026-10-22/120000Z-id'
+});
+assert.throws(() => validatePreparationArguments(['inspect', '--latest']), /Usage/);
+assert.throws(() => validatePreparationArguments(['status', '--write']), /Usage/);
+assert.equal(require('../package.json').scripts.package, 'node scripts/package-vsix.cjs', 'legacy no-argument package interface remains unchanged');
+cases += 6;
+
+console.log(`Passed ${cases} VSIX verification, packaging, candidate preparation, and release-input fixture cases.`);
