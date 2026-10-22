@@ -141,7 +141,13 @@ const executionPaths = {
   implementationReport: '.github/skills/safe-implementation/implementation-report-template.md',
   reviewTemplate: '.github/skills/code-review/review-report-template.md',
   assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
-  readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md', wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md'
+  planAgent: '.github/agents/plan.agent.md', checkpointSkill: '.github/skills/local-git-checkpoints/SKILL.md',
+  codeReview: '.github/skills/code-review/SKILL.md', assuranceSkill: '.github/skills/rpir-stage-assurance/SKILL.md',
+  planPrompt: '.github/prompts/plan.prompt.md', implementPrompt: '.github/prompts/implement.prompt.md',
+  remediatePrompt: '.github/prompts/remediate-review.prompt.md', reviewPrompt: '.github/prompts/review.prompt.md',
+  lifecycleInstruction: '.github/instructions/lifecycle-records.instructions.md',
+  readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md', wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md',
+  wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', wikiMaintenance: 'docs/Wiki/maintain-the-toolkit.md'
 };
 const executionSources = Object.fromEntries(Object.entries(executionPaths).map(([key, relative]) => [key, readArtifact(relative)]));
 assert.doesNotThrow(() => contracts.checkIncrementalRpirContract(executionSources));
@@ -207,7 +213,7 @@ for (const [label, key, mutate, diagnostic] of [
     'permission or consequential helper changes require reassessment', 'permission or consequential helper changes need no reassessment'),
   /Checkpoint checklist authorization must cover approved Plans/],
   ['duplicate-grant requirement reintroduced in validation checklist', 'validationChecklist', (text) => replaceOnce(text,
-    'Plan-covered Git-metadata effects', 'separately granted Git-metadata effects'),
+    'Do not demand duplicate grants for unchanged Plan-covered effects.', 'Demand duplicate grants for unchanged Plan-covered effects.'),
   /Implementation checklist must use Plan-covered authority/],
   ['Review checkpoint omits Plan coverage', 'reviewAgent', (text) => replaceOnce(text,
     'only when an applicable approved Plan explicitly covers that record and phase', 'only when a checkpoint is useful'),
@@ -731,6 +737,168 @@ assertRejected('broken ADR resource link', () => contracts.checkLocalLinks(
 assertRejected('escaping ADR resource link', () => contracts.checkLocalLinks(
   adrPaths.skill, '[outside](../../../../README.md)'
 ));
+
+// Expected checkpoint planning is an authored owner contract, not a runtime
+// arbitrary-Plan validation service. Each mutation is exact-once and must fail
+// its own diagnostic; keep the independent Research/architecture tests above.
+function rejectCheckpoint(label, key, target, replacement, owner, diagnostic) {
+  assertRejected(label, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, [key]: replaceOnce(executionSources[key], target, replacement)
+  }), (error) => error.contractId === 'RPIR-CHECKPOINT-001' &&
+    error.message === `${owner}: ${diagnostic}`);
+}
+const planningDiagnostic = 'require bounded prospective planning and meaningful per-item exceptions without granting Git authority';
+const entryDiagnostic = 'each detailed item needs a useful checkpoint or concrete justified exception field';
+const accountingDiagnostic = 'account for each planned versus actual boundary without retrospective Plan exceptions or commit-count acceptance';
+const runtimeDiagnostic = 'preserve effect-specific runtime safeguards and honest dispositions';
+const entry = executionSources.planTemplate.split('\n').find((line) => line.startsWith('**Commit plan:**'));
+assert.ok(entry, 'Plan template requires an owned commit field');
+for (const replacement of ['', '**Commit plan:**', '**Commit plan:** `<No commits for any Work Item.>`',
+  '**Commit plan:** `<Combine everything because it is simpler.>`']) {
+  rejectCheckpoint(`missing/empty/generic blanket item field: ${replacement}`, 'planTemplate', entry, replacement,
+    'planTemplate', entryDiagnostic);
+}
+const exceptionParts = ['actual constraint/reason', 'affected IDs', 'validation/dependency consequence',
+  'later checkpoint boundary if one exists', 'why the normal boundary is unsuitable'];
+for (const target of ['strategy reference', 'normal post-validation checkpoint boundary', 'coherent content and purpose', ...exceptionParts]) {
+  rejectCheckpoint(`template item independently loses ${target}`, 'planTemplate', entry,
+    replaceOnce(entry, target, 'omitted'), 'planTemplate', entryDiagnostic);
+}
+const missingEntry = replaceOnce(executionSources.planTemplate, entry, '**Commit plan:**');
+for (const [label, planTemplate, readme] of [
+  ['wrong section', replaceOnce(missingEntry, '## Execution guidance and validation', `## Execution guidance and validation\n\n${entry}`), executionSources.readme],
+  ['history', `${missingEntry}\n\n## Historical example\n\n${entry}`, executionSources.readme],
+  ['wrong owner', missingEntry, `${executionSources.readme}\n\n${entry}`]
+]) assertRejected(`item-entry ${label} decoy`, () => contracts.checkIncrementalRpirContract({
+  ...executionSources, planTemplate, readme
+}), (error) => error.contractId === 'RPIR-CHECKPOINT-001' && error.message === `planTemplate: ${entryDiagnostic}`);
+// A second detailed item cannot borrow the first item's intact entry.
+assertRejected('second detailed item lacks checkpoint entry', () => contracts.checkIncrementalRpirContract({
+  ...executionSources, planTemplate: replaceOnce(executionSources.planTemplate, '## Execution guidance and validation',
+    '### Work Item 2: coupled tests\n\n**Validation:** both required checks pass.\n\n## Execution guidance and validation')
+}), (error) => error.contractId === 'RPIR-CHECKPOINT-001' && error.message === `planTemplate: ${entryDiagnostic}`);
+
+for (const [key, anchor] of [
+  ['repository', '- **Expected checkpoint planning, conditional execution:**'],
+  ['core', 'Every prospective Plan includes'], ['planAgent', 'Plan the deliverable'],
+  ['planning', 'Specify the approved outcome'], ['checkpointSkill', 'Every prospective Plan must include'],
+  ['checklist', 'Require one explicit bounded strategy']
+]) {
+  const paragraph = executionSources[key].split(/\n\s*\n/).find((part) => part.startsWith(anchor));
+  assert.ok(paragraph, `${key} planning paragraph must exist`);
+  for (const target of ['actual constraint/reason', 'affected IDs', 'validation/dependency consequence',
+    'later boundary if one exists', 'why the normal boundary is unsuitable']) {
+    rejectCheckpoint(`${key} independently loses exception ${target}`, key, paragraph,
+      replaceOnce(paragraph, target, 'omitted'), key, planningDiagnostic);
+  }
+  const weakened = replaceOnce(paragraph, 'explicit bounded', 'bounded');
+  rejectCheckpoint(`${key} missing explicit strategy requirement`, key, paragraph,
+    weakened, key, planningDiagnostic);
+  assertRejected(`${key} historical decoy cannot restore explicit strategy requirement`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, [key]: `${replaceOnce(executionSources[key], paragraph, weakened)}\n\n## Historical planning example, not operating policy\n\n${paragraph}`
+  }), (error) => error.contractId === 'RPIR-CHECKPOINT-001' && error.message === `${key}: ${planningDiagnostic}`);
+  for (const contradiction of ['Checkpoint planning is optional.', 'Git strategy remains optional.',
+    'Work Items may omit the commit entry.', 'A generic blanket exception is sufficient.',
+    'Historical prohibitions may be ignored.']) {
+    rejectCheckpoint(`${key} additive contradiction with positive rule intact: ${contradiction}`, key,
+      paragraph, `${paragraph}\n\n${contradiction}`, key,
+      'contradictory optional checkpoint planning or prohibition bypass');
+  }
+}
+
+const combination = `**Commit plan:** Strategy reference G1: normal post-validation checkpoint boundary after WI1 is deferred to WI2; coherent content and purpose are the contract change plus coupled regression tests. This specific justified combination/deferral/no-commit exception has actual constraint/reason: WI1 changes a contract that WI2's fixtures must consume, so separate snapshots fail required checks; affected IDs: WI1 and WI2; validation/dependency consequence: neither is independently validated until both contract entries pass together; later checkpoint boundary if one exists: immediately after WI2 validation before unrelated WI3; why the normal boundary is unsuitable: WI1 alone would preserve a knowingly broken contract/test snapshot.`;
+// This positive illustrates a useful exception, not proof that prose keywords
+// establish its truth. Manually reconcile its IDs, dependency and later gate.
+for (const planTemplate of [
+  replaceOnce(executionSources.planTemplate, entry, combination),
+  replaceOnce(executionSources.planTemplate, entry, replaceOnce(entry, 'coherent content and purpose', 'coherent content/purpose')),
+  replaceOnce(executionSources.planTemplate, entry, entry.replace('coherent content and purpose', 'coherent content and purpose (policy, tests and directly related docs together)')),
+  replaceOnce(executionSources.planTemplate, 'Every prospective Plan must state one explicit bounded', 'Every prospective Plan must state one explicit bounded and reviewable'),
+  `${executionSources.planTemplate}\n\n## Historical evidence, not prospective policy\n\nA historical prohibition supplies no Git authority. Checkpoint planning is optional in this quoted historical example only.`
+]) {
+  assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources, planTemplate }));
+  cases += 1;
+}
+for (const [key, target, replacement] of [
+  ['planAgent', 'Each detailed Work Item must reference that strategy', 'Every detailed Work Item must reference that strategy'],
+  ['checkpointSkill', 'Every detailed Work Item references it', 'Each detailed Work Item references it'],
+  ['checkpointSkill', 'coherent content and purpose', 'coherent content/purpose']
+]) {
+  assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({
+    ...executionSources, [key]: replaceOnce(executionSources[key], target, replacement)
+  }));
+  cases += 1;
+}
+for (const [key, anchor] of [
+  ['implementationReport', '- **Planned-versus-actual checkpoint accounting:**'],
+  ['reviewTemplate', '- **Planned-versus-actual boundary assessment:**'],
+  ['validationChecklist', '- [ ] Reconcile planned versus actual'],
+  ['implementAgent', 'Reconcile the inspected Plan']
+]) {
+  const owned = executionSources[key].split('\n').find((line) => line.startsWith(anchor));
+  assert.ok(owned);
+  for (const target of ['before unrelated work', key === 'implementAgent'
+    ? 'substantive approved Plan content to invent retrospective' : 'retrospective substantive']) {
+    rejectCheckpoint(`${key} boundary evidence loses ${target}`, key, owned,
+      replaceOnce(owned, target, 'omitted'), key, accountingDiagnostic);
+  }
+  for (const target of ['actual constraint/reason', 'affected IDs', 'validation/dependency consequence', 'later boundary if one exists']) {
+    rejectCheckpoint(`${key} departure loses ${target}`, key, owned,
+      replaceOnce(owned, target, 'omitted'), key,
+      'assess each departure reason, IDs, validation consequence and later boundary');
+  }
+}
+for (const [owner, target] of [
+  ['preflight', 'incidental index refresh/cache writes'],
+  ['preflight', 'Unknown, changed or incompatible consequential effects stop that command before execution'],
+  ['applicability', 'Skipped — not applicable'], ['applicability', 'Skipped — no eligible changes'],
+  ['applicability', 'Unavailable / unresolved'], ['applicability', 'Do not call this a verified no-repository skip'],
+  ['authorization', 'A real platform denial stops the affected action and is never bypassed through another role.'],
+  ['candidate', 'unrelated staged content exists'], ['candidate', 'partial staging/same-file ownership is ambiguous'],
+  ['candidate', 'validation actually applies to the staged snapshot'], ['candidate', 'HEAD/index drift'],
+  ['candidate', 'if drift occurs, stop and re-inspect'], ['candidate', 'source-read-only in every phase'],
+  ['candidate', 'stop before invoking a source-mutating helper'], ['candidate', 'Do not disable a required hook'],
+  ['candidate', 'Never bypass hooks/signing'], ['candidate', 'invent identity/legal signoff'],
+  ['candidate', 'Remote/network effects are outside this checkpoint capability'],
+  ['reconciliation', 'Only after the complete candidate and relevant checks are supported and state remains current'],
+  ['reconciliation', 'A command success alone does not verify a commit'],
+  ['reconciliation', 'If completion is uncertain, reconcile'], ['evidence', 'No commit verified'],
+  ['evidence', 'Commit verified with unexpected effects'], ['evidence', 'Completion uncertain'],
+  ['evidence', 'chronology unverified']
+]) {
+  // Isolate the actual owner occurrence when outcome labels also appear in §6.
+  const headings = { preflight: '## Prospective Plan coverage', applicability: '## 1. Decide whether a checkpoint applies',
+    authorization: '## 3. Bind authorization to the approved Plan', candidate: '## 4. Inspect and preserve the candidate',
+    reconciliation: '## 5. Append and reconcile; never assume success', evidence: '## 6. Report evidence without lifecycle claims' };
+  const start = executionSources.checklist.indexOf(headings[owner]);
+  const end = executionSources.checklist.indexOf('\n## ', start + headings[owner].length);
+  const owned = executionSources.checklist.slice(start, end < 0 ? undefined : end);
+  rejectCheckpoint(`runtime ${owner} loses ${target}`, 'checklist', owned,
+    replaceOnce(owned, target, 'safeguard omitted'), `checklist ${owner}`, runtimeDiagnostic);
+}
+
+for (const [key, boundary] of [
+  ['planTemplate', '## Planned work'], ['implementAgent', 'Before every engineer-facing question,'],
+  ['reviewAgent', 'Before every engineer-facing question,'], ['safe', '## Outputs'],
+  ['validationChecklist', '## Read-only Validation Worker'], ['implementationReport', '## Identity, direct lineage and next action'],
+  ['reviewTemplate', '## Findings'], ['codeReview', 'Return cited, severity-ranked findings'],
+  ['assuranceSkill', 'Do not edit, run commands, delegate, persist records'], ['assurance', '## Stage-specific outcome'],
+  ['readme', 'Plan, Implement and Review retain contextual material clarification'], ['wikiRpir', '## Canonical references'],
+  ['wikiEvidence', '## Canonical references'], ['wikiCatalogue', '## Canonical references'],
+  ['wikiMaintenance', '## Canonical references'], ['planPrompt', '## Process'],
+  ['implementPrompt', '## Process'], ['reviewPrompt', '## Process'],
+  ['lifecycleInstruction', '## Validation boundaries']
+]) {
+  // Insert inside the relevant normative section, not before the next heading
+  // for catalogue/maintenance whose Skills/diagnostic sections end earlier.
+  const target = key === 'wikiCatalogue'
+    ? '| Convert requirements and evidence into an implementation plan'
+    : key === 'wikiMaintenance' ? 'The retained [archive-boundary fixture suite]' : boundary;
+  for (const contradiction of ['Checkpoint planning is optional.', 'A generic blanket exception is sufficient.']) {
+    rejectCheckpoint(`${key} additive optional-planning contradiction`, key, target,
+      `${contradiction}\n\n${target}`, key, 'contradictory optional checkpoint planning or prohibition bypass');
+  }
+}
 
 const runnerPath = agentPath('Script Runner');
 const runner = agents.get(runnerPath);

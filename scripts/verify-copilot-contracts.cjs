@@ -729,6 +729,188 @@ function requireOrderedLoop(text, start, markerRule, diagnostic) {
   ].join('\\s*'), 'i')], diagnostic);
 }
 
+// Bounded authored-contract checks only. These selectors do not parse consumer
+// Plans, judge exception truth, or establish runtime Git/agent behaviour.
+function requireCheckpointRule(text, patterns, owner, rule) {
+  if (patterns.some((pattern) => !pattern.test(text))) {
+    fail(`${owner}: ${rule}`, 'RPIR-CHECKPOINT-001');
+  }
+}
+
+function checkExpectedCheckpointPlanning(source) {
+  const planningOwners = {
+    repository: paragraph(section(source.repository, '## Lifecycle authority and transitions'), '- **Expected checkpoint planning, conditional execution:**'),
+    core: paragraph(section(source.core, '## Conditional local Git checkpoints'), 'Every prospective Plan'),
+    planAgent: paragraph(coordinatorBody(source.planAgent, 'Plan'), 'Plan the deliverable'),
+    planning: paragraph(section(source.planning, '## Procedure'), 'Specify the approved outcome'),
+    checkpointSkill: paragraph(source.checkpointSkill, 'Every prospective Plan'),
+    checklist: section(source.checklist, '## Prospective Plan coverage')
+  };
+  const exceptionFields = [
+    /actual constraint\/reason/i, /affected IDs/i, /validation\/dependency consequence/i,
+    /later (?:checkpoint )?boundary if one exists/i, /why the normal boundary is unsuitable/i
+  ];
+  for (const [owner, text] of Object.entries(planningOwners)) {
+    requireCheckpointRule(text, [
+      /(?:Every prospective Plan|Require one)[^.!?\n]*explicit bounded/i,
+      /(?:Every|Each) detailed Work Item[^.!?\n]*(?:referenc|strategy)/i,
+      /normal post-validation checkpoint boundary/i, /coherent content(?: and |\/)purpose/i,
+      /specific justified combination/i, /deferral/i, /no-commit exception/i,
+      ...exceptionFields,
+      /empty heading/i, /generic exemption/i, /unexplained blanket/i,
+      /historical/i, /(?:no Git authority|never supplies Git authority)/i
+    ], owner, 'require bounded prospective planning and meaningful per-item exceptions without granting Git authority');
+  }
+
+  const templateStrategy = field(section(source.planTemplate, '## Outcome and boundaries'), 'Local Git checkpoint strategy');
+  requireCheckpointRule(templateStrategy, [
+    /Every prospective Plan must state one explicit bounded/i,
+    /stable reference/i, /Each detailed item needs the commit-plan entry/i
+  ], 'planTemplate', 'require one strategy and an entry for every detailed item');
+  const details = section(source.planTemplate, '## Detailed work items');
+  const items = details.split(/^### Work Item /m).slice(1);
+  requireCheckpointRule(details, [/Add a matching `### Work Item N` section for each register row/],
+    'planTemplate', 'keep register and detailed item identities aligned');
+  if (!items.length) fail('planTemplate: missing detailed checkpoint entry', 'RPIR-CHECKPOINT-001');
+  for (const item of items) {
+    const entry = item.split('\n').find((line) => line.startsWith('**Commit plan:**')) || '';
+    requireCheckpointRule(entry, [
+      /strategy reference/i, /normal post-validation checkpoint boundary/i,
+      /coherent content(?: and |\/)purpose/i, /specific justified combination\/deferral\/no-commit exception/i,
+      ...exceptionFields
+    ], 'planTemplate', 'each detailed item needs a useful checkpoint or concrete justified exception field');
+  }
+
+  const accountingOwners = {
+    core: paragraph(section(source.core, '## Conditional local Git checkpoints'), 'Every prospective Plan'),
+    checkpointSkill: paragraph(source.checkpointSkill, 'Coordinators propose'),
+    checklist: paragraph(section(source.checklist, '## 6. Report evidence without lifecycle claims'), 'At every expected boundary'),
+    implementAgent: paragraph(coordinatorBody(source.implementAgent, 'Implement'), 'Reconcile the inspected Plan'),
+    safe: section(source.safe, '## Execution, validation and record evidence'),
+    validationChecklist: section(source.validationChecklist, '## Evidence, records and independent review').split('\n')
+      .find((line) => line.startsWith('- [ ] Reconcile planned versus actual')) || '',
+    implementationReport: field(section(source.implementationReport, '## Execution and review evidence'), 'Planned-versus-actual checkpoint accounting'),
+    reviewAgent: paragraph(coordinatorBody(source.reviewAgent, 'Review'), 'Assess checkpoint planning'),
+    codeReview: section(source.codeReview, '### Checkpoint planning and boundary assessment'),
+    reviewTemplate: field(section(source.reviewTemplate, '## Disposition and comparison'), 'Planned-versus-actual boundary assessment'),
+    assuranceSkill: section(source.assuranceSkill, '### Checkpoint coverage and accounting'),
+    assurance: section(source.assurance, '## Delivery and material boundaries').split('\n')
+      .find((line) => line.startsWith('- [ ] Implement/Review compare')) || ''
+  };
+  for (const [owner, text] of Object.entries(accountingOwners)) {
+    requireCheckpointRule(text, [
+      /planned(?: versus |-|‑)actual|planned-versus-actual|planned strategy[^.!?\n]*actual disposition/i,
+      /(?:every|each) expected (?:Work Item )?boundary/i, /before unrelated work/i,
+      /(?:actual disposition evidence|actual disposition with evidence|disposition evidence|actual evidence|verified checkpoint evidence)/i,
+      /(?:retrospective substantive|substantive[^.!?\n]*retrospective)/i,
+      /commit(?:-| )count[^.!?\n]*technical acceptance|not commit count as technical acceptance/i
+    ], owner, 'account for each planned versus actual boundary without retrospective Plan exceptions or commit-count acceptance');
+  }
+  for (const owner of ['implementAgent', 'safe', 'validationChecklist', 'implementationReport', 'reviewAgent', 'codeReview', 'reviewTemplate', 'assuranceSkill']) {
+    requireCheckpointRule(accountingOwners[owner], [
+      /actual constraint\/reason/i, /affected IDs/i, /validation\/dependency consequence/i,
+      /later boundary if one exists/i, /why (?:the )?normal(?: boundary)? (?:is|was) unsuitable/i
+    ], owner, 'assess each departure reason, IDs, validation consequence and later boundary');
+  }
+
+  const runtimeOwners = {
+    preflight: paragraph(section(source.checklist, '## Prospective Plan coverage'), 'Before every Git command,'),
+    applicability: section(source.checklist, '## 1. Decide whether a checkpoint applies'),
+    authorization: section(source.checklist, '## 3. Bind authorization to the approved Plan'),
+    candidate: section(source.checklist, '## 4. Inspect and preserve the candidate'),
+    reconciliation: section(source.checklist, '## 5. Append and reconcile; never assume success'),
+    evidence: section(source.checklist, '## 6. Report evidence without lifecycle claims')
+  };
+  for (const [owner, patterns] of Object.entries({
+    preflight: [/incidental index refresh\/cache writes/i, /Unknown, changed or incompatible consequential effects stop that command before execution/i],
+    applicability: [/outside Git or uses another VCS[^\n]*Skipped — not applicable/i,
+      /no eligible change remains[^\n]*Skipped — no eligible changes/i,
+      /Git is missing\/inaccessible[^\n]*membership is ambiguous[^\n]*Unavailable \/ unresolved/i,
+      /Do not call this a verified no-repository skip/i, /Do not create an empty commit[^\n]*force-add/i],
+    authorization: [/silent, prohibiting, or merely optional\/unapproved strategy does not authorize Git/i,
+      /real platform denial stops the affected action and is never bypassed/i],
+    candidate: [/unrelated staged content exists[^\n]*ownership is ambiguous/i,
+      /validation actually applies to the staged snapshot/i, /HEAD\/index drift/i,
+      /if drift occurs, stop and re-inspect/i, /source-read-only in every phase/i,
+      /stop before invoking a source-mutating helper/i, /Do not disable a required hook/i,
+      /Never bypass hooks\/signing[^\n]*invent identity\/legal signoff/i,
+      /Remote\/network effects are outside this checkpoint capability/i],
+    reconciliation: [/Only after the complete candidate and relevant checks are supported and state remains current/i,
+      /command success alone does not verify a commit/i,
+      /If completion is uncertain, reconcile[^\n]*before retry/i],
+    evidence: [/actual ID|ID, parent/i, /No commit verified/i, /Commit verified with unexpected effects/i,
+      /Completion uncertain/i, /chronology unverified/i, /static tests/i]
+  })) requireCheckpointRule(runtimeOwners[owner], patterns, `checklist ${owner}`, 'preserve effect-specific runtime safeguards and honest dispositions');
+
+  const userOwners = {
+    readme: section(source.readme, '### Expected checkpoint planning; conditional execution'),
+    wikiRpir: section(source.wikiRpir, '## Expected checkpoint planning; conditional execution'),
+    wikiEvidence: section(source.wikiEvidence, '### Expected checkpoint planning; conditional execution'),
+    wikiCatalogue: section(source.wikiCatalogue, '### Skills').split('\n')
+      .find((line) => line.includes('](../../.github/skills/local-git-checkpoints/SKILL.md)')) || '',
+    wikiMaintenance: section(source.wikiMaintenance, '### Diagnose and validate without packaging')
+  };
+  for (const [owner, text] of Object.entries(userOwners)) {
+    requireCheckpointRule(text, [
+      /Every prospective Plan[^.!?\n]*bounded strategy/i,
+      /every detailed Work Item[^.!?\n]*strategy reference/i,
+      /normal post-validation boundary/i, /coherent content\/purpose/i,
+      /specific justified exception/i, /planned versus actual[^.!?\n]*every expected boundary before unrelated work/i,
+      /retrospective substantive Plan exceptions/i,
+      /static[^.!?\n]*(?:not|cannot|do not)[^.!?\n]*(?:runtime|semantic)/i
+    ], owner, 'align required planning, conditional accounting and static/runtime limits');
+  }
+  const summaries = {
+    planPrompt: section(source.planPrompt, '## Constraints'),
+    implementPrompt: section(source.implementPrompt, '## Constraints'),
+    remediatePrompt: section(source.remediatePrompt, '## Constraints'),
+    reviewPrompt: section(source.reviewPrompt, '## Constraints'),
+    lifecycleInstruction: section(source.lifecycleInstruction, '## Stage schemas')
+  };
+  for (const owner of ['planPrompt', 'lifecycleInstruction']) {
+    requireCheckpointRule(summaries[owner], [
+      /every prospective Plan[^.!?\n]*explicit bounded/i,
+      /(?:each|every) detailed Work Item[^.!?\n]*strategy(?:-referenced| reference)/i,
+      /actual constraint\/reason/i, /affected IDs/i, /validation\/dependency consequence/i,
+      /historical/i, /no Git authority/i
+    ], owner, 'summarize required strategy, per-item exceptions and prohibition compatibility');
+  }
+  for (const owner of ['implementPrompt', 'remediatePrompt', 'reviewPrompt', 'lifecycleInstruction']) {
+    requireCheckpointRule(summaries[owner], [
+      /planned(?: versus |-|‑)actual|planned-versus-actual|every planned boundary/i,
+      /every expected (?:correction )?boundary|every planned boundary/i,
+      /before unrelated work/i, /actual disposition(?:\/exception)? evidence/i,
+      /retrospective substantive Plan exceptions|Do not backfill substantive exceptions/i,
+      /commit count is not technical acceptance|not commit count as technical acceptance/i
+    ], owner, 'summarize actual boundary evidence without substantive Plan backfill');
+  }
+  const scopes = {
+    ...planningOwners, ...accountingOwners, ...userOwners, ...summaries,
+    planAgent: coordinatorBody(source.planAgent, 'Plan'),
+    implementAgent: coordinatorBody(source.implementAgent, 'Implement'),
+    reviewAgent: coordinatorBody(source.reviewAgent, 'Review'),
+    planning: section(source.planning, '## Procedure'),
+    planTemplate: section(source.planTemplate, '## Outcome and boundaries') + details,
+    checklist: planningOwners.checklist + accountingOwners.checklist + runtimeOwners.authorization,
+    safe: section(source.safe, '## Execution, validation and record evidence'),
+    validationChecklist: section(source.validationChecklist, '## Capabilities and effects') +
+      section(source.validationChecklist, '## Evidence, records and independent review'),
+    implementationReport: section(source.implementationReport, '## Execution and review evidence'),
+    reviewTemplate: section(source.reviewTemplate, '## Disposition and comparison'),
+    assurance: section(source.assurance, '## Delivery and material boundaries'),
+    wikiCatalogue: section(source.wikiCatalogue, '### Skills'),
+    repository: section(source.repository, '## Lifecycle authority and transitions'),
+    core: section(source.core, '## Conditional local Git checkpoints'),
+    checkpointSkill: source.checkpointSkill.split('\n# Local Git checkpoints\n')[1] || ''
+  };
+  for (const [owner, text] of Object.entries(scopes)) {
+    if (/(?:checkpoint|commit|Git) (?:planning|strategy|plans?) (?:is|are|remains?) optional|(?:only when|if) (?:local )?commits are intended|(?:Work Items? may|may) omit (?:the |a )?(?:commit|checkpoint)[^.!?\n]*entry|generic (?:blanket )?(?:exception|prohibition) (?:is sufficient|satisfies)|(?:historical )?prohibitions? (?:may be ignored|grants? Git authority)/i.test(text)) {
+      fail(`${owner}: contradictory optional checkpoint planning or prohibition bypass`, 'RPIR-CHECKPOINT-001');
+    }
+    rejectDuplicateGrant(text, owner);
+  }
+}
+
 function checkIncrementalRpirContract(sources = {}) {
   const paths = {
     repository: '.github/copilot-instructions.md', core: '.github/skills/rpir-lifecycle-core/SKILL.md',
@@ -742,7 +924,13 @@ function checkIncrementalRpirContract(sources = {}) {
     implementationReport: '.github/skills/safe-implementation/implementation-report-template.md',
     reviewTemplate: '.github/skills/code-review/review-report-template.md',
     assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
-    readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md', wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md'
+    planAgent: '.github/agents/plan.agent.md', checkpointSkill: '.github/skills/local-git-checkpoints/SKILL.md',
+    codeReview: '.github/skills/code-review/SKILL.md', assuranceSkill: '.github/skills/rpir-stage-assurance/SKILL.md',
+    planPrompt: '.github/prompts/plan.prompt.md', implementPrompt: '.github/prompts/implement.prompt.md',
+    remediatePrompt: '.github/prompts/remediate-review.prompt.md', reviewPrompt: '.github/prompts/review.prompt.md',
+    lifecycleInstruction: '.github/instructions/lifecycle-records.instructions.md',
+    readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md', wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md',
+    wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', wikiMaintenance: 'docs/Wiki/maintain-the-toolkit.md'
   };
   const source = Object.fromEntries(Object.entries(paths).map(([key, relative]) => [key, sources[key] ?? readText(relative)]));
 
@@ -795,15 +983,15 @@ function checkIncrementalRpirContract(sources = {}) {
   const planGuidance = between(source.planning, 'Specify the approved outcome', '\n## Limits');
   requireExecutionRule(planGuidance, [
     /bounded local staging\/append-only commit strategy/i,
-    /Approval of that inspected Plan includes its covered commits after `\/implement`/i,
+    /Approval of that inspected Plan includes only its covered commits after `\/implement`/i,
     /without a separate grant exchange/i,
-    /Normal cadence is a checkpoint after each completed eligible coherent Work Item/i,
+    /Normal cadence is a checkpoint after each completed eligible coherent(?: validated)? Work Item/i,
     /proactive consideration of earlier coherent validated Task boundaries/i,
     /Silent, prohibited or unapproved-option Plans do not authorize Git/i
   ], 'Planning guidance must require explicit bounded strategy and normal cadence without duplicate approval');
 
   requireExecutionRule(source.planTemplate, [
-    /Local Git checkpoint strategy, when intended/i, /repository\/worktree\/branch selection rule/i,
+    /\*\*Local Git checkpoint strategy:\*\*/i, /repository\/worktree\/branch selection rule/i,
     /Script Runner ownership/i, /Explicit approval of this inspected Plan authorizes only its covered commits after `\/implement`/i,
     /no separate grant exchange is needed/i, /after each completed Work Item/i,
     /earlier coherent validated Tasks/i, /Plan publication cannot authorize its own checkpoint or earlier Research effects/i
@@ -870,9 +1058,9 @@ function checkIncrementalRpirContract(sources = {}) {
 
   const implementationCapabilities = between(source.validationChecklist, '## Capabilities and effects', '\n## Evidence, records and independent review');
   requireExecutionRule(implementationCapabilities, [
-    /Plan-covered Git-metadata effects/i,
+    /Do not demand duplicate grants for unchanged Plan-covered effects/i,
     /verify the inspected approved Plan explicitly covers the bounded effect and phase/i,
-    /bind validation to the complete candidate/i,
+    /bind validation to the complete staged snapshot/i,
     /Only Script Runner performs the Git mutation/i
   ], 'Implementation checklist must use Plan-covered authority while retaining candidate and executor safeguards');
   rejectDuplicateGrant(implementationCapabilities, 'Implementation checklist capabilities');
@@ -893,10 +1081,10 @@ function checkIncrementalRpirContract(sources = {}) {
     /completion-to-save\/readback before unrelated later work/i, /observed late reconciliation/i,
     /unverified timing/i, /denied\/failed\/conflicting\/unverified saves as unsaved tracking/i,
   ], 'Implementation report marker field must distinguish completion timing and unsaved tracking');
-  const implementationCheckpointField = source.implementationReport.match(/^- \*\*Local Git checkpoint, if relevant:\*\*[^\n]*/m)?.[0] || '';
+  const implementationCheckpointField = field(section(source.implementationReport, '## Execution and review evidence'), 'Planned-versus-actual checkpoint accounting');
   requireExecutionRule(implementationCheckpointField, [
-    /expected Work Item and earlier coherent Task opportunities/i, /even when no commit occurred/i,
-    /missing commit is not by itself a technical delivery defect/i
+    /earlier coherent validated Task opportunities/i, /even with no commits/i,
+    /No commit-count technical acceptance gate/i
   ], 'Implementation report checkpoint field must assess opportunities and no-commit paths');
 
   const reviewCheckpointField = source.reviewTemplate.match(/^- \*\*Implementation range and checkpoint evidence:\*\*[^\n]*/m)?.[0] || '';
@@ -916,7 +1104,7 @@ function checkIncrementalRpirContract(sources = {}) {
     /expected checkpoint opportunities/i, /no silence-based pass or commit-count gate/i
   ], 'Stage assurance must distinguish observed timing, unknown evidence and checkpoint exceptions');
 
-  const readmeCheckpointSection = between(source.readme, '### Optional local Git checkpoints', '\nPlan, Implement and Review retain contextual material clarification');
+  const readmeCheckpointSection = section(source.readme, '### Expected checkpoint planning; conditional execution');
   requireExecutionRule(readmeCheckpointSection, [
     /approving that inspected Plan approves its covered commits after `\/implement`/i,
     /no separate grant exchange is needed/i, /after each completed Work Item/i,
@@ -928,8 +1116,8 @@ function checkIncrementalRpirContract(sources = {}) {
     /a final checked state is not proof of when it was saved/i
   ], 'README progress guidance must explain timely persistence and honest recovery');
 
-  const wikiRpirCheckpoint = between(source.wikiRpir, '## Optional local Git checkpoints', '\n## Canonical references');
-  const wikiEvidenceCheckpoint = between(source.wikiEvidence, '### Optional local Git checkpoints', '\n## Canonical references');
+  const wikiRpirCheckpoint = section(source.wikiRpir, '## Expected checkpoint planning; conditional execution');
+  const wikiEvidenceCheckpoint = section(source.wikiEvidence, '### Expected checkpoint planning; conditional execution');
   for (const [label, text] of [['RPIR Wiki', wikiRpirCheckpoint], ['lifecycle evidence Wiki', wikiEvidenceCheckpoint]]) {
     requireExecutionRule(text, [
       /after each completed Work Item/i, /earlier coherent validated Task/i,
@@ -942,6 +1130,7 @@ function checkIncrementalRpirContract(sources = {}) {
     /before moving to unrelated work/i, /persists only eligible existing markers/i,
     /disclose affected IDs(?: promptly)? as unsaved tracking/i, /parent-only failure or pause retains supported children/i
   ], 'RPIR Wiki progress summary must preserve completion-boundary tracking and recovery');
+  checkExpectedCheckpointPlanning(source);
   return true;
 }
 

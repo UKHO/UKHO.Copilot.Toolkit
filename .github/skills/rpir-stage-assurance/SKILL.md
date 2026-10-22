@@ -21,4 +21,10 @@ Provide independent, read-only advice on an actual working stage document, inspe
 
 ## Boundary
 
+### Checkpoint coverage and accounting
+
+Assess every prospective Plan for one explicit bounded strategy and every detailed Work Item for a strategy reference, normal post-validation boundary and coherent content/purpose, or a specific justified combination/deferral/no-commit exception under the [checkpoint capability](../local-git-checkpoints/SKILL.md). Exceptions identify actual constraint/reason, affected IDs, validation/dependency consequence, later boundary if one exists and why normal is unsuitable. Missing entries, empty headings, generic exemptions and unexplained blanket bans fail planning assessment; actual prohibitions, including historical Plans, still grant no Git authority. Do not invent future obstacles or require historical rewrites.
+
+For Implement and Review, reconcile planned versus actual accounting at every expected boundary before unrelated work, including consideration of earlier coherent validated Tasks and actual disposition evidence. Identify omissions and unjustified departures; runtime obstacles belong in fresh implementation evidence, not retrospective substantive approved-Plan exceptions. Preserve distinct runtime outcomes and safeguards. Assess observed timely handling, observed late/omitted handling or unverified chronology, never a silence/final-history/marker-based pass. Commit count is not technical acceptance; a supported no-commit disposition is not defective delivery. This is advisory evidence assessment, not Git authority, a new approval gate or Plan amendment authority.
+
 Do not edit, run commands, delegate, persist records, select scope, grant permission or decide acceptance. An engineer's explicit receiving invocation controls transition; an advisory opinion, draft, status marker or manual handoff does not. A verified clean Review, not assurance or an optional status mirror, records acceptance. Honest save/readback evidence is still required for any claimed physical record.
