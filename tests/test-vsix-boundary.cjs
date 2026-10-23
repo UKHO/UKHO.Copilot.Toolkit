@@ -532,6 +532,37 @@ try {
     'malformed-or-mismatched', 'incomplete candidate status cannot claim later human outcomes');
   cases += 1;
 
+  const incompleteStatusFixture = preparationFixture();
+  try {
+    const incomplete = prepareCandidate({
+      repositoryRoot: incompleteStatusFixture.repositoryRoot,
+      loadBuildInputs: () => incompleteStatusFixture.inputs,
+      runBuilder: () => ({ status: 7 }),
+      clock: () => new Date('2026-10-22T11:30:00Z'),
+      idFactory: () => 'incomplete-status-shape',
+      temporaryRoot: incompleteStatusFixture.repositoryRoot
+    });
+    assert.equal(incomplete.outcome, 'failed-retained-attempt');
+    const incompleteStatusPath = path.join(incomplete.candidateDirectory, 'status.json');
+    const incompleteInitialStatus = JSON.parse(fs.readFileSync(incompleteStatusPath, 'utf8'));
+    for (const [label, mutate] of [
+      ['incomplete candidate missing outcome date and notes', (status) => { status.manualTest = { outcome: 'passed' }; }],
+      ['incomplete candidate invalid pending date', (status) => {
+        status.publication = { outcome: 'pending/unknown', date: '2026-02-30', notes: 'Outcome is unconfirmed.' };
+      }],
+      ['incomplete candidate non-string notes', (status) => { status.manualTest.notes = null; }]
+    ]) {
+      const malformed = structuredClone(incompleteInitialStatus);
+      mutate(malformed);
+      fs.writeFileSync(incompleteStatusPath, `${JSON.stringify(malformed, null, 2)}\n`);
+      assert.equal(inspectCandidate({ candidateDirectory: incomplete.candidateDirectory }).humanStatus.state,
+        'malformed-or-mismatched', label);
+      cases += 1;
+    }
+  } finally {
+    fs.rmSync(incompleteStatusFixture.repositoryRoot, { recursive: true, force: true });
+  }
+
   const candidateMetadataPath = path.join(preparedCandidate.candidateDirectory, 'candidate.json');
   const originalMetadataBytes = fs.readFileSync(candidateMetadataPath);
   const candidateMetadata = JSON.parse(originalMetadataBytes.toString('utf8'));
