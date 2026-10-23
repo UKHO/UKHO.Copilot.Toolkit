@@ -21,6 +21,8 @@ const STATUS_SCHEMA_VERSION = 1;
 const EVIDENCE_FILE = 'verification-evidence.json';
 const STATUS_FILE = 'status.json';
 const METADATA_FILE = 'candidate.json';
+const OPERATION_LOCK_FILE = '.ukho-vsix-operation.lock';
+const INCOMPLETE_RELEASE_INPUTS_FILE = '.ukho-vsix-release-inputs.incomplete.json';
 
 function fail(message) {
   throw new Error(message);
@@ -58,6 +60,86 @@ function safePath(fullPath, { mustExist = true, directory, label = 'Path' } = {}
   if (directory === true && !lastStat.isDirectory()) fail(`${label} must be a directory`);
   if (directory === false && !lastStat.isFile()) fail(`${label} must be a regular file`);
   return absolute;
+}
+
+function capturePathIdentity(fullPath, { directory, label = 'Path' } = {}) {
+  const absolute = safePath(fullPath, { directory, label });
+  const stat = fs.lstatSync(absolute);
+  return { path: absolute, dev: stat.dev, ino: stat.ino, mode: stat.mode, directory: stat.isDirectory(), label };
+}
+
+function assertPathIdentity(identity) {
+  const current = capturePathIdentity(identity.path, { directory: identity.directory, label: identity.label });
+  if (current.dev !== identity.dev || current.ino !== identity.ino || current.mode !== identity.mode) {
+    fail(`${identity.label} identity changed during the operation: ${identity.path}`);
+  }
+}
+
+function createIdentityGuard(identities) {
+  return () => identities.forEach(assertPathIdentity);
+}
+
+function acquireOperationLock(repositoryRoot) {
+  const rootIdentity = capturePathIdentity(repositoryRoot, { directory: true, label: 'Repository root' });
+  const lockPath = path.join(repositoryRoot, OPERATION_LOCK_FILE);
+  const token = `${process.pid}:${crypto.randomUUID()}`;
+  let descriptor;
+  try {
+    assertPathIdentity(rootIdentity);
+    descriptor = fs.openSync(lockPath, 'wx', 0o600);
+    fs.writeFileSync(descriptor, token, 'utf8');
+    fs.fsyncSync(descriptor);
+    fs.closeSync(descriptor);
+    descriptor = undefined;
+    const lockIdentity = capturePathIdentity(lockPath, { directory: false, label: 'VSIX operation lock' });
+    return {
+      assertHeld() {
+        assertPathIdentity(rootIdentity);
+        assertPathIdentity(lockIdentity);
+        if (fs.readFileSync(lockPath, 'utf8') !== token) fail('VSIX operation lock ownership changed');
+      },
+      release() {
+        assertPathIdentity(rootIdentity);
+        assertPathIdentity(lockIdentity);
+        if (fs.readFileSync(lockPath, 'utf8') !== token) fail('VSIX operation lock ownership changed; refusing to remove it');
+        fs.unlinkSync(lockPath);
+      }
+    };
+  } catch (error) {
+    if (descriptor !== undefined) fs.closeSync(descriptor);
+    if (error.code === 'EEXIST') fail('Another VSIX helper operation holds the repository lock, or a prior interruption left it; inspect and reconcile before retrying');
+    throw error;
+  }
+}
+
+function assertNoIncompleteReleaseInputs(repositoryRoot) {
+  const marker = path.join(repositoryRoot, INCOMPLETE_RELEASE_INPUTS_FILE);
+  try {
+    safePath(marker, { directory: false, label: 'Incomplete release-input marker' });
+  } catch (error) {
+    if (/ENOENT/.test(error.message)) return;
+    throw error;
+  }
+  fail('A prior confirmed release-input update is incomplete; reconcile its saved files before preparation');
+}
+
+function writeIncompleteReleaseInputsMarker(repositoryRoot, operationLock) {
+  const marker = path.join(repositoryRoot, INCOMPLETE_RELEASE_INPUTS_FILE);
+  const bytes = jsonBytes({ schema: 'ukho.vsix-release-inputs-incomplete', schemaVersion: 1, createdAt: new Date().toISOString() });
+  operationLock.assertHeld();
+  fs.writeFileSync(marker, bytes, { flag: 'wx', mode: 0o600 });
+  const identity = capturePathIdentity(marker, { directory: false, label: 'Incomplete release-input marker' });
+  operationLock.assertHeld();
+  if (!fs.readFileSync(marker).equals(bytes)) fail('Incomplete release-input marker failed readback');
+  return { identity, bytes };
+}
+
+function removeIncompleteReleaseInputsMarker(repositoryRoot, marker, operationLock) {
+  const markerPath = path.join(repositoryRoot, INCOMPLETE_RELEASE_INPUTS_FILE);
+  operationLock.assertHeld();
+  assertPathIdentity(marker.identity);
+  if (!fs.readFileSync(markerPath).equals(marker.bytes)) fail('Incomplete release-input marker changed; refusing to clear it');
+  fs.unlinkSync(markerPath);
 }
 
 function isContained(parent, child) {
@@ -216,18 +298,32 @@ function ensureDirectory(fullPath, label, { create = false } = {}) {
   }
 }
 
-function allocateCandidate(releasesRoot, instant, idFactory, attempts = 32) {
+function allocateCandidate(releasesRoot, instant, idFactory, attempts = 32, operationLock) {
   const when = new Date(instant);
   if (!Number.isFinite(when.getTime())) fail('Allocation clock must return a valid instant');
   const dateLayout = formatUtc(when);
   const dateDirectory = path.join(releasesRoot, dateLayout.date);
+  const releasesIdentity = capturePathIdentity(releasesRoot, { directory: true, label: 'Selected Releases root' });
+  operationLock?.assertHeld();
+  assertPathIdentity(releasesIdentity);
   ensureDirectory(dateDirectory, 'UTC candidate date directory', { create: true });
+  operationLock?.assertHeld();
+  assertPathIdentity(releasesIdentity);
+  const dateIdentity = capturePathIdentity(dateDirectory, { directory: true, label: 'UTC candidate date directory' });
   for (let index = 0; index < attempts; index += 1) {
     const id = idFactory();
     const layout = candidateLayout(releasesRoot, when, id);
     try {
+      operationLock?.assertHeld();
+      assertPathIdentity(releasesIdentity);
+      assertPathIdentity(dateIdentity);
       fs.mkdirSync(layout.directory);
+      operationLock?.assertHeld();
+      assertPathIdentity(releasesIdentity);
+      assertPathIdentity(dateIdentity);
       safePath(layout.directory, { directory: true, label: 'New candidate directory' });
+      layout.pathIdentities = [releasesIdentity, dateIdentity,
+        capturePathIdentity(layout.directory, { directory: true, label: 'Candidate directory' })];
       return layout;
     } catch (error) {
       if (error.code === 'EEXIST') continue;
@@ -237,17 +333,23 @@ function allocateCandidate(releasesRoot, instant, idFactory, attempts = 32) {
   fail(`Could not allocate a unique candidate directory after ${attempts} collisions`);
 }
 
-function writeExclusive(file, bytes, label) {
+function writeExclusive(file, bytes, label, guard = () => {}) {
+  guard();
   safePath(path.dirname(file), { directory: true, label: `${label} parent` });
+  guard();
   fs.writeFileSync(file, bytes, { flag: 'wx' });
+  guard();
   safePath(file, { directory: false, label });
 }
 
-function updateOwnedFile(file, expectedBytes, nextBytes, label) {
+function updateOwnedFile(file, expectedBytes, nextBytes, label, guard = () => {}) {
+  guard();
   safePath(file, { directory: false, label });
   const current = fs.readFileSync(file);
   if (!current.equals(expectedBytes)) fail(`${label} changed after preparation began; refusing to overwrite it`);
+  guard();
   fs.writeFileSync(file, nextBytes);
+  guard();
   safePath(file, { directory: false, label });
   if (!fs.readFileSync(file).equals(nextBytes)) fail(`${label} readback differs from intended content`);
   return nextBytes;
@@ -289,18 +391,18 @@ function readRegularBytes(file, label) {
   return fs.readFileSync(file);
 }
 
-function persistOutcome(candidate, metadata, status, expectedMetadataBytes, expectedStatusBytes) {
+function persistOutcome(candidate, metadata, status, expectedMetadataBytes, expectedStatusBytes, guard) {
   const metadataBytes = jsonBytes(metadata);
   const statusBytes = jsonBytes(status);
   const persistence = [];
   try {
-    updateOwnedFile(path.join(candidate.directory, METADATA_FILE), expectedMetadataBytes, metadataBytes, 'Candidate metadata');
+    updateOwnedFile(path.join(candidate.directory, METADATA_FILE), expectedMetadataBytes, metadataBytes, 'Candidate metadata', guard);
     persistence.push('candidate-metadata:written-and-read-back');
   } catch (error) {
     persistence.push(`candidate-metadata:failed:${error.message}`);
   }
   try {
-    updateOwnedFile(path.join(candidate.directory, STATUS_FILE), expectedStatusBytes, statusBytes, 'Human status file');
+    updateOwnedFile(path.join(candidate.directory, STATUS_FILE), expectedStatusBytes, statusBytes, 'Human status file', guard);
     persistence.push('human-status:written-and-read-back');
   } catch (error) {
     persistence.push(`human-status:failed:${error.message}`);
@@ -325,11 +427,16 @@ function prepareCandidate({
   let status;
   let buildInputs;
   let copiedBytes;
+  let operationLock;
+  let candidatePathGuard = () => {};
   try {
     const repo = safePath(repositoryRoot, { directory: true, label: 'Repository root' });
+    operationLock = acquireOperationLock(repo);
+    assertNoIncompleteReleaseInputs(repo);
     const releases = archiveRoot ? path.resolve(archiveRoot) : path.join(repo, 'Releases');
     if (!isContained(repo, releases)) fail('Selected archive root must remain inside the repository root');
     safePath(releases, { directory: true, label: 'Selected Releases root' });
+    const releasesIdentity = capturePathIdentity(releases, { directory: true, label: 'Selected Releases root' });
     fs.accessSync(releases, fs.constants.W_OK);
     const rootManifest = parseJsonFile(safePath(path.join(repo, 'package.json'), { directory: false, label: 'package.json' }), 'package.json');
     assertManifest(rootManifest);
@@ -346,7 +453,13 @@ function prepareCandidate({
     const temp = safePath(temporaryRoot, { directory: true, label: 'Transient build root' });
     fs.accessSync(temp, fs.constants.W_OK);
     const allocationInstant = new Date(clock());
-    layout = allocateCandidate(releases, allocationInstant, idFactory);
+    layout = allocateCandidate(releases, allocationInstant, idFactory, 32, operationLock);
+    candidatePathGuard = createIdentityGuard([
+      capturePathIdentity(repo, { directory: true, label: 'Repository root' }),
+      releasesIdentity,
+      ...layout.pathIdentities
+    ]);
+    candidatePathGuard();
     result.candidateId = layout.candidateId;
     result.candidateDirectory = layout.directory;
     result.vsixPath = path.join(layout.directory, `${rootManifest.name}-${rootManifest.version}.vsix`);
@@ -356,8 +469,8 @@ function prepareCandidate({
     status = makeStatus(layout.candidateId);
     metadataBytes = jsonBytes(metadata);
     statusBytes = jsonBytes(status);
-    writeExclusive(path.join(layout.directory, STATUS_FILE), statusBytes, 'Human status file');
-    writeExclusive(path.join(layout.directory, METADATA_FILE), metadataBytes, 'Candidate metadata');
+    writeExclusive(path.join(layout.directory, STATUS_FILE), statusBytes, 'Human status file', candidatePathGuard);
+    writeExclusive(path.join(layout.directory, METADATA_FILE), metadataBytes, 'Candidate metadata', candidatePathGuard);
     result.checks.push({ id: 'exclusive-utc-candidate-allocation', outcome: 'passed', createdAt: allocationInstant.toISOString() });
 
     transientDirectory = fs.mkdtempSync(path.join(temp, '.ukho-vsix-prepare-'));
@@ -366,6 +479,8 @@ function prepareCandidate({
     const transientOutput = path.join(transientDirectory, `${rootManifest.name}-${rootManifest.version}.vsix`);
     if (!isContained(transientDirectory, transientOutput)) fail('Transient VSIX output path escapes its owned directory');
     if (hooks.beforeBuild) hooks.beforeBuild({ repositoryRoot: repo, buildInputs, candidate: layout });
+    operationLock.assertHeld();
+    candidatePathGuard();
     const built = runBuilder({ repositoryRoot: repo, executable: installed.executable, outputPath: transientOutput, manifest: rootManifest, buildInputs });
     if (!built || built.error || built.status !== 0) {
       fail(`Pinned @vscode/vsce build failed (status ${built?.status ?? 'unknown'}${built?.signal ? `, signal ${built.signal}` : ''}${built?.error ? `, ${built.error.message}` : ''})`);
@@ -373,6 +488,8 @@ function prepareCandidate({
     const transientBytes = readRegularBytes(transientOutput, 'Pinned @vscode/vsce output');
     result.checks.push({ id: 'fake-or-pinned-builder-output', outcome: 'passed', sizeBytes: transientBytes.length });
     if (hooks.afterBuild) hooks.afterBuild({ repositoryRoot: repo, buildInputs, candidate: layout });
+    operationLock.assertHeld();
+    candidatePathGuard();
     const currentManifest = parseJsonFile(safePath(path.join(repo, 'package.json'), { directory: false, label: 'package.json after build' }), 'package.json after build');
     validateLockfile(repo, currentManifest);
     const currentLockfileSha256 = sha256(fs.readFileSync(lockfilePath));
@@ -385,14 +502,17 @@ function prepareCandidate({
     }
     result.checks.push({ id: 'build-input-drift', outcome: 'passed' });
     if (hooks.beforeCopy) hooks.beforeCopy({ transientOutput, candidatePath: result.vsixPath, candidate: layout });
+    operationLock.assertHeld();
+    candidatePathGuard();
     copyCandidate(transientOutput, result.vsixPath, fs.constants.COPYFILE_EXCL);
+    candidatePathGuard();
     copiedBytes = readRegularBytes(result.vsixPath, 'Retained candidate VSIX');
     if (!copiedBytes.equals(transientBytes)) fail('Retained candidate bytes differ from exact transient builder output');
     result.sha256 = sha256(copiedBytes);
     result.sizeBytes = copiedBytes.length;
     result.checks.push({ id: 'exclusive-exact-byte-copy', outcome: 'passed', sha256: result.sha256, sizeBytes: result.sizeBytes });
     const evidence = verifier.captureBuildEvidence({ archiveBytes: copiedBytes, buildInputs });
-    writeExclusive(path.join(layout.directory, EVIDENCE_FILE), jsonBytes(evidence), 'Candidate verification evidence');
+    writeExclusive(path.join(layout.directory, EVIDENCE_FILE), jsonBytes(evidence), 'Candidate verification evidence', candidatePathGuard);
     const verification = verifier.verifySelectedCandidate({
       candidatePath: result.vsixPath, evidence, mode: 'fresh', buildInputs
     });
@@ -402,7 +522,7 @@ function prepareCandidate({
     metadata.preparation = { outcome: 'prepared and verified', verified: true, checks: result.checks };
     status = makeStatus(layout.candidateId, { fileName: path.basename(result.vsixPath), sha256: result.sha256, sizeBytes: result.sizeBytes });
     if (hooks.beforePersist) hooks.beforePersist({ candidate: layout, metadata, status });
-    const persisted = persistOutcome(layout, metadata, status, metadataBytes, statusBytes);
+    const persisted = persistOutcome(layout, metadata, status, metadataBytes, statusBytes, candidatePathGuard);
     metadataBytes = persisted.metadataBytes;
     statusBytes = persisted.statusBytes;
     result.checks.push({ id: 'candidate-metadata-and-human-status', outcome: persisted.persistence.every((entry) => entry.includes('written-and-read-back')) ? 'passed' : 'failed', details: persisted.persistence });
@@ -422,7 +542,7 @@ function prepareCandidate({
         result.sha256 = metadata.artifact.sha256;
         result.sizeBytes = metadata.artifact.sizeBytes;
       }
-      const persisted = persistOutcome(layout, metadata, status, metadataBytes, statusBytes);
+      const persisted = persistOutcome(layout, metadata, status, metadataBytes, statusBytes, candidatePathGuard);
       result.checks.push({ id: 'failure-metadata-and-status', outcome: persisted.persistence.every((entry) => entry.includes('written-and-read-back')) ? 'passed' : 'failed', details: persisted.persistence });
     }
     return result;
@@ -442,20 +562,56 @@ function prepareCandidate({
         }
       }
     }
+    if (operationLock) {
+      try { operationLock.release(); }
+      catch (error) {
+        result.checks.push({ id: 'operation-lock-release', outcome: 'failed', error: error.message });
+        if (!result.error) {
+          result.error = `VSIX operation lock release failed: ${error.message}`;
+          result.outcome = result.verified ? 'prepared-verified-cleanup-warning'
+            : (result.candidateId ? 'partial-unverified' : 'failed-preflight');
+        }
+      }
+    }
   }
+}
+
+function validateStatusRecord(record, outcomes, label) {
+  if (!record || typeof record !== 'object' || Array.isArray(record) || !outcomes.includes(record.outcome) ||
+      !Object.hasOwn(record, 'date') || !Object.hasOwn(record, 'notes') || typeof record.notes !== 'string') {
+    return `${label} outcome, date, or notes fields are invalid`;
+  }
+  const requiresDate = !['not tested', 'not published'].includes(record.outcome);
+  if (!requiresDate && record.date !== null) return `${label} date must be null for ${record.outcome}`;
+  if (requiresDate) {
+    if (typeof record.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(record.date)) return `${label} requires a YYYY-MM-DD date`;
+    const parsed = new Date(`${record.date}T00:00:00.000Z`);
+    if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== record.date) return `${label} date is not a valid UTC calendar date`;
+    if (!record.notes.trim()) return `${label} requires notes for ${record.outcome}`;
+  }
+  return null;
 }
 
 function validateStatus(status, candidateId, artifact) {
   if (!status || status.schema !== STATUS_SCHEMA || status.schemaVersion !== STATUS_SCHEMA_VERSION) {
     return { state: 'malformed-or-unsupported', humanReported: true, error: 'Status schema is missing or unsupported' };
   }
-  if (status.candidateId !== candidateId || !status.manualTest || !status.publication ||
-      !['not tested', 'passed', 'failed'].includes(status.manualTest.outcome) ||
-      !['not published', 'pending/unknown', 'published'].includes(status.publication.outcome)) {
+  if (status.candidateId !== candidateId || status.reportType !== 'human-reported; preparation initializes these values only') {
     return { state: 'malformed-or-mismatched', humanReported: true, error: 'Status identity or outcome fields are invalid' };
   }
-  if (!artifact || status.artifact?.sha256 !== artifact.sha256 || status.artifact?.sizeBytes !== artifact.sizeBytes ||
-      status.artifact?.fileName !== artifact.fileName) {
+  const manualError = validateStatusRecord(status.manualTest, ['not tested', 'passed', 'failed'], 'Manual-test status');
+  const publicationError = validateStatusRecord(status.publication, ['not published', 'pending/unknown', 'published'], 'Publication status');
+  if (manualError || publicationError) {
+    return { state: 'malformed-or-mismatched', humanReported: true, error: manualError || publicationError };
+  }
+  if (artifact === null) {
+    if (status.artifact !== null || status.manualTest.outcome !== 'not tested' || status.publication.outcome !== 'not published') {
+      return { state: 'malformed-or-mismatched', humanReported: true, error: 'Incomplete candidate status must retain its initial identity and outcomes' };
+    }
+    return { state: 'reported', humanReported: true, manualTest: status.manualTest, publication: status.publication };
+  }
+  if (!artifact || !status.artifact || status.artifact.sha256 !== artifact.sha256 || status.artifact.sizeBytes !== artifact.sizeBytes ||
+      status.artifact.fileName !== artifact.fileName || Object.keys(status.artifact).length !== 3) {
     return { state: 'malformed-or-mismatched', humanReported: true, error: 'Human status does not match retained candidate identity/hash/size' };
   }
   return {
@@ -491,11 +647,7 @@ function inspectCandidate({ candidateDirectory, mode = 'historical', buildInputs
       try {
         const statusPath = safePath(path.join(directory, STATUS_FILE), { directory: false, label: 'Human status file' });
         const status = parseJsonFile(statusPath, 'Human status file');
-        humanStatus = status.schema === STATUS_SCHEMA && status.schemaVersion === STATUS_SCHEMA_VERSION &&
-          status.candidateId === candidateId && status.artifact === null &&
-          status.manualTest?.outcome === 'not tested' && status.publication?.outcome === 'not published'
-          ? { state: 'reported', humanReported: true, manualTest: status.manualTest, publication: status.publication }
-          : { state: 'malformed-or-mismatched', humanReported: true, error: 'Incomplete candidate status does not match its initial candidate identity' };
+        humanStatus = validateStatus(status, candidateId, null);
       } catch (error) {
         humanStatus = { state: 'malformed-or-unavailable', humanReported: true, error: error.message };
       }
@@ -522,6 +674,12 @@ function inspectCandidate({ candidateDirectory, mode = 'historical', buildInputs
     }
     const evidencePath = safePath(path.join(directory, EVIDENCE_FILE), { directory: false, label: 'Candidate verification evidence' });
     const evidence = parseJsonFile(evidencePath, 'Candidate verification evidence');
+    const expectedIdentity = evidence?.captured?.identity;
+    const expectedFileName = expectedIdentity && `${expectedIdentity.name}-${expectedIdentity.version}.vsix`;
+    if (!expectedIdentity || !isDeepStrictEqual(metadata.packagedIdentity, expectedIdentity) ||
+        artifact.fileName !== expectedFileName || path.basename(vsixPath) !== expectedFileName) {
+      fail('Candidate metadata identity or version-derived artifact filename disagrees with captured verification identity');
+    }
     let verification;
     try {
       verification = verifier.verifySelectedCandidate({ candidatePath: vsixPath, evidence, mode, buildInputs });
@@ -574,6 +732,8 @@ function inspectReleasePreimages(repositoryRoot) {
   };
   for (const [name, file] of Object.entries(paths)) safePath(file, { directory: false, label: name });
   const bytes = Object.fromEntries(Object.entries(paths).map(([name, file]) => [name, fs.readFileSync(file)]));
+  const identities = Object.fromEntries(Object.entries(paths).map(([name, file]) =>
+    [name, capturePathIdentity(file, { directory: false, label: name })]));
   const manifest = JSON.parse(bytes.manifest.toString('utf8'));
   const lock = JSON.parse(bytes.lock.toString('utf8'));
   assertManifest(manifest);
@@ -581,7 +741,7 @@ function inspectReleasePreimages(repositoryRoot) {
       lock.version !== manifest.version || lock.packages[''].version !== manifest.version) {
     fail('Release-input preimages have inconsistent manifest/lockfile identity or version');
   }
-  return { paths, bytes, manifest, lock, changelog: bytes.changelog.toString('utf8') };
+  return { paths, bytes, identities, manifest, lock, changelog: bytes.changelog.toString('utf8') };
 }
 
 function applyConfirmedReleaseInputs({
@@ -590,12 +750,17 @@ function applyConfirmedReleaseInputs({
 } = {}) {
   const report = { outcome: 'not-changed', changed: [], files: {}, error: null, packagingAllowed: false };
   let preimages;
+  let operationLock;
+  let incompleteMarker;
   const staged = [];
   try {
+    const repo = safePath(path.resolve(repositoryRoot), { directory: true, label: 'Repository root' });
+    operationLock = acquireOperationLock(repo);
+    assertNoIncompleteReleaseInputs(repo);
     assertVersion(version);
     if (typeof changeSummary !== 'string' || !changeSummary.trim()) fail('An evidence-based change summary is required for release-input confirmation');
     if (typeof confirm !== 'function') fail('An explicit confirmation callback is required; absence means no writes');
-    preimages = inspectReleasePreimages(path.resolve(repositoryRoot));
+    preimages = inspectReleasePreimages(repo);
     const nextManifest = updateJsonVersion(preimages.manifest, version, 'package.json');
     const nextLock = updateJsonVersion(preimages.lock, version, 'package-lock.json');
     const nextRootLock = updateJsonVersion(preimages.lock.packages[''], version, 'package-lock.json root package');
@@ -622,6 +787,8 @@ function applyConfirmedReleaseInputs({
       return report;
     }
     for (const [name, file] of Object.entries(preimages.paths)) {
+      operationLock.assertHeld();
+      assertPathIdentity(preimages.identities[name]);
       if (!fs.readFileSync(file).equals(preimages.bytes[name])) {
         report.outcome = 'preimage-drift';
         report.error = `${name} changed after confirmation; no release-input writes were started`;
@@ -632,18 +799,32 @@ function applyConfirmedReleaseInputs({
     for (const name of ['manifest', 'lock', 'changelog']) {
       const file = preimages.paths[name];
       const temp = path.join(path.dirname(file), `.${path.basename(file)}.${crypto.randomUUID()}.release-input.tmp`);
+      operationLock.assertHeld();
       fs.writeFileSync(temp, next[name], { flag: 'wx' });
+      operationLock.assertHeld();
       if (!fs.readFileSync(temp).equals(next[name])) fail(`Staged ${name} release input failed readback`);
       staged.push({ name, file, temp, nextBytes: next[name] });
     }
+    incompleteMarker = writeIncompleteReleaseInputsMarker(repo, operationLock);
     for (const item of staged) {
+      operationLock.assertHeld();
+      assertPathIdentity(preimages.identities[item.name]);
       if (!fs.readFileSync(item.file).equals(preimages.bytes[item.name])) {
         report.outcome = report.changed.length ? 'partial' : 'preimage-drift';
         report.error = `${item.name} changed immediately before replacement; stopped without overwriting that file`;
         break;
       }
-      if (replaceFile) replaceFile(item);
-      else fs.renameSync(item.temp, item.file);
+      const guardedReplace = () => {
+        operationLock.assertHeld();
+        assertPathIdentity(preimages.identities[item.name]);
+        if (!fs.readFileSync(item.file).equals(preimages.bytes[item.name])) {
+          fail(`${item.name} changed at the replacement boundary; refusing to overwrite it`);
+        }
+        fs.renameSync(item.temp, item.file);
+      };
+      if (replaceFile) replaceFile(item, guardedReplace);
+      else guardedReplace();
+      operationLock.assertHeld();
       const current = fs.readFileSync(item.file);
       if (!current.equals(item.nextBytes)) fail(`${item.name} release-input readback differs after save`);
       report.changed.push(item.name);
@@ -653,12 +834,23 @@ function applyConfirmedReleaseInputs({
       catch (error) { report.files[name] = { state: 'unreadable', error: error.message }; }
     }
     if (report.error) return report;
-    const current = inspectReleasePreimages(path.resolve(repositoryRoot));
+    const current = inspectReleasePreimages(repo);
     if (current.manifest.version !== version || current.lock.version !== version || current.lock.packages[''].version !== version) {
       report.outcome = 'partial';
       report.error = 'Post-save package versions are inconsistent; dependent packaging is stopped';
       return report;
     }
+    for (const name of ['manifest', 'lock', 'changelog']) {
+      operationLock.assertHeld();
+      assertPathIdentity(current.identities[name]);
+      if (!current.bytes[name].equals(next[name])) {
+        report.outcome = 'partial';
+        report.error = `${name} changed after replacement; dependent packaging is stopped`;
+        return report;
+      }
+    }
+    removeIncompleteReleaseInputsMarker(repo, incompleteMarker, operationLock);
+    incompleteMarker = undefined;
     report.outcome = report.changed.length ? 'updated-and-validated' : 'unchanged';
     report.packagingAllowed = true;
     return report;
@@ -668,8 +860,8 @@ function applyConfirmedReleaseInputs({
       for (const [name, file] of Object.entries(preimages.paths)) {
         try {
           const currentBytes = fs.readFileSync(file);
-          report.files[name] = { sha256: sha256(currentBytes), version: name === 'changelog' ? undefined : JSON.parse(currentBytes.toString('utf8')).version };
           if (!currentBytes.equals(preimages.bytes[name]) && !report.changed.includes(name)) report.changed.push(name);
+          report.files[name] = { sha256: sha256(currentBytes), version: name === 'changelog' ? undefined : JSON.parse(currentBytes.toString('utf8')).version };
         }
         catch (readError) { report.files[name] = { state: 'unreadable', error: readError.message }; }
       }
@@ -688,6 +880,14 @@ function applyConfirmedReleaseInputs({
           report.packagingAllowed = false;
           report.outcome = report.changed.length ? 'partial' : 'failed';
         }
+      }
+    }
+    if (operationLock) {
+      try { operationLock.release(); }
+      catch (error) {
+        report.error = report.error || `VSIX operation lock release failed: ${error.message}`;
+        report.packagingAllowed = false;
+        report.outcome = report.changed.length ? 'partial' : 'failed';
       }
     }
   }
@@ -746,24 +946,27 @@ function confirmReleaseInputsInteractively(proposal, { input = process.stdin, ou
   return Buffer.from(chunks).toString('utf8').trim() === `CONFIRM ${proposal.version}`;
 }
 
-function main(args = process.argv.slice(2)) {
+function main(args = process.argv.slice(2), dependencies = {}) {
   const command = validateArguments(args);
   let result;
-  if (command.command === 'prepare') result = prepareCandidate();
+  if (command.command === 'prepare') result = (dependencies.prepareCandidate || prepareCandidate)(dependencies.prepareOptions);
   else if (command.command === 'inspect') result = inspectCandidate({ candidateDirectory: command.candidateDirectory, mode: 'historical' });
   else {
-    result = applyConfirmedReleaseInputs({
+    result = (dependencies.applyConfirmedReleaseInputs || applyConfirmedReleaseInputs)({
       version: command.version,
       changeSummary: command.changeSummary,
       expectedPendingNotes: command.expectedPendingNotes,
       proposedNotes: command.proposedNotes,
-      confirm: (proposal) => confirmReleaseInputsInteractively(proposal)
+      confirm: (proposal) => (dependencies.confirmReleaseInputs || confirmReleaseInputsInteractively)(proposal)
     });
   }
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-  if (command.command === 'prepare' && result.outcome !== 'prepared-verified') process.exitCode = 1;
-  if (command.command === 'inspect' && result.verified !== true) process.exitCode = 1;
-  if (command.command === 'release-inputs' && result.packagingAllowed !== true) process.exitCode = 1;
+  (dependencies.writeOutput || ((text) => process.stdout.write(text)))(`${JSON.stringify(result, null, 2)}\n`);
+  if (!dependencies.suppressExitCode) {
+    if (command.command === 'prepare' && result.outcome !== 'prepared-verified') process.exitCode = 1;
+    if (command.command === 'inspect' && result.verified !== true) process.exitCode = 1;
+    if (command.command === 'release-inputs' && result.packagingAllowed !== true) process.exitCode = 1;
+  }
+  return result;
 }
 
 if (require.main === module) {
@@ -777,6 +980,6 @@ if (require.main === module) {
 module.exports = {
   CANDIDATE_SCHEMA, EVIDENCE_FILE, METADATA_FILE, STATUS_FILE, STATUS_SCHEMA,
   allocateCandidate, applyConfirmedReleaseInputs, candidateLayout, inspectCandidate,
-  confirmReleaseInputsInteractively, makeStatus, prepareAfterReleaseInputUpdate, prepareCandidate,
+  confirmReleaseInputsInteractively, main, makeStatus, prepareAfterReleaseInputUpdate, prepareCandidate,
   safePath, validateArguments, validateBuildInputs
 };
