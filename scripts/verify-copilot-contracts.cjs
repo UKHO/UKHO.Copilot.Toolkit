@@ -503,6 +503,7 @@ function checkCompleteArchitectureCoverage(source) {
   // a second paragraph cannot hide behind the still-correct owning paragraph.
   for (const [owner, text] of Object.entries({
     ...owners, ...representation, ...routine,
+    core: `${owners.core}\n${section(source.core, '### Prospective exact-ADR sign-off recording effect')}`,
     planTemplate: section(source.planTemplate, '## Outcome and boundaries'),
     implement: coordinatorBody(source.implement, 'Implement'),
     review: coordinatorBody(source.review, 'Review'),
@@ -574,6 +575,148 @@ function checkDecisionReadinessContract(source) {
   ], 'Plan template: existing Work Item detail must provide the complete optional factual-unknown route');
 }
 
+function checkImplementSignoffContract(source) {
+  const transition = source.core.split('\n').find((line) => line.startsWith('| Plan -> Implement |')) || '';
+  requireADRRule(transition, [
+    /when that rule is already effective before the invocation/i,
+    /signs off only those snapshots/i,
+    /no separate routine approval/i,
+    /`\/plan`[\s\S]*`\/review` do not sign off/i
+  ], 'Lifecycle core Plan-to-Implement transition must bind sign-off to effective policy and exact snapshots');
+
+  const effect = section(source.core, '### Prospective exact-ADR sign-off recording effect');
+  for (const [pattern, rule] of [
+    [/effective before the qualifying explicit `\/implement` invocation/i, 'effective-before-invocation guard'],
+    [/not retroactive sign-off/i, 'no-retroactive-sign-off guard'],
+    [/exact bound ADR path\/ID, identifiable decision section, substantive preimage version\/snapshot/i, 'exact binding identity'],
+    [/current `Proposed` state/i, 'Proposed preimage state'],
+    [/actual agreement evidence\/conditions and affected Work Items/i, 'agreement, conditions and affected work'],
+    [/only the Implement coordinator may record/i, 'coordinator-only recording authority'],
+    [/only `Status: Accepted`, the actual decision date, and actual agreement evidence/i, 'metadata-only update fields'],
+    [/naming the invocation, inspected Plan version and exact ADR preimage/i, 'actual agreement-evidence binding'],
+    [/Preserve the decision text, all other metadata, and accepted\/superseded history/i, 'decision and history preservation'],
+    [/identity, containment, absence of conflicting edits and effective permission/i, 'identity, containment, conflict and permission guards'],
+    [/save without overwriting concurrent changes and read back the complete postimage/i, 'non-overwrite and postimage readback'],
+    [/Assess multiple bound ADRs independently/i, 'per-record handling'],
+    [/do not claim `Accepted`/i, 'failure is not Accepted'],
+    [/hold only effects dependent on the unrecorded sign-off while continuing independent approved work/i, 'dependent-only hold'],
+    [/(?:A successful record is not rolled back because another record failed|Keep a successfully recorded ADR if another independent record fails)/i,
+      'partial-success preservation'],
+    [/not general ADR authorship/i, 'no general ADR authorship']
+  ]) requireADRRule(effect, [pattern], `Lifecycle core sign-off effect: ${rule}`);
+
+  const adrPhase = section(source.skill, '## Phase operation');
+  requireADRRule(adrPhase, [
+    /only when the prospective sign-off rule[^.!?\n]*effective before[^.!?\n]*explicit `\/implement` invocation/i,
+    /signs off only the exact Proposed snapshot/i,
+    /prior invocation is not retroactive/i,
+    /does not grant general ADR authorship/i
+  ], 'ADR Skill Implement operation must describe only prospective exact-snapshot sign-off');
+  const adrAuthority = section(source.skill, '## Authority and effect safeguards');
+  requireADRRule(adrAuthority, [
+    /separately defines a prospective Implement-coordinator-only sign-off metadata effect/i,
+    /not ADR authorship/i,
+    /already effective before the qualifying invocation/i
+  ], 'ADR Skill must separate sign-off recording from general ADR authorship');
+  requireADRRule(source.template, [
+    /does not follow from Research acknowledgment, `\/plan`, an answer, report, worker, Script Runner, `send: false` prefill, `\/review`, or delivery acceptance/i,
+    /only the engineer's explicit `\/implement` invocation with the inspected approved Plan can sign off an exact Proposed ADR snapshot/i,
+    /only when that prospective rule is already effective before the invocation/i,
+    /status recording is a separate, narrow Implement-coordinator effect/i,
+    /A prior invocation is not retroactive/i
+  ], 'ADR template must distinguish exact sign-off, status persistence and non-sign-off events');
+
+  const planHandoff = parseFrontmatterText(source.plan, '.github/agents/plan.agent.md').blocks.handoffs.join('\n');
+  for (const [pattern, rule] of [
+    [/(?:each|every) bound ADR's exact path\/ID, section, substantive version\/snapshot/i, 'exact ADR identity, section and version'],
+    [/Proposed state, actual agreement evidence\/conditions and affected Work Items/i, 'Proposed state, agreement and affected work'],
+    [/explicit invocation with this inspected Plan is both bounded delivery authorization and sign-off only for those exact ADR preimages/i, 'dual-purpose exact-snapshot invocation'],
+    [/only if the prospective rule is already effective before invocation/i, 'effective-before-invocation condition'],
+    [/(?:no separate|no additional) routine approval is requested/i, 'no duplicate approval'],
+    [/`\/plan`, answers, reports, workers, Script Runner and `\/review` do not sign off/i, 'non-sign-off events'],
+    [/handoff is a manual prefill, not approval or invocation/i, 'manual handoff is not approval or invocation'],
+    [/(?:prior invocation is not retroactive|Never treat a prior invocation as retroactive|no earlier invocation is retroactive)/i, 'no retroactive sign-off']
+  ]) requireADRRule(planHandoff, [pattern], `Plan handoff: ${rule}`);
+  const planOwner = paragraph(coordinatorBody(source.plan, 'Plan'), 'At the manual `/implement` handoff');
+  for (const [pattern, rule] of [
+    [/exact ADR path\/ID, identifiable decision section, substantive version\/snapshot/i, 'exact identity, section and version'],
+    [/current Proposed state, actual agreement evidence\/conditions and affected Work Items/i, 'state, agreement and affected work'],
+    [/explicit `\/implement` invocation with this inspected approved Plan is both delivery authorization and sign-off only for those exact ADR preimages/i, 'dual-purpose exact-snapshot invocation'],
+    [/rule is already effective before invocation/i, 'effective-before-invocation condition'],
+    [/(?:no separate|do not request a duplicate) routine approval/i, 'no duplicate approval'],
+    [/prior invocation is not retroactive/i, 'no retroactive sign-off']
+  ]) requireADRRule(planOwner, [pattern], `Plan coordinator handoff: ${rule}`);
+  requireADRRule(section(source.planPrompt, '## Constraints'), [
+    /enumerate each exact ADR path\/ID, section, substantive version\/snapshot, Proposed state/i,
+    /explicit `\/implement` invocation with this inspected Plan is both bounded delivery authorization and sign-off only for those preimages/i,
+    /rule is already effective before invocation/i,
+    /Do not request a duplicate routine approval/i,
+    /no earlier invocation is retroactive/i
+  ], 'Plan prompt must require exact ADR handoff and conditional sign-off');
+
+  const implementOwner = paragraph(coordinatorBody(source.implement, 'Implement'), 'If the approved Plan binds an ADR');
+  requireADRRule(implementOwner, [
+    /exact associated path\/ID, section, substantive preimage version\/snapshot, Proposed state/i,
+    /only if the exact-snapshot sign-off rule was already effective before this engineer's explicit `\/implement` invocation/i,
+    /signs off only the visibly bound preimage/i,
+    /Implement coordinator alone may then record a separate metadata-only update/i,
+    /`Status: Accepted`, actual decision date and actual agreement evidence/i,
+    /preserve all decision text\/history/i,
+    /A prior invocation or authored policy edit is not retroactive or self-activating/i,
+    /do not claim `Accepted`/i,
+    /hold only dependent effects/i,
+    /Assess each bound ADR separately/i,
+    /Workers, Script Runner, Review and helpers receive no ADR authorship\/status authority/i
+  ], 'Implement coordinator must bind exact sign-off and narrow recording guards');
+  requireADRRule(section(source.implementPrompt, '## Constraints'), [
+    /exact path\/ID, section, substantive Proposed preimage/i,
+    /only when the prospective rule was effective before this explicit `\/implement` invocation/i,
+    /Implement coordinator alone may perform the separate, guarded metadata-only Accepted\/date\/agreement-evidence update/i,
+    /A prior invocation is not retroactive/i,
+    /failure\/denial\/unverifiable state is not Accepted/i,
+    /Workers\/Runner\/Review\/helpers gain no ADR authorship, status or sign-off authority/i
+  ], 'Implement prompt must preserve exact-snapshot, bootstrap and no-bypass boundaries');
+
+  requireADRRule(source.safe, [
+    /Apply the prospective `\/implement` sign-off only if that rule was already effective before the engineer's explicit invocation/i,
+    /the invocation signs off only that snapshot/i,
+    /only `Status: Accepted`, the actual decision date and actual agreement evidence/i,
+    /A prior invocation or policy edit is not retroactive or self-activating/i,
+    /do not claim `Accepted`/i,
+    /Multiple ADR outcomes are per-record/i
+  ], 'Safe implementation Skill must sequence and report the narrow sign-off effect');
+  const validationADR = source.validation.split('\n').find((line) => line.startsWith('- [ ] Apply exact-snapshot `\/implement` sign-off')) || '';
+  requireADRRule(validationADR, [
+    /only if the rule was effective before this explicit invocation/i,
+    /exact Proposed preimage/i,
+    /(?:only the )?Implement coordinator alone|only the Implement coordinator/i,
+    /complete readback/i,
+    /A prior invocation is not retroactive/i,
+    /not Accepted and blocks only dependent effects/i
+  ], 'Implementation checklist must validate exact preimage, authority and persistence outcome');
+  const reportADR = field(section(source.implementationReport, '## Delivered outcome and progress'), 'ADR sign-off and persistence');
+  requireADRRule(reportADR, [
+    /whether this explicit invocation qualifies under policy effective before it/i,
+    /each exact Plan-bound Proposed preimage/i,
+    /actual per-record save\/readback outcome and postimage/i,
+    /Distinguish invocation from persisted Accepted state/i,
+    /prior invocation is not retroactive/i,
+    /failed\/denied\/conflicting\/unverifiable write is not Accepted/i
+  ], 'Implementation report must distinguish sign-off invocation from per-record persistence');
+
+  for (const [owner, text] of [
+    ['repository policy', source.repository], ['lifecycle instruction', source.lifecycleInstruction]
+  ]) for (const [pattern, rule] of [
+    [/explicit `\/implement` invocation/i, 'explicit invocation event'],
+    [/exact Proposed ADR/i, 'exact Proposed binding'],
+    [/already effective before/i, 'effective-before-invocation condition'],
+    [/(?:only the )?Implement coordinator(?: alone)?/i, 'single coordinator recording authority'],
+    [/(?:not|never) retroactive|no retroactive sign-off/i, 'no retroactive sign-off'],
+    [/does not self-upgrade|not self-upgrade/i, 'no session bootstrap']
+  ]) requireADRRule(text, [pattern], `${owner}: ${rule}`);
+  return true;
+}
+
 function checkArchitectureDecisionRecordContract(sources = {}) {
   const paths = {
     skill: '.github/skills/architecture-decision-records/SKILL.md',
@@ -600,7 +743,8 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
     assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
     readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md',
     wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md',
-    wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', planPrompt: '.github/prompts/plan.prompt.md'
+    wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', planPrompt: '.github/prompts/plan.prompt.md',
+    implementPrompt: '.github/prompts/implement.prompt.md'
   };
   const source = Object.fromEntries(Object.entries(paths).map(([key, relative]) => [key, sources[key] ?? readText(relative)]));
   const metadata = parseFrontmatterText(source.skill, paths.skill).values;
@@ -611,11 +755,10 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
     if (!source.skill.includes(`](${resource})`)) fail(`ADR Skill must directly link ${resource}`, 'ADR-CONTRACT-001');
   }
   const adrEffects = section(source.skill, '## Authority and effect safeguards');
-  requireADRRule(adrEffects, [/Preserve accepted and superseded substantive history\./i],
-    'ADR skill must preserve accepted history');
-  requireADRRule(adrEffects, [
-    /Check each ADR file effect separately for identity, containment, absence\/collision, effective permission, saved result, and readback\./i
-  ], 'ADR skill must guard each file effect separately');
+  for (const [pattern, rule] of [
+    [/Preserve accepted and superseded substantive history\./i, 'ADR skill must preserve accepted history'],
+    [/Check each ADR file effect separately for identity, containment, absence\/collision, effective permission, saved result, and readback\./i, 'ADR skill must guard each file effect separately']
+  ]) requireADRRule(adrEffects, [pattern], rule);
   requireADRRule(source.skill, [
     /Research[\s\S]*Plan[\s\S]*Implement[\s\S]*Review/i,
     /not a fifth RPIR phase|not an authority grant/i,
@@ -627,6 +770,7 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
 
   checkCompleteArchitectureCoverage(source);
   checkDecisionReadinessContract(source);
+  checkImplementSignoffContract(source);
 
   const expectedInputs = [
     '1.1', '1.2', '1.3', '1.4', '1.5',
@@ -728,7 +872,7 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
   ], 'Research guidance must reuse ADR coverage and hand over gaps without ADR authorship');
   const implementADR = source.implement.split(/\n\s*\n/).find((paragraph) => /^If the approved Plan binds an ADR,/i.test(paragraph)) || '';
   requireADRRule(implementADR, [
-    /inspect[^.\n]*exact[^.\n]*path\/ID[^.\n]*substantive (?:version|snapshot)/i
+    /inspect[^.\n]*exact[^.\n]*path\/ID[^.\n]*substantive (?:preimage )?(?:version|snapshot)/i
   ], 'Implement ADR inspection is missing exact identity/version binding');
   const resolution = implementADR.match(/\bResolve\b[^.\n]*\./i)?.[0] || '';
   for (const [label, pattern] of [

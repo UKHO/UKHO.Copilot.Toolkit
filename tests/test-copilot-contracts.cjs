@@ -121,7 +121,8 @@ const adrPaths = {
   assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
   readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md',
   wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md',
-  wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', planPrompt: '.github/prompts/plan.prompt.md'
+  wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', planPrompt: '.github/prompts/plan.prompt.md',
+  implementPrompt: '.github/prompts/implement.prompt.md'
 };
 const adrSources = Object.fromEntries(Object.entries(adrPaths).map(([key, relative]) => [key, readArtifact(relative)]));
 assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract(adrSources));
@@ -211,6 +212,62 @@ assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({
   ...adrSources, planTemplate: replaceOnce(adrSources.planTemplate, residualFactTemplate, safeFactRoute)
 }), 'a concrete bounded non-decision fact route remains valid');
 cases += 1;
+
+function rejectSignoff(label, key, target, replacement, diagnostic) {
+  assertRejected(label, () => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], target, replacement)
+  }), (error) => error.contractId === 'ADR-CONTRACT-001' && diagnostic.test(error.message));
+}
+
+const signoffCoreDiagnostic = /Lifecycle core sign-off effect:/;
+for (const [label, target, replacement, rule] of [
+  ['sign-off effective after invocation', 'effective before the qualifying explicit `/implement` invocation', 'effective after the qualifying explicit `/implement` invocation', /effective-before-invocation guard/],
+  ['retroactive invocation accepted', 'not retroactive sign-off', 'is retroactive sign-off', /no-retroactive-sign-off guard/],
+  ['non-Proposed preimage accepted', 'current `Proposed` state', 'any decision state', /Proposed preimage state/],
+  ['metadata scope broadened', 'Update only `Status: Accepted`, the actual decision date, and actual agreement evidence', 'Update ADR decision content and status metadata', /metadata-only update fields/],
+  ['decision rationale rewrite allowed', 'Preserve the decision text, all other metadata, and accepted/superseded history', 'Revise the decision text and metadata', /decision and history preservation/],
+  ['permission guard omitted', 'identity, containment, absence of conflicting edits and effective permission', 'identity and containment', /identity, containment, conflict and permission guards/],
+  ['postimage readback omitted', 'read back the complete postimage', 'assume the saved result', /non-overwrite and postimage readback/],
+  ['multi-record outcomes coupled', 'Assess multiple bound ADRs independently', 'Assess all bound ADRs as one transaction', /per-record handling/],
+  ['failed write described as Accepted', 'do not claim `Accepted`', 'claim `Accepted` after an attempted write', /failure is not Accepted/],
+  ['partial success rollback introduced', 'A successful record is not rolled back because another record failed', 'Rollback every successful record when another record fails', /partial-success preservation/],
+  ['general ADR authorship granted', 'not general ADR authorship', 'general ADR authorship', /no general ADR authorship/]
+]) rejectSignoff(label, 'core', target, replacement, rule);
+
+const exactPreimageSentence = 'The Plan handoff must visibly enumerate each exact bound ADR path/ID, identifiable decision section, substantive preimage version/snapshot, current `Proposed` state, actual agreement evidence/conditions and affected Work Items;';
+const coreWithoutPreimage = replaceOnce(adrSources.core, exactPreimageSentence,
+  'The Plan handoff identifies an ADR;');
+for (const [label, core, template] of [
+  ['historical decoy', `${coreWithoutPreimage}\n\n## Historical example, not operating policy\n\n${exactPreimageSentence}\n`, adrSources.template],
+  ['wrong-owner decoy', coreWithoutPreimage, `${adrSources.template}\n\n${exactPreimageSentence}\n`]
+]) assertRejected(`core exact-preimage ${label} cannot satisfy the effect`, () => contracts.checkArchitectureDecisionRecordContract({
+  ...adrSources, core, template
+}), (error) => error.contractId === 'ADR-CONTRACT-001' && /Lifecycle core sign-off effect: exact binding identity/.test(error.message));
+
+for (const [label, target, replacement, rule] of [
+  ['handoff omits exact substantive version', "Visibly enumerate every bound ADR's exact path/ID, section, substantive version/snapshot", "Visibly enumerate every bound ADR's exact path/ID and section", /exact ADR identity, section and version/],
+  ['handoff asks duplicate approval', 'no separate routine approval is requested', 'a separate routine approval is required', /no duplicate approval/],
+  ['handoff makes prefill sign-off', 'The handoff is a manual prefill, not approval or invocation.', 'The handoff is an approval and invocation.', /manual handoff is not approval or invocation/],
+  ['handoff allows retroactive sign-off', 'Never treat a prior invocation as retroactive.', 'Treat a prior invocation as retroactive.', /no retroactive sign-off/]
+]) rejectSignoff(label, 'plan', target, replacement, rule);
+
+for (const [label, target, replacement, rule] of [
+  ['Implement lets workers record ADR', 'Workers, Script Runner, Review and helpers receive no ADR authorship/status authority.', 'Workers, Script Runner, Review and helpers may record ADR status.', /Implement coordinator must bind exact sign-off and narrow recording guards/],
+  ['Implement treats failed persistence as Accepted', 'do not claim `Accepted`', 'claim `Accepted`', /Implement coordinator must bind exact sign-off and narrow recording guards/],
+  ['report conflates invocation and persistence', 'Distinguish invocation from persisted Accepted state', 'Treat invocation as persisted Accepted state', /Implementation report must distinguish sign-off invocation from per-record persistence/]
+]) rejectSignoff(label, label.startsWith('report') ? 'implementationReport' : 'implement', target, replacement, rule);
+
+for (const [key, target, replacement] of [
+  ['core', 'Do not request a duplicate routine approval.', 'Do not request another confirmation.'],
+  ['plan', 'no separate routine approval is requested', 'no additional routine approval is requested'],
+  ['core', 'A successful record is not rolled back because another record failed',
+    'Keep a successfully recorded ADR if another independent record fails']
+]) {
+  assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], target, replacement)
+  }));
+  cases += 1;
+}
 
 const readinessSentence = 'A completed Plan has no unresolved architectural choice';
 const planWithoutReadiness = replaceOnce(adrSources.plan, readinessSentence, 'Plan readiness is assessed');
@@ -480,7 +537,11 @@ for (const [label, key, mutate, diagnostic] of [
   ['unresolved ADR version drift', 'implement', (text) => replaceOnce(text, 'material mismatch, ', ''), /missing material version mismatch before dependent effects/],
   ['unavailable ADR content omitted', 'implement', (text) => replaceOnce(text, 'unavailable content or ', ''), /missing unavailable content before dependent effects/],
   ['unsatisfied ADR condition omitted', 'implement', (text) => replaceOnce(text, ' or an unsatisfied condition', ''), /missing unsatisfied conditions before dependent effects/],
-  ['independent work continuity omitted', 'implement', (text) => replaceOnce(text, ', while continuing independent approved work', ''), /missing independent-work continuity/],
+  ['independent work continuity omitted', 'implement', (text) => {
+    const changed = text.replaceAll('independent approved work', '');
+    assert.notEqual(changed, text);
+    return changed;
+  }, /unexpected architecture requires engineer-directed Plan resolution/],
   ['dependent-effects guard omitted', 'implement', (text) => replaceOnce(text, ' before dependent effects', ''), /missing material version mismatch before dependent effects/],
   ['Review implies architecture approval', 'review', (text) => replaceOnce(text, 'a clean Review does not establish enterprise or architectural approval.', ''), /conflates delivery acceptance/],
   ['missing decision date field', 'template', (text) => replaceOnce(text, /^- \*\*Decision date:\*\*[^\n]*\n/m, ''), /decision provenance/]
