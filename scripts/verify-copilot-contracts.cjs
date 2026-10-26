@@ -704,6 +704,47 @@ function checkImplementSignoffContract(source) {
     /failed\/denied\/conflicting\/unverifiable write is not Accepted/i
   ], 'Implementation report must distinguish sign-off invocation from per-record persistence');
 
+  const readmeSignoffSummary = paragraph(source.readme, 'Under the prospective exact-snapshot rule');
+  requireADRRule(readmeSignoffSummary, [
+    /explicit `\/implement` invocation signs off only the exact Proposed ADR preimage/i,
+    /only if the rule was already effective before that invocation/i,
+    /invocation alone is not proof of persistence/i,
+    /`\/plan`, answers, reports, workers, Script Runner, prefills and `\/review` are not ADR sign-off/i,
+    /Review remains source-read-only and records delivery acceptance only/i,
+    /authored sources do not establish Local or Agent Host runtime behavior/i
+  ], 'README summary must present prospective sign-off, guarded persistence, read-only Review and runtime limits');
+  const wikiRpirSummary = paragraph(source.wikiRpir, 'When the prospective exact-snapshot rule');
+  requireADRRule(wikiRpirSummary, [
+    /only the Proposed ADR preimage visibly identified in the inspected Plan handoff/i,
+    /rule is already effective before/i,
+    /A prior invocation is not retroactive/i,
+    /Review independently compares actual invocation\/persistence evidence but remains source-read-only/i,
+    /Stage Assurance only advises and receives no status-write authority/i,
+    /do not prove installed Local or Agent Host behavior/i
+  ], 'RPIR Wiki summary must distinguish sign-off, delivery Review and assurance authority');
+  const wikiAuthoritySummary = paragraph(source.wikiEvidence, 'The prospective ADR sign-off rule');
+  requireADRRule(wikiAuthoritySummary, [
+    /only an explicit `\/implement` invocation with the inspected approved Plan/i,
+    /when the rule was already effective/i,
+    /status\/date\/agreement evidence separately/i,
+    /report distinguishes invocation from each record's actual persistence outcome/i,
+    /no prior invocation is retroactive/i,
+    /Review is read-only and assesses delivery/i,
+    /assurance remains advisory/i,
+    /does not activate itself or prove installed runtime behavior/i
+  ], 'Lifecycle evidence Wiki summary must state exact sign-off timing and evidence authority');
+  const catalogueSignoffSummary = source.wikiCatalogue.split('\n').find((line) =>
+    line.startsWith('| Prospective exact-snapshot ADR sign-off recording |')) || '';
+  requireADRRule(catalogueSignoffSummary, [
+    /only an explicit `\/implement` invocation with the inspected Plan signs off the exact visible Proposed preimage/i,
+    /when policy was effective beforehand/i,
+    /Implement coordinator records only guarded metadata/i,
+    /Review is source-read-only/i,
+    /assurance is advisory/i,
+    /No prior invocation is retroactive/i,
+    /does not self-activate or prove runtime behavior/i
+  ], 'Artifact catalogue must summarize the prospective sign-off capability accurately');
+
   for (const [owner, text] of [
     ['repository policy', source.repository], ['lifecycle instruction', source.lifecycleInstruction]
   ]) for (const [pattern, rule] of [
@@ -886,11 +927,50 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
   requireADRRule(implementADR, [
     /(?:continu(?:e|ing)|allow(?:ing)?)[^.\n]*(?:independent|unrelated) approved work(?:[^.\n]*continue)?/i
   ], 'Implement ADR guidance is missing independent-work continuity');
-  requireADRRule(source.review, [
-    /independently compare actual delivery\/evidence and governance claims/i,
-    /clean Review does not establish enterprise or architectural approval/i,
-    /Review remains source-read-only/i
-  ], 'Review guidance conflates delivery acceptance or grants ADR authorship');
+  for (const [pattern, rule] of [
+    [/independently compare (?:actual )?(?:delivery\/evidence|those claims)[^.!?\n]*(?:governance claims|physical ADR postimage)/i, 'independent evidence comparison'],
+    [/clean (?:Review|`\/review`) does not establish enterprise or architectural approval|clean `\/review` is not ADR sign-off/i, 'Review is not architectural sign-off'],
+    [/Review remains source-read-only/i, 'source-read-only boundary'],
+    [/exact bound path\/ID, section, substantive version\/preimage and current state/i, 'exact ADR identity and state'],
+    [/(?:implementation report's actual invocation and per-record persistence evidence|actual invocation and per-record persistence evidence from the implementation report)/i,
+      'report invocation and per-record persistence evidence'],
+    [/do not infer `Accepted` from invocation alone/i, 'no Accepted inference from invocation'],
+    [/A prior `\/implement` invocation is not retroactive/i, 'no retroactive sign-off']
+  ]) requireADRRule(paragraph(coordinatorBody(source.review, 'Review'), 'When the approved Plan binds an ADR'),
+    [pattern], `Review guidance: ${rule}`);
+  const reviewSkillProcedure = section(source.codeReview, '## Procedure').split('\n')
+    .find((line) => line.trimStart().startsWith('When the Plan binds an ADR')) || '';
+  for (const [pattern, rule] of [
+    [/exact bound path\/ID, section, substantive version\/preimage and current state/i, 'exact ADR identity and state'],
+    [/implementation report's actual invocation and per-record persistence evidence/i, 'report invocation and per-record persistence evidence'],
+    [/do not infer `Accepted` from invocation alone/i, 'no Accepted inference from invocation'],
+    [/Review gains no ADR authorship or status-write authority/i, 'no ADR write authority']
+  ]) requireADRRule(reviewSkillProcedure, [pattern], `Code Review Skill: ${rule}`);
+  const reviewADRField = field(section(source.reviewReport, '## Disposition and comparison'), 'Architectural choice coverage and ADR comparison');
+  for (const [pattern, rule] of [
+    [/actual invocation and per-record persistence evidence/i, 'invocation and per-record persistence'],
+    [/do not infer `Accepted` from invocation/i, 'no Accepted inference'],
+    [/prior invocation when the policy was not effective before it/i, 'no retroactive sign-off'],
+    [/clean delivery Review is not ADR sign-off/i, 'Review is not ADR sign-off'],
+    [/no ADR authorship or status-write authority/i, 'no Review write authority']
+  ]) requireADRRule(reviewADRField, [pattern], `Review report schema: ${rule}`);
+  const assuranceAssessment = section(source.assuranceSkill, '## Assessment').split('\n')
+    .find((line) => line.trimStart().startsWith('When a Plan binds an ADR')) || '';
+  for (const [pattern, rule] of [
+    [/exact identity\/section\/preimage version\/state\/conditions/i, 'exact ADR traceability'],
+    [/report's actual invocation (?:and|plus) per-record persistence claims/i, 'invocation and persistence evidence'],
+    [/Do not infer `Accepted` from invocation alone/i, 'no Accepted inference'],
+    [/invocation predating effective policy/i, 'no retroactive sign-off'],
+    [/advisory, grants no ADR authorship or status-write authority/i, 'advisory no-write boundary']
+  ]) requireADRRule(assuranceAssessment, [pattern], `Stage Assurance Skill: ${rule}`);
+  const assuranceADRCheck = source.assurance.split('\n').find((line) => line.startsWith('- [ ] For exact-snapshot sign-off')) || '';
+  requireADRRule(assuranceADRCheck, [
+    /actual invocation and each per-record save\/readback outcome/i,
+    /inspected ADR preimage\/postimage/i,
+    /Invocation alone is not persisted `Accepted`/i,
+    /no invocation predating effective policy is retroactive/i,
+    /Assurance is advisory and grants no ADR status-write authority/i
+  ], 'Stage Assurance checklist must compare sign-off evidence without granting authority');
   requireADRRule(source.runner, [
     /Script Runner itself remains source\/configuration\/customization-read-only in every phase/i,
     /Plan coordinator's separate associated-Proposed-ADR exception never transfers to Runner/i

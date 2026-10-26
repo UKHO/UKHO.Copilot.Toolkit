@@ -269,6 +269,74 @@ for (const [key, target, replacement] of [
   cases += 1;
 }
 
+const reviewInvocationCaveat = 'A prior `/implement` invocation is not retroactive if the exact-snapshot rule was not effective before it.';
+const reviewWithoutInvocationCaveat = replaceOnce(adrSources.review, reviewInvocationCaveat, 'A qualifying invocation follows the effective policy.');
+assertRejected('Review historical decoy cannot replace its exact-invocation rule', () => contracts.checkArchitectureDecisionRecordContract({
+  ...adrSources,
+  review: `${reviewWithoutInvocationCaveat}\n\n## Historical note\n\n${reviewInvocationCaveat}\n`
+}), (error) => error.contractId === 'ADR-CONTRACT-001' && /Review guidance: no retroactive sign-off/.test(error.message));
+
+const reviewCleanIsNotSignoff = 'a clean `/review` is not ADR sign-off and does not establish enterprise or architectural approval.';
+rejectSignoff('Review claims a clean delivery Review signs off ADR', 'review', reviewCleanIsNotSignoff,
+  'A clean `/review` is ADR sign-off and establishes architectural approval.', /Review guidance: Review is not architectural sign-off/);
+rejectSignoff('Review permits ADR status writes', 'review', 'Review remains source-read-only and does not author or revise ADRs.',
+  'Review may update ADR status when evidence is clear.', /Review guidance: source-read-only boundary/);
+
+const reviewSkillNoInference = 'do not infer `Accepted` from invocation alone or assume an unverified save succeeded.';
+const reviewSkillWithoutInference = replaceOnce(adrSources.codeReview, reviewSkillNoInference, 'compare available report evidence.');
+assertRejected('Review Skill wrong-owner decoy cannot replace no-inference rule', () => contracts.checkArchitectureDecisionRecordContract({
+  ...adrSources,
+  codeReview: `${reviewSkillWithoutInference}\n\n## Unrelated note\n\n${reviewSkillNoInference}\n`
+}), (error) => error.contractId === 'ADR-CONTRACT-001' && /Code Review Skill: no Accepted inference/.test(error.message));
+
+const reportNoInference = 'do not infer `Accepted` from invocation, or retroactive sign-off from a prior invocation when the policy was not effective before it.';
+rejectSignoff('Review report infers Accepted from invocation', 'reviewReport', reportNoInference,
+  'Report that every invocation is Accepted.', /Review report schema: no Accepted inference/);
+rejectSignoff('Review report makes Review ADR sign-off', 'reviewReport', 'A clean delivery Review is not ADR sign-off or architectural approval',
+  'A clean delivery Review is ADR sign-off and architectural approval', /Review report schema: Review is not ADR sign-off/);
+
+const assuranceNoInference = 'Do not infer `Accepted` from invocation alone or retroactive sign-off from an invocation predating effective policy.';
+const assuranceWithoutInference = replaceOnce(adrSources.assuranceSkill, assuranceNoInference, 'Compare the evidence available.');
+assertRejected('Assurance historical decoy cannot replace its sign-off assessment', () => contracts.checkArchitectureDecisionRecordContract({
+  ...adrSources,
+  assuranceSkill: `${assuranceWithoutInference}\n\n## Historical note\n\n${assuranceNoInference}\n`
+}), (error) => error.contractId === 'ADR-CONTRACT-001' && /Stage Assurance Skill: no Accepted inference/.test(error.message));
+
+rejectSignoff('Assurance checklist grants status authority', 'assurance', 'Assurance is advisory and grants no ADR status-write authority.',
+  'Assurance may write ADR status.', /Stage Assurance checklist must compare sign-off evidence/);
+
+for (const [key, prefix, target, replacement, diagnostic] of [
+  ['readme', 'Under the prospective exact-snapshot rule', 'explicit `/implement` invocation signs off only the exact Proposed ADR preimage',
+    'any invocation accepts the ADR', /README summary must present/],
+  ['wikiRpir', 'When the prospective exact-snapshot rule', 'A prior invocation is not retroactive',
+    'A prior invocation is retroactive', /RPIR Wiki summary must distinguish/],
+  ['wikiEvidence', 'The prospective ADR sign-off rule', 'no prior invocation is retroactive',
+    'prior invocations apply retroactively', /Lifecycle evidence Wiki summary must state/]
+]) {
+  const summaryWithoutRule = replaceOnce(adrSources[key], target, replacement);
+  assertRejected(`${key} historical decoy cannot replace its summary rule`, () => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources,
+    [key]: `${summaryWithoutRule}\n\n## Historical note\n\n${target}\n`
+  }), (error) => error.contractId === 'ADR-CONTRACT-001' && diagnostic.test(error.message));
+}
+
+rejectSignoff('catalogue summary overstates sign-off authority', 'wikiCatalogue',
+  'only an explicit `/implement` invocation with the inspected Plan signs off the exact visible Proposed preimage',
+  'any implementation invocation accepts all ADRs', /Artifact catalogue must summarize/);
+
+for (const [key, target, replacement] of [
+  ['review', 'plus the implementation report\'s actual invocation and per-record persistence evidence',
+    'plus actual invocation and per-record persistence evidence from the implementation report'],
+  ['reviewReport', 'Compare actual invocation and per-record persistence evidence with the exact ADR preimage/postimage and conditions',
+    'Compare the actual invocation and per-record persistence evidence against the bound ADR preimage, postimage, and conditions'],
+  ['assuranceSkill', 'report\'s actual invocation and per-record persistence claims', 'report\'s actual invocation plus per-record persistence claims']
+]) {
+  assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], target, replacement)
+  }));
+  cases += 1;
+}
+
 const readinessSentence = 'A completed Plan has no unresolved architectural choice';
 const planWithoutReadiness = replaceOnce(adrSources.plan, readinessSentence, 'Plan readiness is assessed');
 for (const [label, plan, prompt] of [
@@ -543,7 +611,10 @@ for (const [label, key, mutate, diagnostic] of [
     return changed;
   }, /unexpected architecture requires engineer-directed Plan resolution/],
   ['dependent-effects guard omitted', 'implement', (text) => replaceOnce(text, ' before dependent effects', ''), /missing material version mismatch before dependent effects/],
-  ['Review implies architecture approval', 'review', (text) => replaceOnce(text, 'a clean Review does not establish enterprise or architectural approval.', ''), /conflates delivery acceptance/],
+  ['Review implies architecture approval', 'review', (text) => replaceOnce(
+    text, 'a clean `/review` is not ADR sign-off and does not establish enterprise or architectural approval.',
+    'a clean `/review` is ADR sign-off and establishes architectural approval.'
+  ), /Review guidance: Review is not architectural sign-off/],
   ['missing decision date field', 'template', (text) => replaceOnce(text, /^- \*\*Decision date:\*\*[^\n]*\n/m, ''), /decision provenance/]
 ]) {
   const fixture = { ...adrSources, [key]: mutate(adrSources[key]) };
