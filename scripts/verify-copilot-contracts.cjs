@@ -518,6 +518,62 @@ function checkCompleteArchitectureCoverage(source) {
   })) rejectArchitectureExemption(text, owner);
 }
 
+function checkDecisionReadinessContract(source) {
+  const researchAgent = paragraph(coordinatorBody(source.research, 'Research'), 'Explicitly identify architectural choices');
+  const researchSkill = section(source.researchSkill, '## Procedure').split('\n').find((line) => line.startsWith('7. Before handoff')) || '';
+  const researchTemplate = section(source.researchTemplate, '### ADR inputs and remaining gaps');
+  for (const [owner, text] of Object.entries({ researchAgent, researchSkill, researchTemplate })) {
+    requireADRRule(text, [
+      /resolve foreseeable[^.!?\n]*choices (?:where|when) practicab(?:le|ility)|resolve foreseeable[^.!?\n]*choices (?:where|when) practical/i,
+      /(?:distinguish|separate|classify)[^.!?\n]*(?:decision|choice)[^.!?\n]*(?:fact|factual)|(?:distinguish|separate|classify)[^.!?\n]*(?:fact|factual)[^.!?\n]*(?:decision|choice)/i,
+      /do not present an unresolved architectural choice as a factual unknown/i,
+      /do not treat a complete Proposed ADR as missing decision content merely because sign-off is pending/i
+    ], `${owner}: Research must resolve foreseeable choices and distinguish factual gaps from decisions`);
+  }
+  requireADRRule(researchAgent, [
+    /separately identify factual unknowns[^.!?\n]*evidence[^.!?\n]*consequence[^.!?\n]*(?:check|acquisition) route/i
+  ], 'Research coordinator must hand over factual evidence gaps separately');
+
+  const planAgent = paragraph(coordinatorBody(source.plan, 'Plan'), 'A completed Plan');
+  const planningProcedure = section(source.planning, '## Procedure').split('\n').find((line) => line.startsWith('5. Inspect relevant')) || '';
+  const planningGaps = section(source.planning, '### Resolve material planning gaps');
+  const planPrompt = section(source.planPrompt, '## Constraints');
+  for (const [owner, text] of Object.entries({ planAgent, planningProcedure, planningGaps, planPrompt })) {
+    for (const [pattern, rule] of [
+      [/completed Plan has no (?:unresolved architectural choice|unsettled architectural decision)/i,
+        'completed Plan must have no unresolved architectural choice'],
+      [/foreseeable[^.!?\n]*choices (?:where|when) practicable/i, 'resolve foreseeable choices where practicable'],
+      [/do not treat a complete Proposed ADR as missing decision content merely because sign-off is pending/i,
+        'distinguish Proposed sign-off from missing decision content']
+    ]) requireADRRule(text, [pattern], `${owner}: Plan must resolve architecture; ${rule}`);
+    requireADRRule(text, [
+      /remaining material factual unknown/i,
+      /bounded (?:check|route)/i,
+      /expected interpretation/i,
+      /allowed in-scope response/i,
+      /affected (?:Work Items\/effects|items?(?: and|\/) effects)/i,
+      /engineer-(?:escalation|direction) condition|(?:condition|escalation)[^.!?\n]*engineer direction/i,
+      /independent work that can continue|independent[^.!?\n]*continue/i,
+      /bare `TBD`[^.!?\n]*(?:not[^.!?\n]*actionable|insufficient)/i,
+      /(?:do not|does not|never) require zero (?:factual )?unknowns|do not (?:require|impose) (?:a )?zero[- ](?:factual[- ])?unknowns?(?: rule| requirement)?|not a zero-(?:factual-)?unknowns? (?:rule|requirement)/i,
+      /fact[^.!?\n]*(?:changes|invalidates)[^.!?\n]*architectural choice[^.!?\n]*hold[^.!?\n]*dependent effects/i
+    ], `${owner}: residual facts need a bounded per-Work-Item route without a zero-unknowns rule`);
+  }
+
+  const templateDetails = section(source.planTemplate, '## Detailed work items');
+  requireADRRule(templateDetails, [
+    /Residual factual unknown \(include only when a material fact remains\)/i,
+    /current evidence/i, /bounded check\/observation/i,
+    /expected interpretation and allowed in-scope response/i,
+    /affected Work Items\/effects/i,
+    /engineer-escalation condition/i,
+    /independent work that can continue/i,
+    /bare TBD[^.!?\n]*(?:not|insufficient)[^.!?\n]*actionable/i,
+    /do not use this route for an unresolved architectural decision/i,
+    /do not require zero unknown facts/i
+  ], 'Plan template: existing Work Item detail must provide the complete optional factual-unknown route');
+}
+
 function checkArchitectureDecisionRecordContract(sources = {}) {
   const paths = {
     skill: '.github/skills/architecture-decision-records/SKILL.md',
@@ -544,7 +600,7 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
     assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
     readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md',
     wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md',
-    wikiCatalogue: 'docs/Wiki/artifact-catalogue.md'
+    wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', planPrompt: '.github/prompts/plan.prompt.md'
   };
   const source = Object.fromEntries(Object.entries(paths).map(([key, relative]) => [key, sources[key] ?? readText(relative)]));
   const metadata = parseFrontmatterText(source.skill, paths.skill).values;
@@ -570,6 +626,7 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
   ], 'ADR Skill is missing phase, ownership, or effect safeguards');
 
   checkCompleteArchitectureCoverage(source);
+  checkDecisionReadinessContract(source);
 
   const expectedInputs = [
     '1.1', '1.2', '1.3', '1.4', '1.5',

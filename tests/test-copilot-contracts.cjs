@@ -121,13 +121,108 @@ const adrPaths = {
   assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
   readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md',
   wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md',
-  wikiCatalogue: 'docs/Wiki/artifact-catalogue.md'
+  wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', planPrompt: '.github/prompts/plan.prompt.md'
 };
 const adrSources = Object.fromEntries(Object.entries(adrPaths).map(([key, relative]) => [key, readArtifact(relative)]));
 assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract(adrSources));
 assert.doesNotThrow(() => contracts.checkLocalLinks(adrPaths.skill, adrSources.skill));
 cases += 5;
 cases += 2;
+
+// Decision readiness and residual factual unknowns are owned by normative
+// Research/Plan sections and the existing Work Item detail, not metadata,
+// history, or a second register. These fixtures test authored contracts, not
+// arbitrary Plan meaning or runtime behavior.
+for (const [label, key, target, replacement, diagnostic] of [
+  ['Research skips foreseeable decisions', 'research', 'Resolve foreseeable engineer-owned choices where practicable', 'list choices when convenient', /Research must resolve foreseeable choices/],
+  ['Research fails to separate facts from decisions', 'research', 'distinguish decisions from factual evidence gaps', 'record unresolved items', /Research must resolve foreseeable choices/],
+  ['Research relabels a material choice as fact', 'research', 'do not present an unresolved architectural choice as a factual unknown', 'present an unresolved architectural choice as a factual unknown', /Research must resolve foreseeable choices/],
+  ['Research treats Proposed as incomplete', 'research', 'Do not treat a complete Proposed ADR as missing decision content merely because sign-off is pending', 'Treat a complete Proposed ADR as missing decision content merely because sign-off is pending', /Research must resolve foreseeable choices/],
+  ['Plan permits unresolved architecture', 'plan', 'A completed Plan has no unresolved architectural choice', 'A Plan may retain unresolved architectural choices', /Plan must resolve architecture/],
+  ['Plan confuses Proposed state with decision content', 'plan', 'Do not treat a complete Proposed ADR as missing decision content merely because sign-off is pending', 'Treat a complete Proposed ADR as missing decision content merely because sign-off is pending', /Plan must resolve architecture/],
+  ['Plan permits unbounded TBD', 'plan', 'A bare `TBD` or “investigate later” is not actionable', 'A bare `TBD` or “investigate later” is an acceptable route', /residual facts need a bounded per-Work-Item route/]
+]) {
+  assertRejected(label, () => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], target, replacement)
+  }), (error) => error.contractId === 'ADR-CONTRACT-001' && diagnostic.test(error.message));
+}
+
+const researchChoiceRule = 'Resolve foreseeable engineer-owned choices where practicable';
+const researchWithoutChoiceRule = replaceOnce(adrSources.research, researchChoiceRule, 'list choices when convenient');
+for (const [label, research, researchTemplate] of [
+  ['historical decoy', `${researchWithoutChoiceRule}\n\n## Historical example, not operating policy\n\n${researchChoiceRule}\n`, adrSources.researchTemplate],
+  ['metadata decoy', replaceOnce(researchWithoutChoiceRule, 'description: ', `description: ${researchChoiceRule}. `), adrSources.researchTemplate],
+  ['wrong-section decoy', replaceOnce(researchWithoutChoiceRule, '\n\nOnly after actual acknowledgment', `\n\nSupplementary note: ${researchChoiceRule}.\n\nOnly after actual acknowledgment`), adrSources.researchTemplate],
+  ['wrong-owner decoy', researchWithoutChoiceRule, `${adrSources.researchTemplate}\n\n${researchChoiceRule}`]
+]) {
+  assertRejected(`Research handover ${label} cannot replace its normative rule`, () => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, research, researchTemplate
+  }), (error) => error.contractId === 'ADR-CONTRACT-001' && /Research must resolve foreseeable choices/.test(error.message));
+}
+
+for (const [label, key, target, replacement, diagnostic] of [
+  ['Plan procedure permits unresolved architecture', 'planning', 'A completed Plan has no unresolved architectural choice: resolve foreseeable choices where practicable', 'A Plan may retain unresolved architectural choices', /Plan must resolve architecture/],
+  ['Plan gap guidance permits unresolved architecture', 'planning', 'A completed Plan has no unresolved architectural choice;', 'A Plan may retain unresolved architectural choices;', /Plan must resolve architecture/],
+  ['Plan prompt permits unresolved architecture', 'planPrompt', 'A completed Plan has no unresolved architectural choice', 'A Plan may retain unresolved architectural choices', /Plan must resolve architecture/],
+  ['Plan procedure permits bare TBD', 'planning', 'A bare `TBD` or “investigate later” is not actionable. If a fact changes or invalidates an architectural choice', 'A bare `TBD` or “investigate later” is an acceptable route. If a fact changes or invalidates an architectural choice', /residual facts need a bounded per-Work-Item route/],
+  ['Plan prompt permits bare TBD', 'planPrompt', 'A bare `TBD` or “investigate later” is insufficient', 'A bare `TBD` or “investigate later” is sufficient', /residual facts need a bounded per-Work-Item route/]
+]) {
+  assertRejected(label, () => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], target, replacement)
+  }), (error) => error.contractId === 'ADR-CONTRACT-001' && diagnostic.test(error.message));
+}
+
+const residualFactTemplate = adrSources.planTemplate.match(/\*\*Residual factual unknown \(include only when a material fact remains\):\*\*[^\n]*/)?.[0];
+assert.ok(residualFactTemplate, 'Plan template requires an optional residual-fact field in its existing Work Item detail');
+for (const [label, target, replacement] of [
+  ['current evidence', 'current evidence', 'evidence'],
+  ['bounded check', 'bounded check/observation', 'check'],
+  ['expected interpretation and allowed response', 'expected interpretation and allowed in-scope response', 'interpretation'],
+  ['affected Work Items/effects', 'affected Work Items/effects', 'affected work'],
+  ['engineer escalation', 'engineer-escalation condition', 'escalation'],
+  ['independent continuation', 'independent work that can continue', 'independent work'],
+  ['architectural-decision boundary', 'Do not use this route for an unresolved architectural decision', 'This route may carry unresolved architecture'],
+  ['zero-unknowns safeguard', 'Do not require zero unknown facts', 'Require zero unknown facts']
+]) {
+  assertRejected(`Plan template residual route omits ${label}`, () => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources,
+    planTemplate: replaceOnce(adrSources.planTemplate, residualFactTemplate,
+      replaceOnce(residualFactTemplate, target, replacement))
+  }), (error) => error.contractId === 'ADR-CONTRACT-001' &&
+    error.message === 'Plan template: existing Work Item detail must provide the complete optional factual-unknown route');
+}
+
+for (const [key, target, replacement] of [
+  ['research', 'Resolve foreseeable engineer-owned choices where practicable', 'Resolve foreseeable choices when practical'],
+  ['research', 'distinguish decisions from factual evidence gaps', 'separate factual evidence gaps from unresolved decisions'],
+  ['plan', 'no unresolved architectural choice', 'no unsettled architectural decision'],
+  ['planPrompt', 'affected Work Items/effects', 'affected items and effects'],
+  ['planPrompt', 'engineer-escalation condition', 'condition for engineer direction'],
+  ['planPrompt', 'do not require zero factual unknowns', 'this is not a zero-unknowns requirement']
+]) {
+  assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], target, replacement)
+  }));
+  cases += 1;
+}
+
+const safeFactRoute = '**Residual factual unknown (include only when a material fact remains):** `Current evidence: the container image tag is not stated in the checked configuration. Bounded check/observation: inspect the configured image tag in the deployment descriptor. Expected interpretation and allowed in-scope response: if the tag matches the approved baseline, continue the existing Work Item; otherwise hold only the affected deployment effect. Affected Work Items/effects: WI1 deployment verification. Engineer-escalation condition: if the observed value changes a security or architecture commitment, ask the engineer before that effect. Independent work that can continue: complete unrelated documentation checks. A bare TBD is not actionable. Do not use this route for an unresolved architectural decision. Do not require zero unknown facts.`';
+assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({
+  ...adrSources, planTemplate: replaceOnce(adrSources.planTemplate, residualFactTemplate, safeFactRoute)
+}), 'a concrete bounded non-decision fact route remains valid');
+cases += 1;
+
+const readinessSentence = 'A completed Plan has no unresolved architectural choice';
+const planWithoutReadiness = replaceOnce(adrSources.plan, readinessSentence, 'Plan readiness is assessed');
+for (const [label, plan, prompt] of [
+  ['historical decoy', `${planWithoutReadiness}\n\n## Historical example, not operating policy\n\n${readinessSentence}\n`, adrSources.planPrompt],
+  ['metadata decoy', replaceOnce(planWithoutReadiness, 'description: ', `description: ${readinessSentence}. `), adrSources.planPrompt],
+  ['wrong-owner decoy', planWithoutReadiness, `${adrSources.planPrompt}\n\n${readinessSentence}`]
+]) {
+  assertRejected(`Plan readiness ${label} cannot replace its normative rule`, () => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, plan, planPrompt: prompt
+  }), (error) => error.contractId === 'ADR-CONTRACT-001' && /Plan must resolve architecture/.test(error.message));
+}
 
 const executionPaths = {
   repository: '.github/copilot-instructions.md', core: '.github/skills/rpir-lifecycle-core/SKILL.md',
