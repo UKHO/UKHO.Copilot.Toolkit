@@ -6,9 +6,9 @@ All notable releases of the UKHO Copilot Toolkit are documented here. Versions f
 
 ### 1.0.0 review candidate
 
-- The replacement `1.0.0` VSIX uses the repository-root output `ukho-copilot-toolkit-1.0.0.vsix`; the previous undistributed same-version archive is preserved separately at `Releases/ukho-copilot-toolkit-1.0.0.vsix`. The replacement remains a private review candidate, not a released version and not approved for distribution. This engineer-selected major version includes breaking changes, consistent with the README's versioning convention.
+- This is a private, undistributed review candidate named `ukho-copilot-toolkit-1.0.0.vsix`; manual testing and publication remain separate human activities. Candidate attempts are retained independently under `Releases/YYYY-MM-DD/HHmmssZ-<unique-id>/`, so a new attempt does not replace or inherit verification from an older one. The 1.0.0 major version includes the breaking changes below, consistent with the README's versioning convention.
 - Skill contributions now identify each regular `.github/skills/<skill>/SKILL.md` entry file, while `package.json.files` continues to include each complete Skill directory and its supporting resources.
-- Packaging builds to an owned temporary path and publishes only to an absent version-derived root target; archive verification is bound to that exact root candidate and compares source payload bytes and complete contribution metadata. The preserved `Releases/` archive is never a fallback.
+- Candidate preparation builds with the pinned `@vscode/vsce` 3.9.2 tool to an owned temporary path, retains the exact output in its unique archive directory, and verifies it against captured build inputs. Inspection requires an explicit candidate directory; the legacy root-only `package` and `verify-package` interfaces do not fall back to archived candidates.
 
 ### Breaking changes
 
