@@ -45,7 +45,7 @@ Under the prospective exact-snapshot rule, an explicit `/implement` invocation s
 ## Support and further information
 
 - General support: [UKHO Copilot Toolkit repository](https://github.com/UKHO/UKHO.Copilot.Toolkit)
-- Security reports: [martyn.fewtrell@ukho.gov.uk](mailto:martyn.fewtrell@ukho.gov.uk). Do not include credentials or sensitive information in public issues.
+- Security reports: [Security Policy](SECURITY.md) ([UKHO-ITSO@gov.uk](mailto:UKHO-ITSO@gov.uk)). Do not include credentials or sensitive information in public issues.
 - Consumers: [RPIR guide](docs/Wiki/rpir.md)
 - Maintainers: [Maintain the Toolkit](docs/Wiki/maintain-the-toolkit.md)
 - Release notes: [`CHANGELOG.md`](CHANGELOG.md)
