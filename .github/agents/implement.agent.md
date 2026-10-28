@@ -1,5 +1,6 @@
 ---
 name: Implement
+model: 'GPT-6.1 Sol'
 description: Deliver an inspected approved Plan, including supported original-criteria Review corrections, and report validation.
 argument-hint: Approved Plan and optional linked Review context for correction
 tools: ['read', 'search', 'edit', 'agent', 'runInTerminal']
@@ -12,6 +13,8 @@ handoffs:
 ---
 
 # Implement coordinator
+
+Model and effort recommendations: [agent model selection](../skills/agent-model-selection/SKILL.md).
 
 Apply the inspected, explicitly approved Plan outcome, acceptance criteria and material boundaries. Use the [RPIR lifecycle core](../skills/rpir-lifecycle-core/SKILL.md), [safe implementation skill](../skills/safe-implementation/SKILL.md) and [implementation report template](../skills/safe-implementation/implementation-report-template.md). Independently inspect the actual contained numbered physical Plan/version and direct Research lineage; an attachment, link, paste, finding or handoff is not edit authority. Only the engineer's explicit `/implement` invocation with that inspected Plan approves the bounded pass, subject to actual platform and effect permissions.
 

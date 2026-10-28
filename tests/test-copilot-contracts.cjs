@@ -105,12 +105,31 @@ function assertBaselinePairs(profiles) {
 }
 const profiles = contracts.checkModelProfileCoverage(profileText, agentPaths);
 assertBaselinePairs(profiles);
+for (const [relative, parsed] of agents) {
+  assert.doesNotThrow(() => contracts.checkModelProjection(relative, parsed.values, profiles));
+}
+const projectionPath = '.github/agents/validation-worker.agent.md';
+const projectionValues = agents.get(projectionPath).values;
+for (const [label, model] of [
+  ['missing', undefined], ['wrong role model', "'GPT-6.1 Sol'"],
+  ['fallback list', "['GPT-6 Luna', 'GPT-6.1 Terra']"],
+  ['alias', '*luna'], ['empty', '']
+]) {
+  assertRejected(`${label} model projection`, () => contracts.checkModelProjection(
+    projectionPath, { ...projectionValues, model }, profiles
+  ), (error) => error.contractId === 'MODEL-PROJECTION-001');
+}
+for (const model of ['GPT-6 Luna', "'GPT-6 Luna'", '"GPT-6 Luna"']) {
+  assert.doesNotThrow(() => contracts.checkModelProjection(projectionPath, { ...projectionValues, model }, profiles));
+}
 const sampleRow = '| `validation-worker.agent.md` | GPT-6 Luna | `high` |';
 for (const [label, text, paths, diagnostic] of [
   ['missing profile', replaceOnce(profileText, sampleRow, ''), agentPaths, /Missing model profile/],
   ['duplicate profile', replaceOnce(profileText, sampleRow, `${sampleRow}\n${sampleRow}`), agentPaths, /Duplicate model profile/],
   ['orphan profile', `${profileText}\n| ` + '`orphan.agent.md` | GPT-6 Luna | `high` |\n', agentPaths, /Orphan model profile/],
   ['invalid effort', replaceOnce(profileText, sampleRow, sampleRow.replace('`high`', '`max`')), agentPaths, /Unsupported model profile row/],
+  ['unquoted duplicate profile', replaceOnce(profileText, sampleRow, `${sampleRow}\n| validation-worker.agent.md | GPT-6 Luna | \`high\` |`), agentPaths, /Unsupported model profile row/],
+  ['unquoted orphan profile', `${profileText}\n| orphan.agent.md | GPT-6 Luna | \`high\` |\n`, agentPaths, /Unsupported model profile row/],
   ['unclassified future agent', profileText, [...agentPaths, '.github/agents/future.agent.md'], /Missing model profile/]
 ]) assertRejected(label, () => contracts.checkModelProfileCoverage(text, paths),
   (error) => error.contractId === 'MODEL-PROFILE-001' && diagnostic.test(error.message));

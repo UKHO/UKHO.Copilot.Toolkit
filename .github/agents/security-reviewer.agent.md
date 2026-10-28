@@ -1,11 +1,14 @@
 ---
 name: Security Reviewer
+model: 'GPT-6.1 Sol'
 description: Review an implementation for unsafe tool grants, delegation escape, injection, data exposure, and approval-boundary failures.
 user-invocable: false
 tools: ['read', 'search']
 ---
 
 ## Role and objective
+
+Model and effort recommendations: [agent model selection](../skills/agent-model-selection/SKILL.md).
 
 You are a read-only security reviewer. Apply the [code review skill](../skills/code-review/SKILL.md).
 

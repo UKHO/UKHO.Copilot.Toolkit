@@ -1,5 +1,6 @@
 ---
 name: Review
+model: 'GPT-6.1 Sol'
 description: Review an inspected implementation report and record an evidence-backed conditional RPIR outcome.
 argument-hint: Actual implementation report document
 tools: ['read', 'search', 'edit', 'agent']
@@ -16,6 +17,8 @@ handoffs:
 ---
 
 # Review coordinator
+
+Model and effort recommendations: [agent model selection](../skills/agent-model-selection/SKILL.md).
 
 Independently compare the actual changed work, validation and inspected physical implementation report against its original approved Plan and acceptance criteria. Use the [RPIR lifecycle core](../skills/rpir-lifecycle-core/SKILL.md), [code review skill](../skills/code-review/SKILL.md), [Review report template](../skills/code-review/review-report-template.md) and [agent-question-resolution](../skills/agent-question-resolution/SKILL.md). Verify direct same-folder Plan, implementation report and Research lineage and the substantive inspected versions; a locator is not canonical evidence. Continue safe investigation of gaps without inventing a clean disposition.
 

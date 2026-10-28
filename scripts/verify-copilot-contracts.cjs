@@ -1448,7 +1448,10 @@ function checkModelAuthoringContract(sources = {}) {
 }
 
 function checkModelProfileCoverage(profile, agentPaths) {
-  const rows = section(profile, '# Authoritative role profiles').split('\n').filter((line) => /^\| `/.test(line));
+  const rows = section(profile, '# Authoritative role profiles').split('\n')
+    .filter((line) => /^\s*\|/.test(line))
+    .filter((line) => line !== '| Agent definition | Recommended model | Target effort |' &&
+      line !== '| --- | --- | --- |');
   const profiles = new Map();
   for (const row of rows) {
     const match = row.match(/^\| `([a-z0-9-]+\.agent\.md)` \| (GPT-6\.1 Sol|GPT-6\.1 Terra|GPT-6 Luna) \| `(high|xhigh)` \|$/);
@@ -1465,6 +1468,19 @@ function checkModelProfileCoverage(profile, agentPaths) {
   for (const name of expected) if (!profiles.has(name)) fail(`Missing model profile: ${name}`, 'MODEL-PROFILE-001');
   for (const name of profiles.keys()) if (!expected.includes(name)) fail(`Orphan model profile: ${name}`, 'MODEL-PROFILE-001');
   return profiles;
+}
+
+function checkModelProjection(relative, values, profiles) {
+  const expected = profiles.get(path.posix.basename(relative));
+  if (!expected || typeof values.model !== 'string' || !values.model.trim()) {
+    fail(`${relative} must declare its single profile model`, 'MODEL-PROJECTION-001');
+  }
+  let actual;
+  try { actual = parseTextScalar(values.model.trim(), relative, 'model'); }
+  catch { fail(`${relative} has unsupported model metadata`, 'MODEL-PROJECTION-001'); }
+  if (actual !== expected.model) {
+    fail(`${relative} model must match its profile: ${expected.model}`, 'MODEL-PROJECTION-001');
+  }
 }
 
 function checkCustomizationContracts(inventory) {
@@ -1486,7 +1502,7 @@ function checkCustomizationContracts(inventory) {
   }
 
   const agentPaths = inventory.chatAgents;
-  checkModelProfileCoverage(readText('.github/skills/agent-model-selection/references/role-profiles.md'), agentPaths);
+  const profiles = checkModelProfileCoverage(readText('.github/skills/agent-model-selection/references/role-profiles.md'), agentPaths);
   const agentNames = new Set(agentPaths.map((relative) => parsedByPath.get(relative).values.name));
   const promptPaths = inventory.chatPromptFiles;
   for (const relative of promptPaths) {
@@ -1496,6 +1512,7 @@ function checkCustomizationContracts(inventory) {
   for (const relative of agentPaths) {
     const { values, blocks } = parsedByPath.get(relative);
     checkAgentMetadata(relative, values, blocks, agentNames);
+    checkModelProjection(relative, values, profiles);
   }
 
   for (const relative of artifacts) {
@@ -1568,6 +1585,6 @@ if (require.main === module) {
 
 module.exports = {
   checkAgentMetadata, checkLocalLinks, checkManifestParity, checkPromptMetadata,
-  checkCustomizationContracts, checkArchitectureDecisionRecordContract, checkIncrementalRpirContract, checkModelAuthoringContract, checkModelProfileCoverage,
+  checkCustomizationContracts, checkArchitectureDecisionRecordContract, checkIncrementalRpirContract, checkModelAuthoringContract, checkModelProfileCoverage, checkModelProjection,
   parseFrontmatterText, parseHandoffs, parseStringList
 };

@@ -15,6 +15,12 @@ A VS Code extension containing UKHO Copilot customizations.
 
 Installation does not create workspace lifecycle records or begin RPIR. Start work by explicitly requesting Research when you are ready.
 
+## Agent model recommendations
+
+The [shared role profiles](.github/skills/agent-model-selection/references/role-profiles.md) give each agent a model recommendation and target effort. Agent frontmatter now configures a single model preference matching that profile; actual automatic selection has not yet been verified on every Local path. Select the intended coordinator and check the effective model in the VS Code picker where exposed; set the target effort where supported. Do not assume root effort reaches delegated workers or that their effort is enforced.
+
+If the recommended model is unavailable or the effective selection cannot be verified, disclose the mismatch rather than silently downgrade. An override or escalation is appropriate only through an evidenced, supported route; Astra requires engineer direction. Picker precedence, Local child effort, compatibility across the declared version range and installed routing remain unverified. Copilot-harness parity is a separate follow-on; static metadata and links do not establish runtime behavior.
+
 ## Follow the RPIR workflow
 
 Each phase produces a saved record for you to inspect. Manually invoke the next phase with that physical record; suggestions and reports do not advance phases or accept work automatically.

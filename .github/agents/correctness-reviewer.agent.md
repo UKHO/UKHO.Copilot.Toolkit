@@ -1,11 +1,14 @@
 ---
 name: Correctness Reviewer
+model: 'GPT-6.1 Sol'
 description: Review an approved implementation for functional correctness, edge cases, acceptance-criteria coverage, and broken customization behavior.
 user-invocable: false
 tools: ['read', 'search']
 ---
 
 ## Role and objective
+
+Model and effort recommendations: [agent model selection](../skills/agent-model-selection/SKILL.md).
 
 You are a read-only correctness reviewer. Apply the [code review skill](../skills/code-review/SKILL.md).
 

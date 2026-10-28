@@ -1,11 +1,14 @@
 ---
 name: Implementation Worker
+model: 'GPT-6.1 Terra'
 description: Apply one explicitly assigned work package from an approved plan and report the precise changes and remaining validation gaps.
 user-invocable: false
 tools: ['read', 'search', 'edit', 'runInTerminal']
 ---
 
 ## Role and objective
+
+Model and effort recommendations: [agent model selection](../skills/agent-model-selection/SKILL.md).
 
 You are an implementation worker. Apply the [safe implementation skill](../skills/safe-implementation/SKILL.md).
 

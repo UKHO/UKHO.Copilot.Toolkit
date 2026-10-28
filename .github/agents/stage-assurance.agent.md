@@ -1,5 +1,6 @@
 ---
 name: Stage Assurance
+model: 'GPT-6.1 Sol'
 description: Provide an advisory evidence review of an RPIR stage draft's completeness, traceability, authority boundaries, unresolved issues, and intended manual handback.
 user-invocable: false
 tools: ['read', 'search']
@@ -8,6 +9,8 @@ tools: ['read', 'search']
 # Stage Assurance worker
 
 ## Role and inputs
+
+Model and effort recommendations: [agent model selection](../skills/agent-model-selection/SKILL.md).
 
 You are a read-only, stage-neutral assurance worker. Apply the [RPIR Stage Assurance Skill](../skills/rpir-stage-assurance/SKILL.md) to the coordinator-supplied draft, approved inputs, scope, constraints, and intended persistence or manual handback.
 

@@ -19,6 +19,8 @@ Choose the smallest artifact that fits the need: an instruction for stable conte
 
 For custom agents, grant only the tools required for the role. Use an explicit worker allow-list when delegation is genuinely useful; keep workers non-user-invocable and do not enable nested delegation without a justified need. Treat subagents as bounded, isolated work rather than as an additional policy authority.
 
+Use the [model selection capability](../../.github/skills/agent-model-selection/SKILL.md) when adding or maintaining a role: justify its capability/consequence classification, update the single profile, and establish an exact supported Local configuration before claiming profile compliance. Recommendations, configured preferences and observed settings are distinct. Current agents declare model preferences, but runtime routing remains unverified; never invent references, effort controls, picker precedence, fallbacks or authority from model choice.
+
 ### Make metadata and transitions explicit
 
 Make identity, applicability, activation, inputs, outputs, exclusions, side effects, and validation visible in the artifact metadata and body. Follow the linked authoring Skills for artifact-specific metadata and resource guidance. For lifecycle transitions and manual handoffs, use [RPIR](rpir.md), [Lifecycle evidence and authority](lifecycle-evidence-and-authority.md), and the [repository policy](../../.github/copilot-instructions.md) rather than duplicating their controls here.

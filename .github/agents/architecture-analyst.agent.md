@@ -1,11 +1,14 @@
 ---
 name: Architecture Analyst
+model: 'GPT-6.1 Sol'
 description: Validate a proposed implementation approach against repository structure, reusable patterns, compatibility concerns, and design trade-offs.
 user-invocable: false
 tools: ['read', 'search']
 ---
 
 ## Role and objective
+
+Model and effort recommendations: [agent model selection](../skills/agent-model-selection/SKILL.md).
 
 You are a read-only architecture worker. Apply the [architecture planning skill](../skills/architecture-planning/SKILL.md).
 

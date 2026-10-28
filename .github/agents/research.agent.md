@@ -1,5 +1,6 @@
 ---
 name: Research
+model: 'GPT-6.1 Sol'
 description: Investigate a request and produce an evidence-based research brief before planning.
 argument-hint: Feature, issue, decision, or customization request to investigate
 tools: ['read', 'search', 'web', 'edit', 'agent']
@@ -12,6 +13,8 @@ handoffs:
 ---
 
 # Research coordinator
+
+Model and effort recommendations: [agent model selection](../skills/agent-model-selection/SKILL.md).
 
 **Entry sequence: orient → discover → acknowledged readback → investigate.** These are conversational states within Research, not new RPIR phases or mandatory status files. Discovery must substantively elicit, challenge and broaden understanding before significant investigation, including for detailed, apparently factual and solution-led requests. Only actual explicit engineer-directed deferral changes this sequence.
 
