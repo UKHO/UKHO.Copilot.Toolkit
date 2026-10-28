@@ -1,0 +1,45 @@
+# Authoritative role profiles
+
+This is the single active recommendation allocation for Toolkit agents. Each row identifies one agent definition by its filename under `.github/agents/`; the model is the recommended identity and effort is the target, not a configured or observed setting. `xhigh` means Extra High. These names are not verified editor configuration literals; a display name, provider ID, qualified editor reference and tool argument are not interchangeable. No automatic routing or effective effort has been observed by this profile.
+
+| Agent definition | Recommended model | Target effort |
+| --- | --- | --- |
+| `architecture-analyst.agent.md` | GPT-6.1 Sol | `high` |
+| `codebase-investigator.agent.md` | GPT-6.1 Terra | `high` |
+| `correctness-reviewer.agent.md` | GPT-6.1 Sol | `high` |
+| `domain-investigator.agent.md` | GPT-6.1 Terra | `high` |
+| `feasibility-investigator.agent.md` | GPT-6.1 Terra | `xhigh` |
+| `implement.agent.md` | GPT-6.1 Sol | `high` |
+| `implementation-worker.agent.md` | GPT-6.1 Terra | `xhigh` |
+| `maintainability-reviewer.agent.md` | GPT-6.1 Terra | `high` |
+| `plan.agent.md` | GPT-6.1 Sol | `high` |
+| `requirements-analyst.agent.md` | GPT-6.1 Terra | `high` |
+| `research.agent.md` | GPT-6.1 Sol | `high` |
+| `review.agent.md` | GPT-6.1 Sol | `high` |
+| `script-runner.agent.md` | GPT-6.1 Sol | `high` |
+| `security-reviewer.agent.md` | GPT-6.1 Sol | `high` |
+| `stage-assurance.agent.md` | GPT-6.1 Sol | `high` |
+| `test-strategist.agent.md` | GPT-6.1 Terra | `xhigh` |
+| `test-worker.agent.md` | GPT-6.1 Terra | `high` |
+| `validation-worker.agent.md` | GPT-6 Luna | `high` |
+
+## Capability and consequence rubric
+
+For a new or materially changed role, inspect its actual responsibilities, evidence and output, breadth and ambiguity, consequence of missed constraints, tool/effect boundary, and independent reconciliation. Record the reasoning and choose a single model/effort pair; the current allocation illustrates the following starting points, not an automatic classification by job title:
+
+- **Broad coordination or high-consequence judgment:** Sol/high for lifecycle integration, architecture, correctness/security review, advisory assurance, and command-effect reasoning. Read-only or short work can still have high consequence.
+- **Bounded analysis:** Terra/high for focused evidence gathering, requirements, maintainability and test assessment with deliberate reconciliation.
+- **Demanding but explicitly scoped work:** Terra/xhigh for bounded feasibility, implementation and test strategy, with coordinator ownership and clear inputs and criteria.
+- **Narrow independently reconciled structural validation:** Luna/high where the role is limited and read-only; escalate when semantic authority or difficult boundary analysis is needed.
+
+These are quality-first recommendations informed by role contracts and engineering judgment, not benchmark-proven equivalence or measured savings. Do not automatically lower a delegated role's capability. Add one deliberate profile row for each new suite role and assess supported automatic Local configuration and evidence before calling it profile-compliant. Reconcile the profile with the actual contributed inventory; do not treat 18 as a permanent limit.
+
+## Selection, escalation and failure
+
+- The selected design requires an assigned model to be selected automatically on each supported Local root and child path. Use only a verified native single-model preference and any separately evidenced necessary same-profile projection; this reference is not configuration inheritance. Automatic selection, exact references, each path, floor/current compatibility and effective settings remain unverified until separately authorized observations establish them.
+- Apply an explicit engineer override only through an evidenced, supported path and subject to availability, cost-tier restrictions and actual permission. Do not promise universal picker precedence or remove an approved default when an override is unsupported. Report the override as an exception rather than proof of default routing.
+- For a demonstrated reasoning shortfall, consider higher supported effort on the same model; for persistent Terra/xhigh difficulty, Sol/high may be appropriate. Escalate directly to the appropriate coordinator or stronger profile when extra effort is unlikely to resolve a capability or scope gap. Max is not a routine default. Astra is outside routine defaults and automatic fallback; use it only with engineer direction and a supported, permitted route.
+- Do not silently downgrade Sol roles or introduce automatic downgrade, Auto, Astra, or ordered fallback. If an assigned model is unavailable, unmatched, or its effective selection is unverified, disclose it and do not call the run profile-compliant. A native no-match failure may leave the previous model selected; it is not fail-closed enforcement. Resolve the affected selection through supported routes or return it for engineer direction, never bypass a denial.
+- `high` and `xhigh` are target efforts, not evidence of supported or effective controls. Local child effort is not assumed to follow the parent. Report unsupported or unobservable effort honestly; no unsupported effort field, per-agent context size, token limit or temperature is prescribed. Use model/harness-native context and compaction without claiming a particular capacity.
+
+The profile is Local-only for this delivery; Copilot behavior is not established. A recommendation, configuration or escalation never expands authority, changes tool or delegation boundaries, waives independent Review, turns advisory assurance into acceptance, or authorizes a phase transition or effect.

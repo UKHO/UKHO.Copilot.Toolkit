@@ -11,6 +11,7 @@ const inventory = discover();
 const sourceManifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const manifest = desiredManifest(sourceManifest, inventory);
 const expectedSkillContributions = [
+  '.github/skills/agent-model-selection/SKILL.md',
   '.github/skills/agent-question-resolution/SKILL.md',
   '.github/skills/architecture-decision-records/SKILL.md',
   '.github/skills/architecture-planning/SKILL.md',

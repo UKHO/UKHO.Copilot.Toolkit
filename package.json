@@ -54,6 +54,7 @@
     ".github/prompts/plan.prompt.md",
     ".github/prompts/remediate-review.prompt.md",
     ".github/prompts/review.prompt.md",
+    ".github/skills/agent-model-selection",
     ".github/skills/agent-question-resolution",
     ".github/skills/architecture-decision-records",
     ".github/skills/architecture-planning",
@@ -149,6 +150,9 @@
       }
     ],
     "chatSkills": [
+      {
+        "path": ".github/skills/agent-model-selection/SKILL.md"
+      },
       {
         "path": ".github/skills/agent-question-resolution/SKILL.md"
       },
