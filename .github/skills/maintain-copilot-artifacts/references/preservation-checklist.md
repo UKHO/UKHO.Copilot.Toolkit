@@ -14,6 +14,7 @@ Use with a completed batch-local [rule map](../templates/rule-map.md). This chec
 - [ ] Compare frontmatter, names, descriptions, invocation visibility, headings, paths, anchors, applicability and discovery/registration metadata.
 - [ ] Check every link destination and fragment, plus linked resource bodies and relevant consumers; a valid link alone does not establish equivalent exposure or loading.
 - [ ] Preserve tools, capabilities, routes, delegation, handoffs, outputs and validation interfaces unless the approved outcome explicitly changes them.
+- [ ] Compare the [shared model profile](../../agent-model-selection/SKILL.md), role classification and configuration projections, supported overrides and fallback rules, and harness/evidence limits. Do not treat metadata or links as observed routing, effort or picker precedence.
 - [ ] Inspect neighboring primitive-selection, clarification, input, output and validation duties; do not treat historical records or retained test staging as active rewrite targets.
 
 ## Editing and test evidence

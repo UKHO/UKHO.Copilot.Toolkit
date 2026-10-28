@@ -85,6 +85,65 @@ const unrelatedFieldFixture = desiredManifest({
 assert.deepEqual(unrelatedFieldFixture.customMetadata, { retained: true });
 assert.ok(unrelatedFieldFixture.files.includes('vendor/custom-payload'));
 assert.doesNotThrow(() => contracts.checkManifestParity(manifest, inventory));
+const profilePath = '.github/skills/agent-model-selection/references/role-profiles.md';
+const profileText = readArtifact(profilePath);
+const expectedProfiles = {
+  'architecture-analyst': ['GPT-6.1 Sol', 'high'], 'codebase-investigator': ['GPT-6.1 Terra', 'high'],
+  'correctness-reviewer': ['GPT-6.1 Sol', 'high'], 'domain-investigator': ['GPT-6.1 Terra', 'high'],
+  'feasibility-investigator': ['GPT-6.1 Terra', 'xhigh'], 'implement': ['GPT-6.1 Sol', 'high'],
+  'implementation-worker': ['GPT-6.1 Terra', 'xhigh'], 'maintainability-reviewer': ['GPT-6.1 Terra', 'high'],
+  'plan': ['GPT-6.1 Sol', 'high'], 'requirements-analyst': ['GPT-6.1 Terra', 'high'],
+  'research': ['GPT-6.1 Sol', 'high'], 'review': ['GPT-6.1 Sol', 'high'],
+  'script-runner': ['GPT-6.1 Sol', 'high'], 'security-reviewer': ['GPT-6.1 Sol', 'high'],
+  'stage-assurance': ['GPT-6.1 Sol', 'high'], 'test-strategist': ['GPT-6.1 Terra', 'xhigh'],
+  'test-worker': ['GPT-6.1 Terra', 'high'], 'validation-worker': ['GPT-6 Luna', 'high']
+};
+function assertBaselinePairs(profiles) {
+  for (const [name, [model, effort]] of Object.entries(expectedProfiles)) {
+    assert.deepEqual(profiles.get(`${name}.agent.md`), { model, effort }, `${name} allocation`);
+  }
+}
+const profiles = contracts.checkModelProfileCoverage(profileText, agentPaths);
+assertBaselinePairs(profiles);
+const sampleRow = '| `validation-worker.agent.md` | GPT-6 Luna | `high` |';
+for (const [label, text, paths, diagnostic] of [
+  ['missing profile', replaceOnce(profileText, sampleRow, ''), agentPaths, /Missing model profile/],
+  ['duplicate profile', replaceOnce(profileText, sampleRow, `${sampleRow}\n${sampleRow}`), agentPaths, /Duplicate model profile/],
+  ['orphan profile', `${profileText}\n| ` + '`orphan.agent.md` | GPT-6 Luna | `high` |\n', agentPaths, /Orphan model profile/],
+  ['invalid effort', replaceOnce(profileText, sampleRow, sampleRow.replace('`high`', '`max`')), agentPaths, /Unsupported model profile row/],
+  ['unclassified future agent', profileText, [...agentPaths, '.github/agents/future.agent.md'], /Missing model profile/]
+]) assertRejected(label, () => contracts.checkModelProfileCoverage(text, paths),
+  (error) => error.contractId === 'MODEL-PROFILE-001' && diagnostic.test(error.message));
+const futureProfile = `${profileText}\n| ` + '`future.agent.md` | GPT-6 Luna | `high` |\n';
+assert.equal(contracts.checkModelProfileCoverage(futureProfile, [...agentPaths, '.github/agents/future.agent.md']).size, agentPaths.length + 1);
+const swapped = replaceOnce(profileText, sampleRow, sampleRow.replace('GPT-6 Luna', 'GPT-6.1 Sol'));
+assertRejected('current role pair drift', () => assertBaselinePairs(contracts.checkModelProfileCoverage(swapped, agentPaths)), /validation-worker allocation/);
+const modelAuthoringPaths = {
+  agent: '.github/skills/create-copilot-agent/SKILL.md',
+  agentTemplate: '.github/skills/create-copilot-agent/templates/agent.md',
+  prompt: '.github/skills/create-copilot-prompt/SKILL.md',
+  promptTemplate: '.github/skills/create-copilot-prompt/templates/prompt.md',
+  maintenance: '.github/skills/maintain-copilot-artifacts/SKILL.md',
+  checklist: '.github/skills/maintain-copilot-artifacts/references/preservation-checklist.md'
+};
+const modelAuthoringSources = Object.fromEntries(Object.entries(modelAuthoringPaths).map(([key, relative]) => [key, readArtifact(relative)]));
+assert.doesNotThrow(() => contracts.checkModelAuthoringContract(modelAuthoringSources));
+for (const [owner, target] of [
+  ['agent', 'disclose unresolved evidence'],
+  ['agentTemplate', 'do not activate an invented `model` field'],
+  ['prompt', 'accidental shadowing'],
+  ['promptTemplate', 'without assuming picker precedence'],
+  ['maintenance', 'override/fallback boundaries'],
+  ['checklist', 'harness/evidence limits']
+]) {
+  assertRejected(`${owner} loses model authoring safeguard`, () => contracts.checkModelAuthoringContract({
+    ...modelAuthoringSources, [owner]: replaceOnce(modelAuthoringSources[owner], target, 'omitted')
+  }), (error) => error.contractId === 'MODEL-AUTHORING-001' && error.message.includes(modelAuthoringPaths[owner]));
+}
+assertRejected('model authoring historical decoy', () => contracts.checkModelAuthoringContract({
+  ...modelAuthoringSources,
+  agent: `${replaceOnce(modelAuthoringSources.agent, 'disclose unresolved evidence', 'omit evidence')}\n\n## Historical example\n\ndisclose unresolved evidence\n`
+}), (error) => error.contractId === 'MODEL-AUTHORING-001' && error.message.includes(modelAuthoringPaths.agent));
 for (const [relative, parsed] of agents) {
   assert.doesNotThrow(() => contracts.checkAgentMetadata(relative, parsed.values, parsed.blocks, agentNames));
 }

@@ -1415,6 +1415,58 @@ function checkIncrementalRpirContract(sources = {}) {
   return true;
 }
 
+function checkModelAuthoringContract(sources = {}) {
+  const paths = {
+    agent: '.github/skills/create-copilot-agent/SKILL.md',
+    agentTemplate: '.github/skills/create-copilot-agent/templates/agent.md',
+    prompt: '.github/skills/create-copilot-prompt/SKILL.md',
+    promptTemplate: '.github/skills/create-copilot-prompt/templates/prompt.md',
+    maintenance: '.github/skills/maintain-copilot-artifacts/SKILL.md',
+    checklist: '.github/skills/maintain-copilot-artifacts/references/preservation-checklist.md'
+  };
+  const source = Object.fromEntries(Object.entries(paths).map(([key, relative]) => [key, sources[key] ?? readText(relative)]));
+  const headings = {
+    agent: '## Scope, role, and inputs', agentTemplate: '## Model profile (authoring guidance)',
+    prompt: '## Prompt-specific constraints', promptTemplate: '## Constraints',
+    maintenance: '## Procedure', checklist: '## Interfaces and loading boundaries'
+  };
+  const requirements = {
+    agent: [/capability\/consequence classification/i, /authoritative profile/i, /supported automatic Local model configuration/i, /disclose unresolved evidence/i],
+    agentTemplate: [/capability\/consequence classification/i, /authoritative profile/i, /supported automatic Local configuration/i, /do not activate an invented `model` field/i],
+    prompt: [/omit prompt-level model overrides unless deliberately justified/i, /actual Local path/i, /accidental shadowing/i, /do not assume picker or prompt precedence/i],
+    promptTemplate: [/omit prompt-level model overrides unless deliberately justified/i, /actual Local path/i, /shadowing/i, /without assuming picker precedence/i],
+    maintenance: [/shared profile/i, /configuration projections/i, /override\/fallback boundaries/i, /harness evidence/i],
+    checklist: [/shared model profile/i, /configuration projections/i, /supported overrides and fallback rules/i, /harness\/evidence limits/i]
+  };
+  for (const [owner, patterns] of Object.entries(requirements)) {
+    const owned = section(source[owner], headings[owner]);
+    if (patterns.some((pattern) => !pattern.test(owned))) {
+      fail(`${paths[owner]} is missing its model-profile authoring safeguard`, 'MODEL-AUTHORING-001');
+    }
+  }
+  return true;
+}
+
+function checkModelProfileCoverage(profile, agentPaths) {
+  const rows = section(profile, '# Authoritative role profiles').split('\n').filter((line) => /^\| `/.test(line));
+  const profiles = new Map();
+  for (const row of rows) {
+    const match = row.match(/^\| `([a-z0-9-]+\.agent\.md)` \| (GPT-6\.1 Sol|GPT-6\.1 Terra|GPT-6 Luna) \| `(high|xhigh)` \|$/);
+    if (!match) fail(`Unsupported model profile row: ${row}`, 'MODEL-PROFILE-001');
+    const [, name, model, effort] = match;
+    if (profiles.has(name)) fail(`Duplicate model profile: ${name}`, 'MODEL-PROFILE-001');
+    if ((model === 'GPT-6.1 Sol' || model === 'GPT-6 Luna') && effort !== 'high') {
+      fail(`Unsupported model and effort pairing: ${name}`, 'MODEL-PROFILE-001');
+    }
+    profiles.set(name, { model, effort });
+  }
+  const expected = agentPaths.map((relative) => path.posix.basename(relative));
+  if (new Set(expected).size !== expected.length) fail('Duplicate agent profile identity', 'MODEL-PROFILE-001');
+  for (const name of expected) if (!profiles.has(name)) fail(`Missing model profile: ${name}`, 'MODEL-PROFILE-001');
+  for (const name of profiles.keys()) if (!expected.includes(name)) fail(`Orphan model profile: ${name}`, 'MODEL-PROFILE-001');
+  return profiles;
+}
+
 function checkCustomizationContracts(inventory) {
   const artifacts = classes.flatMap((definition) => definition.kind === 'skill'
     ? inventory[definition.name]
@@ -1434,6 +1486,7 @@ function checkCustomizationContracts(inventory) {
   }
 
   const agentPaths = inventory.chatAgents;
+  checkModelProfileCoverage(readText('.github/skills/agent-model-selection/references/role-profiles.md'), agentPaths);
   const agentNames = new Set(agentPaths.map((relative) => parsedByPath.get(relative).values.name));
   const promptPaths = inventory.chatPromptFiles;
   for (const relative of promptPaths) {
@@ -1459,6 +1512,7 @@ function checkCustomizationContracts(inventory) {
   }
   checkArchitectureDecisionRecordContract();
   checkIncrementalRpirContract();
+  checkModelAuthoringContract();
   return { artifactCount: artifacts.length, resourceCount: resources.length };
 }
 
@@ -1514,6 +1568,6 @@ if (require.main === module) {
 
 module.exports = {
   checkAgentMetadata, checkLocalLinks, checkManifestParity, checkPromptMetadata,
-  checkCustomizationContracts, checkArchitectureDecisionRecordContract, checkIncrementalRpirContract,
+  checkCustomizationContracts, checkArchitectureDecisionRecordContract, checkIncrementalRpirContract, checkModelAuthoringContract, checkModelProfileCoverage,
   parseFrontmatterText, parseHandoffs, parseStringList
 };

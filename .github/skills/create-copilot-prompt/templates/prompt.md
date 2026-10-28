@@ -26,6 +26,7 @@ If required input is missing or ambiguous, MUST stop and ask for it; MUST NOT gu
 - **MUST:** Keep this prompt focused on the single stated job and preserve the selected agent's intended role and boundaries.
 - **MUST NOT:** Declare a `tools` field by default or use a prompt-level tool override to broaden the selected agent's intended capabilities.
 - **MUST:** If an override is independently justified, keep it minimal and verify it is compatible with the selected agent's boundary.
+- **MUST:** Preserve the selected agent's [model profile](../../agent-model-selection/SKILL.md); omit prompt-level model overrides unless deliberately justified and supported for the actual Local path. Check shadowing without assuming picker precedence or observed selection.
 - **MUST NOT:** Proceed when the required agent is missing or unavailable, or a proposed side effect is unsafe or unclear; stop and request clarification or a safe, explicit decision.
 - **SHOULD:** Prefer inspection and a proposed outcome before edits or commands, when relevant to the job.
 - **MUST NOT:** Claim Agent Host portability or equivalent selection/tool behavior without separate evidence; this is a VS Code Local convenience.

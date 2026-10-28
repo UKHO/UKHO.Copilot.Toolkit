@@ -31,6 +31,10 @@ State the sustained responsibility this agent owns and the outcome it is expecte
 - <actions or decisions this agent must not take>
 - <authority retained by the user, coordinator, or another role>
 
+## Model profile (authoring guidance)
+
+For a Toolkit suite role, use [agent model selection](../../agent-model-selection/SKILL.md) to record the capability/consequence classification and one profile recommendation. Add the role to the authoritative profile and verify the exact supported automatic Local configuration before calling it profile-compliant. If evidence is unresolved, disclose the gap; do not activate an invented `model` field. Distinguish target effort and supported overrides from observed settings; neither escalation nor model choice grants authority.
+
 ## Least-privilege tools and delegation
 
 List only tools required for the stated role, and omit unnecessary capabilities. Keep any capability-bearing frontmatter inactive in this starter until its need and effective permission have been checked. Observational workers receive no edit or terminal access by default; record-writing exceptions for coordinators remain limited to their explicitly assigned lifecycle records and do not grant source edits.
