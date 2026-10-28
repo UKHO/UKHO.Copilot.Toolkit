@@ -1,6 +1,7 @@
 ---
 name: Review
 model: 'GPT-6.1 Sol'
+reasoning-effort: high
 description: Review an inspected implementation report and record an evidence-backed conditional RPIR outcome.
 argument-hint: Actual implementation report document
 tools: ['read', 'search', 'edit', 'agent']

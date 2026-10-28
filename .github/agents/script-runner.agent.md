@@ -1,6 +1,7 @@
 ---
 name: Script Runner
 model: 'GPT-6.1 Sol'
+reasoning-effort: high
 description: Execute phase-scoped goals for Research, Plan, Implement, or Review and report inspected effects; perform only properly authorized Git metadata effects, without file authorship or delegation.
 argument-hint: Phase, self-contained goal, expected observation, opened workspace folder, scope, anticipated effects, and required result
 user-invocable: false

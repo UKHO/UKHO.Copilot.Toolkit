@@ -1,6 +1,7 @@
 ---
 name: Domain Investigator
 model: 'GPT-6.1 Terra'
+reasoning-effort: high
 description: Investigate domain terminology, documented requirements, and trusted sources needed to clarify a delegated development request.
 user-invocable: false
 tools: ['read', 'search', 'web']

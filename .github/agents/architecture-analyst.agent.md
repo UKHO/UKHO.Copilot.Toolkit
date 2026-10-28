@@ -1,6 +1,7 @@
 ---
 name: Architecture Analyst
 model: 'GPT-6.1 Sol'
+reasoning-effort: high
 description: Validate a proposed implementation approach against repository structure, reusable patterns, compatibility concerns, and design trade-offs.
 user-invocable: false
 tools: ['read', 'search']

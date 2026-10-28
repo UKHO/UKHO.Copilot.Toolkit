@@ -1,6 +1,7 @@
 ---
 name: Research
 model: 'GPT-6.1 Sol'
+reasoning-effort: high
 description: Investigate a request and produce an evidence-based research brief before planning.
 argument-hint: Feature, issue, decision, or customization request to investigate
 tools: ['read', 'search', 'web', 'edit', 'agent']

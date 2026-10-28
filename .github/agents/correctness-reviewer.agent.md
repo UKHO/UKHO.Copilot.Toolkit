@@ -1,6 +1,7 @@
 ---
 name: Correctness Reviewer
 model: 'GPT-6.1 Sol'
+reasoning-effort: high
 description: Review an approved implementation for functional correctness, edge cases, acceptance-criteria coverage, and broken customization behavior.
 user-invocable: false
 tools: ['read', 'search']

@@ -18,7 +18,8 @@ Choose an agent only when role ownership, context isolation, distinct tools, del
 - State the role, phase objective, responsibilities, explicit exclusions, required inputs, expected output, any justified handoff target, approval requirements, and required tools. Ask for unknown validation commands before considering terminal access; do not invent a command.
 - Keep coordinator instructions focused on orchestration rather than copying repository standards owned elsewhere.
 - For Toolkit suite roles, apply [agent model selection](../agent-model-selection/SKILL.md): justify a capability/consequence classification and one model/target-effort recommendation, and add the role to the authoritative profile. A new suite role is not profile-compliant without supported automatic Local model configuration; establish the exact reference and path evidence before configuring it, and disclose unresolved evidence instead of silently inheriting or inventing a literal. Do not default every role to one model.
-- Distinguish recommended effort from supported configuration and observed effective effort; do not assume root effort reaches a child or promise picker precedence. Overrides require an evidenced supported route, and escalation grants no authority.
+- Declare each role's own canonical profile effort as `reasoning-effort` beside its model, without requiring runtime support proof before declaration; do not default all roles to `high` or inherit another role's effort.
+- Distinguish recommended effort, declared intent, supported model configuration and separately observed effective effort. Runtime consumption, compatibility and harmless ignoring are unestablished; disclose unknown support. Do not assume root effort reaches a child or promise picker precedence. Overrides require an evidenced supported route, and escalation grants no authority.
 
 ## Least-privilege capabilities and delegation
 

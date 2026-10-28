@@ -1,6 +1,7 @@
 ---
 name: Maintainability Reviewer
 model: 'GPT-6.1 Terra'
+reasoning-effort: high
 description: Review an implementation for clarity, duplication, discoverability, consistency, and long-term maintenance risks.
 user-invocable: false
 tools: ['read', 'search']

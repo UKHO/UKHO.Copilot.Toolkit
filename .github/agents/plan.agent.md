@@ -1,6 +1,7 @@
 ---
 name: Plan
 model: 'GPT-6.1 Sol'
+reasoning-effort: high
 description: Plan from inspected Research or engineer-chosen material Review scope with acceptance and constraints.
 argument-hint: Actual Research brief or material-scope Review report
 tools: ['read', 'search', 'edit', 'agent']

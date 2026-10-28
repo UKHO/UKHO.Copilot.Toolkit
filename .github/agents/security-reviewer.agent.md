@@ -1,6 +1,7 @@
 ---
 name: Security Reviewer
 model: 'GPT-6.1 Sol'
+reasoning-effort: high
 description: Review an implementation for unsafe tool grants, delegation escape, injection, data exposure, and approval-boundary failures.
 user-invocable: false
 tools: ['read', 'search']

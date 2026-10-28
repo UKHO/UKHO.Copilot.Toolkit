@@ -1,6 +1,7 @@
 ---
 name: Implementation Worker
 model: 'GPT-6.1 Terra'
+reasoning-effort: xhigh
 description: Apply one explicitly assigned work package from an approved plan and report the precise changes and remaining validation gaps.
 user-invocable: false
 tools: ['read', 'search', 'edit', 'runInTerminal']

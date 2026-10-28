@@ -1,6 +1,7 @@
 ---
 name: Codebase Investigator
 model: 'GPT-6.1 Terra'
+reasoning-effort: high
 description: Inspect repository files and documentation for existing patterns, symbols, and constraints relevant to a delegated research question.
 user-invocable: false
 tools: ['read', 'search']

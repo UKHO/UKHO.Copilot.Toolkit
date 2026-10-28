@@ -1,6 +1,7 @@
 ---
 name: Test Worker
 model: 'GPT-6.1 Terra'
+reasoning-effort: high
 description: Prepare or assess tests and verification cases for an approved implementation without changing repository files or running commands.
 user-invocable: false
 tools: ['read', 'search']

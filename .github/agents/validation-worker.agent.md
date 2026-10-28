@@ -1,6 +1,7 @@
 ---
 name: Validation Worker
 model: 'GPT-6 Luna'
+reasoning-effort: high
 description: Perform read-only structural and manual validation of an implementation against its approved plan and report evidence-backed gaps.
 user-invocable: false
 tools: ['read', 'search']

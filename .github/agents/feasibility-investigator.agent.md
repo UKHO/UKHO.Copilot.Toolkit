@@ -1,6 +1,7 @@
 ---
 name: Feasibility Investigator
 model: 'GPT-6.1 Terra'
+reasoning-effort: xhigh
 description: Assess implementation feasibility, dependencies, compatibility constraints, and unresolved risks for a delegated development request.
 user-invocable: false
 tools: ['read', 'search', 'web']

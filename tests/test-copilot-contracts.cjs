@@ -67,7 +67,6 @@ function agentPath(name) {
 
 // Positive controls: current discovered artifacts, tool boundaries, routes,
 // manifest parity, and all supported local links are structurally valid.
-assert.doesNotThrow(() => contracts.checkCustomizationContracts(inventory));
 assert.deepEqual(inventory.chatSkills, expectedSkillContributions,
   'every contributed Skill must be its literal SKILL.md file path');
 assert.ok(inventory.chatSkills.every((entry) => fs.statSync(path.join(root, entry)).isFile()),
@@ -105,6 +104,230 @@ function assertBaselinePairs(profiles) {
 }
 const profiles = contracts.checkModelProfileCoverage(profileText, agentPaths);
 assertBaselinePairs(profiles);
+
+// These focused cases run before the full structural positive control so an
+// unrelated missing source link cannot hide the declaration-specific result.
+const effortCaseStart = cases;
+const effortPaths = [
+  '.github/agents/codebase-investigator.agent.md',
+  '.github/agents/feasibility-investigator.agent.md'
+];
+function serializedEffort(relative, field) {
+  const text = readArtifact(relative);
+  assert.equal([...text.matchAll(/^reasoning-effort: [^\n]*$/gm)].length, 1, `${relative} has one effort header`);
+  return text.replace(/^reasoning-effort: [^\n]*$/m, field);
+}
+function projectSerialized(relative, text, selectedProfiles = profiles) {
+  const parsed = contracts.parseFrontmatterText(text, relative);
+  contracts.checkModelProjection(relative, parsed.values, selectedProfiles);
+}
+for (const [relative, effort] of [[effortPaths[0], 'high'], [effortPaths[1], 'xhigh']]) {
+  for (const scalar of [effort, `'${effort}'`, `"${effort}"`]) {
+    assert.doesNotThrow(() => projectSerialized(relative, serializedEffort(relative, `reasoning-effort: ${scalar}`)));
+    cases += 1;
+  }
+  for (const [label, field, message] of [
+    ['missing', '', /must declare its non-empty profile effort/],
+    ['empty', 'reasoning-effort:', /must declare its non-empty profile effort/],
+    ['whitespace', 'reasoning-effort:    ', /must declare its non-empty profile effort/],
+    ['single-quoted empty', "reasoning-effort: ''", /must declare its non-empty profile effort/],
+    ['double-quoted empty', 'reasoning-effort: ""', /must declare its non-empty profile effort/],
+    ['quoted whitespace', 'reasoning-effort: "   "', /must declare its non-empty profile effort/],
+    ['wrong role', `reasoning-effort: ${effort === 'high' ? 'xhigh' : 'high'}`, /reasoning-effort must match its profile/],
+    ['case mismatch', `reasoning-effort: ${effort.toUpperCase()}`, /reasoning-effort must match its profile/],
+    ['medium', 'reasoning-effort: medium', /reasoning-effort must match its profile/],
+    ['max', 'reasoning-effort: max', /reasoning-effort must match its profile/],
+    ['array', 'reasoning-effort: [high]', /unsupported reasoning-effort metadata/],
+    ['map', 'reasoning-effort: {value: high}', /unsupported reasoning-effort metadata/],
+    ['alias', 'reasoning-effort: *effort', /unsupported reasoning-effort metadata/],
+    ['anchor', 'reasoning-effort: &effort high', /unsupported reasoning-effort metadata/],
+    ['tag', 'reasoning-effort: !effort high', /unsupported reasoning-effort metadata/],
+    ['literal block', 'reasoning-effort: |', /unsupported reasoning-effort metadata/],
+    ['folded block', 'reasoning-effort: >', /unsupported reasoning-effort metadata/],
+    ['malformed single quote', "reasoning-effort: 'high", /unsupported reasoning-effort metadata/],
+    ['malformed double quote', 'reasoning-effort: "high', /unsupported reasoning-effort metadata/],
+    ['invalid escape', 'reasoning-effort: "hi\\qgh"', /unsupported reasoning-effort metadata/]
+  ]) {
+    assertRejected(`${relative} ${label} serialized effort`, () => projectSerialized(relative, serializedEffort(relative, field)),
+      (error) => error.contractId === 'MODEL-PROJECTION-001' && message.test(error.message));
+  }
+  for (const [label, suffix, diagnostic] of [
+    ['identical duplicate', `\nreasoning-effort: ${effort}`, /duplicate frontmatter field: reasoning-effort/],
+    ['conflicting duplicate', `\nreasoning-effort: ${effort === 'high' ? 'xhigh' : 'high'}`, /duplicate frontmatter field: reasoning-effort/],
+    ['continuation', '\n  continued', /unsupported continuation metadata for reasoning-effort/],
+    ['block continuation', '\n  high', /unsupported continuation metadata for reasoning-effort/]
+  ]) {
+    const first = label === 'block continuation' ? 'reasoning-effort: |' : `reasoning-effort: ${effort}`;
+    assertRejected(`${relative} ${label} serialized effort`, () => projectSerialized(relative, serializedEffort(relative, first + suffix)),
+      (error) => error.contractId === 'STRUCT-001' && diagnostic.test(error.message));
+  }
+}
+const highRow = '| `codebase-investigator.agent.md` | GPT-6.1 Terra | `high` |';
+const xhighRow = '| `feasibility-investigator.agent.md` | GPT-6.1 Terra | `xhigh` |';
+const swappedEfforts = replaceOnce(replaceOnce(profileText, highRow, highRow.replace('`high`', '`xhigh`')),
+  xhighRow, xhighRow.replace('`xhigh`', '`high`'));
+const swappedProfiles = contracts.checkModelProfileCoverage(swappedEfforts, agentPaths);
+assert.doesNotThrow(() => projectSerialized(effortPaths[0], serializedEffort(effortPaths[0], 'reasoning-effort: xhigh'), swappedProfiles));
+assert.doesNotThrow(() => projectSerialized(effortPaths[1], serializedEffort(effortPaths[1], 'reasoning-effort: high'), swappedProfiles));
+cases += 2;
+assertRejected('count-preserving coordinated effort swap', () => assertBaselinePairs(swappedProfiles), /codebase-investigator allocation/);
+
+const effortOwners = {
+  skill: readArtifact('.github/skills/agent-model-selection/SKILL.md'), profile: profileText
+};
+assert.doesNotThrow(() => contracts.checkModelEffortContract(effortOwners));
+cases += 1;
+for (const [owner, target, replacement, sectionName] of [
+  ['skill', 'declared effort intent, and separately observed effective', 'effort', 'procedure'],
+  ['skill', 'Before model configuration', 'Before any configuration', 'procedure'],
+  ['skill', 'without requiring runtime support proof before declaration', 'after support has been demonstrated', 'procedure'],
+  ['skill', 'runtime consumption, compatibility and harmless ignoring are not established', 'runtime behavior is established', 'procedure'],
+  ['skill', 'Do not assume a root effort propagates to a child', 'Assume a root effort propagates to a child', 'procedure'],
+  ['skill', 'effort declaration or escalation never grants tools', 'effort declaration or escalation grants tools', 'output'],
+  ['profile', 'target effort is declared as `reasoning-effort` intent, not an observed effective setting', 'target effort is an effective setting', 'introduction'],
+  ['profile', 'without requiring runtime support proof before declaration', 'after runtime support proof', 'selection'],
+  ['profile', 'does not establish runtime consumption, compatibility, harmless ignoring or effective effort', 'establishes effective effort', 'selection'],
+  ['profile', 'Local child effort is not assumed to follow the parent', 'Local child effort follows the parent', 'selection'],
+  ['profile', 'effort declaration or escalation never expands authority', 'effort declaration or escalation expands authority', 'selection']
+]) {
+  assertRejected(`${owner} ${sectionName} missing or reversed effort rule`, () => contracts.checkModelEffortContract({
+    ...effortOwners, [owner]: replaceOnce(effortOwners[owner], target, replacement)
+  }), (error) => error.contractId === 'MODEL-EFFORT-CONTRACT-001' && error.message === `${sectionName}: missing effort declaration/evidence boundary`);
+}
+for (const [owner, boundary, sectionName] of [
+  ['skill', '## Output and boundary', 'procedure'],
+  ['profile', '| Agent definition | Recommended model | Target effort |', 'introduction'],
+  ['profile', 'The profile is Local-only for this delivery;', 'selection']
+]) {
+  for (const contradiction of [
+    'Runtime support proof is required before declaration.',
+    'Declared effort is automatically applied.',
+    'The declaration proves compatibility.',
+    'The declaration guarantees harmless ignoring.',
+    'Unsupported effort is safely ignored.',
+    'Child effort automatically inherits the parent.',
+    'Effort declarations grant authority.'
+  ]) {
+    assertRejected(`${owner} ${sectionName} additive contradiction: ${contradiction}`, () => contracts.checkModelEffortContract({
+      ...effortOwners, [owner]: replaceOnce(effortOwners[owner], boundary, `${contradiction}\n\n${boundary}`)
+    }), (error) => error.contractId === 'MODEL-EFFORT-CONTRACT-001' && error.message === `${sectionName}: contradictory effort declaration/evidence boundary`);
+  }
+}
+const noInheritance = 'Do not assume a root effort propagates to a child';
+assertRejected('historical decoy cannot supply procedure no-inheritance rule', () => contracts.checkModelEffortContract({
+  ...effortOwners, skill: `${replaceOnce(effortOwners.skill, noInheritance, 'Record observed settings')}\n\n## Historical example\n\n${noInheritance}.\n`
+}), (error) => error.contractId === 'MODEL-EFFORT-CONTRACT-001' && /procedure: missing/.test(error.message));
+for (const [owner, target, replacement] of [
+  ['skill', 'without requiring runtime support proof before declaration', 'without runtime support proof as a prerequisite to declaration'],
+  ['skill', 'Do not assume a root effort propagates to a child', 'Do not assume child effort inherits the root'],
+  ['profile', 'without requiring runtime support proof before declaration', 'without runtime support proof as a prerequisite to declaration']
+]) {
+  assert.doesNotThrow(() => contracts.checkModelEffortContract({
+    ...effortOwners, [owner]: replaceOnce(effortOwners[owner], target, replacement)
+  }));
+  cases += 1;
+}
+console.log(`Passed ${cases - effortCaseStart} focused effort declaration cases.`);
+const authoringCaseStart = cases;
+const modelAuthoringPaths = {
+  agent: '.github/skills/create-copilot-agent/SKILL.md',
+  agentTemplate: '.github/skills/create-copilot-agent/templates/agent.md',
+  prompt: '.github/skills/create-copilot-prompt/SKILL.md',
+  promptTemplate: '.github/skills/create-copilot-prompt/templates/prompt.md',
+  maintenance: '.github/skills/maintain-copilot-artifacts/SKILL.md',
+  checklist: '.github/skills/maintain-copilot-artifacts/references/preservation-checklist.md'
+};
+const modelAuthoringSources = Object.fromEntries(Object.entries(modelAuthoringPaths).map(([key, relative]) => [key, readArtifact(relative)]));
+assert.doesNotThrow(() => contracts.checkModelAuthoringContract(modelAuthoringSources));
+cases += 1;
+for (const [owner, target] of [
+  ['agent', 'disclose unresolved evidence'],
+  ['agentTemplate', 'do not activate an invented `model` field'],
+  ['prompt', 'accidental shadowing'],
+  ['promptTemplate', 'without assuming picker precedence'],
+  ['maintenance', 'override/fallback boundaries'],
+  ['checklist', 'harness/evidence limits']
+]) {
+  assertRejected(`${owner} loses model authoring safeguard`, () => contracts.checkModelAuthoringContract({
+    ...modelAuthoringSources, [owner]: replaceOnce(modelAuthoringSources[owner], target, 'omitted')
+  }), (error) => error.contractId === 'MODEL-AUTHORING-001' && error.message.includes(modelAuthoringPaths[owner]));
+}
+assertRejected('model authoring historical decoy', () => contracts.checkModelAuthoringContract({
+  ...modelAuthoringSources,
+  agent: `${replaceOnce(modelAuthoringSources.agent, 'disclose unresolved evidence', 'omit evidence')}\n\n## Historical example\n\ndisclose unresolved evidence\n`
+}), (error) => error.contractId === 'MODEL-AUTHORING-001' && error.message.includes(modelAuthoringPaths.agent));
+
+const authoringOwners = [
+  ['agent', '## Least-privilege capabilities and delegation'],
+  ['agentTemplate', '## Least-privilege tools and delegation'],
+  ['maintenance', '## Limits and authority'],
+  ['checklist', '## Editing and test evidence']
+];
+for (const [owner, boundary] of authoringOwners) {
+  const projection = owner === 'agentTemplate'
+    ? 'its own canonical profile effort as `reasoning-effort` beside its model'
+    : `each role's own canonical profile effort${owner === 'agent' ? '' : ' declaration'} as \`reasoning-effort\` beside its model`;
+  for (const target of [projection, 'without requiring runtime support proof before declaration',
+    'do not default all roles to `high` or inherit another role\'s effort',
+    'recommended effort, declared intent, supported model configuration and separately observed effective effort',
+    'Runtime consumption, compatibility and harmless ignoring are unestablished',
+    'disclose unknown support', 'Do not assume root effort reaches a child']) {
+    assertRejected(`${owner} omits effort rule: ${target}`, () => contracts.checkModelAuthoringContract({
+      ...modelAuthoringSources, [owner]: replaceOnce(modelAuthoringSources[owner], target, 'rule omitted')
+    }), (error) => error.contractId === 'MODEL-AUTHORING-001' &&
+      error.message === `${modelAuthoringPaths[owner]} is missing its effort authoring safeguard`);
+  }
+  const noAuthority = owner === 'agent' ? 'escalation grants no authority'
+    : owner === 'agentTemplate' ? 'neither escalation nor model choice grants authority' : 'effort declarations grant no authority';
+  assertRejected(`${owner} omits authority boundary`, () => contracts.checkModelAuthoringContract({
+    ...modelAuthoringSources, [owner]: replaceOnce(modelAuthoringSources[owner], noAuthority, 'authority expanded')
+  }), (error) => error.contractId === 'MODEL-AUTHORING-001' &&
+    error.message === `${modelAuthoringPaths[owner]} is missing its effort authoring safeguard`);
+  for (const contradiction of [
+    'All roles must use `high`.', 'Agents must inherit the parent effort.',
+    'Runtime support proof is required before declaration.', 'Declared effort is automatically applied.',
+    'The declaration proves compatibility.', 'Unsupported effort is safely ignored.',
+    'Child effort automatically inherits the parent.', 'Effort declarations grant authority.'
+  ]) {
+    assertRejected(`${owner} additive contradiction: ${contradiction}`, () => contracts.checkModelAuthoringContract({
+      ...modelAuthoringSources, [owner]: replaceOnce(modelAuthoringSources[owner], boundary, `${contradiction}\n\n${boundary}`)
+    }), (error) => error.contractId === 'MODEL-AUTHORING-001' &&
+      error.message === `${modelAuthoringPaths[owner]} has a contradictory effort authoring rule`);
+  }
+  const missing = replaceOnce(modelAuthoringSources[owner], projection, 'the profile recommendation');
+  assertRejected(`${owner} historical effort decoy`, () => contracts.checkModelAuthoringContract({
+    ...modelAuthoringSources, [owner]: `${missing}\n\n## Historical example\n\n${projection}\n`
+  }), (error) => error.contractId === 'MODEL-AUTHORING-001' &&
+    error.message === `${modelAuthoringPaths[owner]} is missing its effort authoring safeguard`);
+  for (const [target, replacement] of [
+    ['without requiring runtime support proof before declaration', 'without runtime support proof as a prerequisite to declaration'],
+    ['Runtime consumption, compatibility and harmless ignoring are unestablished', 'Runtime consumption, compatibility and harmless ignoring are not established']
+  ]) {
+    assert.doesNotThrow(() => contracts.checkModelAuthoringContract({
+      ...modelAuthoringSources, [owner]: replaceOnce(modelAuthoringSources[owner], target, replacement)
+    }));
+    cases += 1;
+  }
+}
+for (const entry of ['model: "<model>"', 'reasoning-effort: "<effort>"', 'reasoning-effort: high']) {
+  assertRejected(`starter contains active ${entry}`, () => contracts.checkModelAuthoringContract({
+    ...modelAuthoringSources, agentTemplate: replaceOnce(modelAuthoringSources.agentTemplate,
+      '# Add only when justified for this specific role:', `${entry}\n# Add only when justified for this specific role:`)
+  }), (error) => error.contractId === 'MODEL-AUTHORING-001' &&
+    error.message === `${modelAuthoringPaths.agentTemplate} must keep model and effort frontmatter inert`);
+}
+const futurePath = '.github/agents/future.agent.md';
+const futureValues = { name: 'Future Role', model: 'GPT-6.1 Terra', 'reasoning-effort': 'xhigh',
+  tools: "['read', 'search']", 'user-invocable': 'false' };
+const classifiedFuture = contracts.checkModelProfileCoverage(
+  `${profileText}\n| \`future.agent.md\` | GPT-6.1 Terra | \`xhigh\` |\n`, [...agentPaths, futurePath]);
+assert.doesNotThrow(() => contracts.checkModelProjection(futurePath, futureValues, classifiedFuture));
+cases += 1;
+assertRejected('profile entry cannot bypass unknown-role authority guard', () => contracts.checkAgentMetadata(
+  futurePath, futureValues, {}, new Set([...agentNames, 'Future Role'])
+), /unrecognized agent role/);
+console.log(`Passed ${cases - authoringCaseStart} focused model authoring cases.`);
+assert.doesNotThrow(() => contracts.checkCustomizationContracts(inventory));
 for (const [relative, parsed] of agents) {
   assert.doesNotThrow(() => contracts.checkModelProjection(relative, parsed.values, profiles));
 }
@@ -137,32 +360,6 @@ const futureProfile = `${profileText}\n| ` + '`future.agent.md` | GPT-6 Luna | `
 assert.equal(contracts.checkModelProfileCoverage(futureProfile, [...agentPaths, '.github/agents/future.agent.md']).size, agentPaths.length + 1);
 const swapped = replaceOnce(profileText, sampleRow, sampleRow.replace('GPT-6 Luna', 'GPT-6.1 Sol'));
 assertRejected('current role pair drift', () => assertBaselinePairs(contracts.checkModelProfileCoverage(swapped, agentPaths)), /validation-worker allocation/);
-const modelAuthoringPaths = {
-  agent: '.github/skills/create-copilot-agent/SKILL.md',
-  agentTemplate: '.github/skills/create-copilot-agent/templates/agent.md',
-  prompt: '.github/skills/create-copilot-prompt/SKILL.md',
-  promptTemplate: '.github/skills/create-copilot-prompt/templates/prompt.md',
-  maintenance: '.github/skills/maintain-copilot-artifacts/SKILL.md',
-  checklist: '.github/skills/maintain-copilot-artifacts/references/preservation-checklist.md'
-};
-const modelAuthoringSources = Object.fromEntries(Object.entries(modelAuthoringPaths).map(([key, relative]) => [key, readArtifact(relative)]));
-assert.doesNotThrow(() => contracts.checkModelAuthoringContract(modelAuthoringSources));
-for (const [owner, target] of [
-  ['agent', 'disclose unresolved evidence'],
-  ['agentTemplate', 'do not activate an invented `model` field'],
-  ['prompt', 'accidental shadowing'],
-  ['promptTemplate', 'without assuming picker precedence'],
-  ['maintenance', 'override/fallback boundaries'],
-  ['checklist', 'harness/evidence limits']
-]) {
-  assertRejected(`${owner} loses model authoring safeguard`, () => contracts.checkModelAuthoringContract({
-    ...modelAuthoringSources, [owner]: replaceOnce(modelAuthoringSources[owner], target, 'omitted')
-  }), (error) => error.contractId === 'MODEL-AUTHORING-001' && error.message.includes(modelAuthoringPaths[owner]));
-}
-assertRejected('model authoring historical decoy', () => contracts.checkModelAuthoringContract({
-  ...modelAuthoringSources,
-  agent: `${replaceOnce(modelAuthoringSources.agent, 'disclose unresolved evidence', 'omit evidence')}\n\n## Historical example\n\ndisclose unresolved evidence\n`
-}), (error) => error.contractId === 'MODEL-AUTHORING-001' && error.message.includes(modelAuthoringPaths.agent));
 for (const [relative, parsed] of agents) {
   assert.doesNotThrow(() => contracts.checkAgentMetadata(relative, parsed.values, parsed.blocks, agentNames));
 }

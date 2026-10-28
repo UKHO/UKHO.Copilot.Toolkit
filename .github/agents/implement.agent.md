@@ -1,6 +1,7 @@
 ---
 name: Implement
 model: 'GPT-6.1 Sol'
+reasoning-effort: high
 description: Deliver an inspected approved Plan, including supported original-criteria Review corrections, and report validation.
 argument-hint: Approved Plan and optional linked Review context for correction
 tools: ['read', 'search', 'edit', 'agent', 'runInTerminal']

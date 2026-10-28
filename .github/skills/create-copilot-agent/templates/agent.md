@@ -33,7 +33,11 @@ State the sustained responsibility this agent owns and the outcome it is expecte
 
 ## Model profile (authoring guidance)
 
-For a Toolkit suite role, use [agent model selection](../../agent-model-selection/SKILL.md) to record the capability/consequence classification and one profile recommendation. Add the role to the authoritative profile and verify the exact supported automatic Local configuration before calling it profile-compliant. If evidence is unresolved, disclose the gap; do not activate an invented `model` field. Distinguish target effort and supported overrides from observed settings; neither escalation nor model choice grants authority.
+For a Toolkit suite role, use [agent model selection](../../agent-model-selection/SKILL.md) to record the capability/consequence classification and one profile recommendation. Add the role to the authoritative profile and verify the exact supported automatic Local configuration before calling it profile-compliant. If evidence is unresolved, disclose the gap; do not activate an invented `model` field.
+
+For the classified role, declare its own canonical profile effort as `reasoning-effort` beside its model, without requiring runtime support proof before declaration; do not default all roles to `high` or inherit another role's effort. This starter has no active model or effort placeholder; add actual fields only when adapting it to a classified role.
+
+Distinguish recommended effort, declared intent, supported model configuration and separately observed effective effort. Runtime consumption, compatibility and harmless ignoring are unestablished; disclose unknown support. Do not assume root effort reaches a child. Supported overrides require evidence; neither escalation nor model choice grants authority.
 
 ## Least-privilege tools and delegation
 

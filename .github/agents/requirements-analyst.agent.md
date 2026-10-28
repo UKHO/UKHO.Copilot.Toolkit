@@ -1,6 +1,7 @@
 ---
 name: Requirements Analyst
 model: 'GPT-6.1 Terra'
+reasoning-effort: high
 description: Analyze an approved research brief for requirements, scope boundaries, acceptance criteria, and unresolved decisions.
 user-invocable: false
 tools: ['read', 'search']
