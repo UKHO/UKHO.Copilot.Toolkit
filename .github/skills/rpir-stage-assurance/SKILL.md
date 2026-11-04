@@ -10,6 +10,8 @@ user-invocable: false
 
 Provide independent, read-only advice on an actual working stage document, inspected predecessor/version when applicable, approved scope, original acceptance, validation and intended next action. Apply only relevant portions of the [stage assurance checklist](./stage-assurance-checklist.md). Assurance is useful when requested, not a mandatory per-unit gate or second approval.
 
+Use the [handoff reliability scenario pairs](./handoff-reliability-scenarios.md) for a bounded semantic assessment when relevant. They are synthetic examples with recorded reasoning, not observed conversations, a new gate or permission to launch sessions.
+
 ## Assessment
 
 1. Compare claims of output, completed work, validation and preserved criteria with inspected evidence. Check the prospective schema proportionately; older records remain readable without migration or rewriting.

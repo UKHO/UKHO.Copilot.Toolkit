@@ -425,6 +425,7 @@ const adrPaths = {
   validation: '.github/skills/safe-implementation/validation-checklist.md',
   implementationReport: '.github/skills/safe-implementation/implementation-report-template.md',
   codeReview: '.github/skills/code-review/SKILL.md',
+  reviewRubric: '.github/skills/code-review/review-rubric.md',
   reviewReport: '.github/skills/code-review/review-report-template.md',
   assuranceSkill: '.github/skills/rpir-stage-assurance/SKILL.md',
   assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
@@ -438,6 +439,163 @@ assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract(adrS
 assert.doesNotThrow(() => contracts.checkLocalLinks(adrPaths.skill, adrSources.skill));
 cases += 5;
 cases += 2;
+
+// Plan's decision-reuse and architecture owners both start with "Reconcile".
+// Coverage must follow the actual architecture owner in either order, while
+// all of its obligations remain enforced independently of the selector.
+const architectureOwnerCaseStart = cases;
+const planArchitectureOwner = adrSources.plan.split(/\n\s*\n/)
+  .find((part) => part.startsWith('Reconcile every architectural choice'));
+const planDecisionReuseOwner = adrSources.plan.split(/\n\s*\n/)
+  .find((part) => part.startsWith('Reconcile supplied decisions before questioning'));
+assert.ok(planArchitectureOwner && planDecisionReuseOwner, 'collision fixtures need both normative Plan owners');
+assert.ok(adrSources.plan.indexOf(planDecisionReuseOwner) < adrSources.plan.indexOf(planArchitectureOwner),
+  'the checked-in Plan must exercise the decision-reuse collision');
+const extraReconcileOwner = replaceOnce(adrSources.plan, '\n# Plan coordinator\n',
+  '\n# Plan coordinator\n\nReconcile unrelated notes without changing phase authority.\n');
+const architectureFirst = replaceOnce(replaceOnce(adrSources.plan, planArchitectureOwner, ''),
+  planDecisionReuseOwner, `${planArchitectureOwner}\n\n${planDecisionReuseOwner}`);
+for (const plan of [
+  adrSources.plan,
+  extraReconcileOwner,
+  architectureFirst,
+  replaceOnce(extraReconcileOwner, 'Reconcile every architectural choice', 'Reconcile all architectural choices'),
+  `${extraReconcileOwner}\n\n## Historical example, not operating policy\n\n${planArchitectureOwner}\n`
+]) {
+  assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({ ...adrSources, plan }));
+  cases += 1;
+}
+const architectureDiagnostic = (error) => error.contractId === 'ADR-COVERAGE-001' &&
+  error.message === 'plan: complete upfront choice identification/reconciliation is required';
+for (const [label, plan] of [
+  ['weakened real owner behind a Reconcile collision', replaceOnce(extraReconcileOwner,
+    'Reconcile every architectural choice identified in Research and every planning discovery',
+    'Reconcile selected architectural choices identified in Research and selected planning discoveries')],
+  ['missing real owner', replaceOnce(extraReconcileOwner, planArchitectureOwner, '')],
+  ['metadata architecture decoy', replaceOnce(replaceOnce(extraReconcileOwner, planArchitectureOwner, ''),
+    'description: ', `description: ${planArchitectureOwner} `)],
+  ['historical architecture decoy', `${replaceOnce(extraReconcileOwner, planArchitectureOwner, '')}\n\n## Historical example, not operating policy\n\n${planArchitectureOwner}\n`],
+  ['ambiguous duplicate normative owners', replaceOnce(extraReconcileOwner, planArchitectureOwner,
+    `${planArchitectureOwner}\n\n${planArchitectureOwner}`)]
+]) {
+  assertRejected(`Plan architecture selector: ${label}`, () =>
+    contracts.checkArchitectureDecisionRecordContract({ ...adrSources, plan }), architectureDiagnostic);
+}
+assertRejected('Plan architecture selector: wrong-owner decoy', () =>
+  contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources,
+    plan: replaceOnce(extraReconcileOwner, planArchitectureOwner, ''),
+    research: `${adrSources.research}\n\n## Historical Plan example\n\n${planArchitectureOwner}\n`
+  }), architectureDiagnostic);
+console.log(`Passed ${cases - architectureOwnerCaseStart} focused Plan architecture-owner cases.`);
+
+// Handoff reliability: owner-local authored obligations, not an NLP oracle.
+const handoffCaseStart = cases;
+assert.doesNotThrow(() => contracts.checkDecisionReadinessContract(adrSources));
+cases += 1;
+for (const [key, target, replacement, diagnostic] of [
+  ['researchSkill', 'what was investigated', 'the residual item', /explain material residuals/],
+  ['researchTemplate', 'why it reasonably remains', 'its name', /explain material residuals/],
+  ['plan', 'including qualified or nonrecommended answers', 'including recommended answers only', /reuse actual selections/],
+  ['planning', 'cite genuinely new evidence', 'cite the old question', /justify material reopening/],
+  ['plan', 'resolve genuine ambiguity with the engineer', 'guess the destination', /reuse evidenced existing ADR destinations/],
+  ['planTemplate', 'Invocation is distinct from persisted Accepted metadata', 'Invocation establishes persisted Accepted metadata', /distinguish ordinary approval/]
+]) {
+  assertRejected(`handoff obligation: ${key} ${target}`, () => contracts.checkDecisionReadinessContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], target, replacement)
+  }), (error) => error.contractId === 'RPIR-HANDOFF-001' && diagnostic.test(error.message));
+}
+const residualReason = 'why it reasonably remains';
+const missingResidualReason = replaceOnce(adrSources.researchTemplate, residualReason, 'its name');
+assertRejected('historical readiness decoy', () => contracts.checkDecisionReadinessContract({
+  ...adrSources, researchTemplate: `${missingResidualReason}\n\n## Historical example\n\n${residualReason}\n`
+}), (error) => error.contractId === 'RPIR-HANDOFF-001' && /researchTemplate: explain material residuals/.test(error.message));
+assertRejected('wrong-owner readiness decoy', () => contracts.checkDecisionReadinessContract({
+  ...adrSources, researchTemplate: missingResidualReason, plan: `${adrSources.plan}\n\n${residualReason}\n`
+}), (error) => error.contractId === 'RPIR-HANDOFF-001' && /researchTemplate: explain material residuals/.test(error.message));
+for (const [key, target, replacement] of [
+  ['researchSkill', 'proportionate decision-critical feasibility investigation', 'proportionate cited feasibility investigation'],
+  ['plan', 'including qualified or nonrecommended answers', 'including qualified and nonrecommended answers'],
+  ['planTemplate', 'ordinary implementation approval alone does not establish architectural agreement',
+    'ordinary delivery approval alone does not establish architectural agreement']
+]) {
+  assert.doesNotThrow(() => contracts.checkDecisionReadinessContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], target, replacement)
+  }));
+  cases += 1;
+}
+for (const [key, target, contradiction] of [
+  ['researchSkill', '8. Make readiness evidence inspectable', 'Research must investigate every fact before Plan. '],
+  ['plan', 'Reconcile supplied decisions before questioning', "Always substitute the recommendation for the engineer's answer. "],
+  ['planning', 'Reconcile supplied decisions before questioning', 'Always re-ask answered questions. '],
+  ['plan', 'Use evidenced consumer conventions', 'Every existing ADR destination requires fresh selection. '],
+  ['planTemplate', 'ordinary implementation approval alone', 'Invocation alone proves persisted Accepted. ']
+]) {
+  // Keep the entire positive clause intact, then append inside its owner.
+  const owned = key === 'planTemplate'
+    ? adrSources[key].split('\n').find((line) => line.includes(target))
+    : adrSources[key].split(/\n\s*\n/).find((part) => part.includes(target));
+  assert.ok(owned, `${key} contradiction fixture needs its actual owner`);
+  assertRejected(`additive handoff contradiction: ${contradiction}`, () => contracts.checkDecisionReadinessContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], owned, `${owned} ${contradiction}`)
+  }), (error) => error.contractId === 'RPIR-HANDOFF-001' && /contradictory handoff readiness rule/.test(error.message));
+}
+console.log(`Passed ${cases - handoffCaseStart} focused handoff readiness cases.`);
+
+const correctionCaseStart = cases;
+for (const [key, target, replacement, diagnostic] of [
+  ['implement', 'Diagnose, correct and recheck supported in-boundary issues under actual authority', 'Record supported issues for later', /require authorized correction/],
+  ['safe', 'next permitted route, then identify independently authorized work', 'next route, then identify independently authorized work', /classify the dependent effect/],
+  ['safe', 'independent investigation is not source-edit authority', 'independent investigation grants source-edit authority', /classify the dependent effect/],
+  ['implementationReport', 'actual authorized attributable repair', 'suggested repair', /record actual correction/],
+  ['safe', 'engineer evidence, affected effects and a recommended resolution', 'engineer a list of issues', /escalate material changes/],
+  ['review', 'missing chronology and runtime effectiveness remain unverified despite static passes', 'static passes establish runtime effectiveness', /distinguish observed chronology/],
+  ['codeReview', 'fresh implementation evidence and fresh independent re-review', 'a success report', /route supported defects/],
+  ['reviewRubric', 'manual Implement resumption', 'automatic correction', /route supported defects/],
+  ['reviewReport', 'do not relabel an approved-outcome defect as optional advice or accept unresolved findings', 'offer optional advice', /route supported defects/]
+]) {
+  assertRejected(`correction obligation: ${key} ${target}`, () => contracts.checkDecisionReadinessContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], target, replacement)
+  }), (error) => error.contractId === 'RPIR-HANDOFF-001' && diagnostic.test(error.message));
+}
+const correctionRule = 'Diagnose, correct and recheck supported in-boundary issues under actual authority';
+const correctionMissing = replaceOnce(adrSources.implement, correctionRule, 'Record supported issues for later');
+for (const [label, implement, safe] of [
+  ['history', `${correctionMissing}\n\n## Historical example\n\n${correctionRule}\n`, adrSources.safe],
+  ['metadata', replaceOnce(correctionMissing, 'description: ', `description: ${correctionRule}. `), adrSources.safe],
+  ['wrong-owner', correctionMissing, `${adrSources.safe}\n\n${correctionRule}\n`]
+]) {
+  assertRejected(`correction ${label} decoy`, () => contracts.checkDecisionReadinessContract({
+    ...adrSources, implement, safe
+  }), (error) => error.contractId === 'RPIR-HANDOFF-001' && /implement: require authorized correction/.test(error.message));
+}
+for (const [key, target, contradiction] of [
+  ['safe', 'Use existing report fields,', 'Supported in-boundary defects may be reported without repair. '],
+  ['safe', 'Use existing report fields,', 'Independent investigation grants source-edit authority. '],
+  ['safe', 'Use existing report fields,', 'A real denial may be bypassed. '],
+  ['safe', 'Use existing report fields,', 'Material changes may proceed without engineer direction. '],
+  ['review', 'Route supported original-criteria defects', 'Review may edit source to close findings. '],
+  ['review', 'Route supported original-criteria defects', 'Static passes prove runtime effectiveness. '],
+  ['review', 'Route supported original-criteria defects', 'Unresolved findings may be accepted. '],
+  ['review', 'Route supported original-criteria defects', 'Automatically invoke Implement for correction. ']
+]) {
+  const owned = adrSources[key].split(/\n\s*\n/).find((part) => part.includes(target));
+  assert.ok(owned, `${key} contradiction fixture needs its actual owner`);
+  assertRejected(`additive correction contradiction: ${contradiction}`, () => contracts.checkDecisionReadinessContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], owned, `${owned} ${contradiction}`)
+  }), (error) => error.contractId === 'RPIR-HANDOFF-001' && /contradictory correction or evidence rule/.test(error.message));
+}
+for (const [key, target, replacement] of [
+  ['safe', 'capability** concerns the actually available route', 'capability** concerns the evidenced available mechanism'],
+  ['implementationReport', 'relevant recheck and actual result', 'relevant recheck and actual result (passed, failed or unavailable)'],
+  ['reviewRubric', 'fresh independent re-review', 'fresh independent re-review of the correction']
+]) {
+  assert.doesNotThrow(() => contracts.checkDecisionReadinessContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], target, replacement)
+  }));
+  cases += 1;
+}
+console.log(`Passed ${cases - correctionCaseStart} focused correction and evidence cases.`);
 
 // Decision readiness and residual factual unknowns are owned by normative
 // Research/Plan sections and the existing Work Item detail, not metadata,

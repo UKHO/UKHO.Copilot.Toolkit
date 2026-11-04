@@ -317,6 +317,16 @@ function paragraph(text, start) {
   return text.split(/\n\s*\n/).find((part) => part.trimStart().startsWith(start)) || '';
 }
 
+function planArchitectureGuidance(text) {
+  // Decision reuse also starts with "Reconcile". Identify the architecture
+  // owner by its existing capability link, not prose that the checks mutate.
+  // Metadata/history are outside the coordinator body; ambiguous owners fail
+  // closed rather than borrowing a valid rule from another paragraph.
+  const owners = coordinatorBody(text, 'Plan').split(/\n\s*\n/)
+    .filter((part) => part.includes('](../skills/architecture-decision-records/SKILL.md)'));
+  return owners.length === 1 ? owners[0] : '';
+}
+
 function field(text, label) {
   return text.split('\n').find((line) => line.startsWith(`- **${label}:**`)) || '';
 }
@@ -346,7 +356,7 @@ function checkCompleteArchitectureCoverage(source) {
     research: paragraph(coordinatorBody(source.research, 'Research'), 'Explicitly identify architectural choices'),
     researchSkill: section(source.researchSkill, '## Procedure'),
     researchTemplate: section(source.researchTemplate, '### ADR inputs and remaining gaps'),
-    plan: paragraph(coordinatorBody(source.plan, 'Plan'), 'Reconcile '),
+    plan: planArchitectureGuidance(source.plan),
     planning: section(source.planning, '## Procedure'),
     planTemplate: field(section(source.planTemplate, '## Outcome and boundaries'), 'Architectural choice coverage and ADR binding'),
     core: section(source.core, '### Planning-stage ADR authorship exception'),
@@ -573,6 +583,115 @@ function checkDecisionReadinessContract(source) {
     /do not use this route for an unresolved architectural decision/i,
     /do not require zero unknown facts/i
   ], 'Plan template: existing Work Item detail must provide the complete optional factual-unknown route');
+
+  // Bounded authored obligations in their actual owners, never an evaluator
+  // for arbitrary Plan decisions or conversation behavior.
+  const readinessOwners = {
+    research: paragraph(coordinatorBody(source.research, 'Research'), 'Make readiness evidence inspectable'),
+    researchSkill: section(source.researchSkill, '## Procedure').split('\n').find((line) => line.startsWith('8. Make readiness evidence inspectable')) || '',
+    researchTemplate: paragraph(researchTemplate, '**Readiness evidence:**')
+  };
+  function requireHandoff(text, patterns, owner, rule) {
+    if (patterns.some((pattern) => !pattern.test(text))) {
+      fail(`${owner}: ${rule}`, 'RPIR-HANDOFF-001');
+    }
+  }
+  for (const [owner, text] of Object.entries(readinessOwners)) {
+    requireHandoff(text, [/proportionate[^.!?\n]*feasibility/i, /realistic alternatives/i,
+      /recommendation/i, /actual engineer direction/i, /material carry-forward/i], owner,
+    'connect investigation, options, recommendation, actual direction and justified residuals');
+  }
+  for (const owner of ['researchSkill', 'researchTemplate']) {
+    requireHandoff(readinessOwners[owner], [/what was investigated/i, /why it reasonably remains/i,
+      /downstream consequence and supported resolution route/i, /qualified (?:or|and) nonrecommended answers/i,
+      /no[^\n]*investigation quota|(?:do not|not)[^\n]*investigation quota/i], owner,
+    'explain material residuals and preserve actual answers without an investigation quota');
+  }
+  const reuseOwners = {
+    plan: paragraph(coordinatorBody(source.plan, 'Plan'), 'Reconcile supplied decisions before questioning'),
+    planning: paragraph(planningGaps, 'Reconcile supplied decisions before questioning')
+  };
+  for (const [owner, text] of Object.entries(reuseOwners)) {
+    requireHandoff(text, [/actual engineer selections/i, /qualified (?:or|and) nonrecommended answers/i,
+      /genuinely new evidence/i, /consequence/i, /recheck/i], owner,
+    'reuse actual selections and justify material reopening with new evidence');
+  }
+  const destination = paragraph(coordinatorBody(source.plan, 'Plan'), 'Create/revise only a directly associated Proposed ADR');
+  requireHandoff(destination, [/evidenced consumer conventions for an existing verified contained ADR destination/i,
+    /resolve genuine ambiguity with the engineer/i, /necessary directory only at an explicitly engineer-selected, verified contained destination/i,
+    /guard directory and file effects separately/i, /absence\/collision, effective permission, save and readback/i],
+  'plan', 'reuse evidenced existing ADR destinations and guard new directory/file effects separately');
+  const agreement = field(section(source.planTemplate, '## Outcome and boundaries'), 'Architectural choice coverage and ADR binding');
+  requireHandoff(agreement, [/ordinary (?:implementation|delivery) approval alone does not establish architectural agreement/i,
+    /qualifying explicit `\/implement` invocation/i, /rule already effective before invocation/i,
+    /exact Proposed preimage visibly bound/i, /actual authority and satisfied conditions/i,
+    /no prior invocation is retroactive/i, /Invocation is distinct from persisted Accepted metadata/i,
+    /separate guarded coordinator save and full readback/i], 'planTemplate',
+  'distinguish ordinary approval, qualifying exact sign-off and verified persistence');
+  for (const [owner, text] of Object.entries({ ...readinessOwners, ...reuseOwners, destination, agreement })) {
+    if (/Research must investigate every fact before Plan|Always substitute the recommendation for the engineer's answer|Always re-ask answered questions|Every existing ADR destination requires fresh selection|Invocation alone proves persisted Accepted/i.test(text)) {
+      fail(`${owner}: contradictory handoff readiness rule`, 'RPIR-HANDOFF-001');
+    }
+  }
+
+  const diagnosis = {
+    implement: paragraph(coordinatorBody(source.implement, 'Implement'), 'Use the safe-implementation method for effect-specific diagnosis'),
+    safe: section(source.safe, '### Effect-specific diagnosis and correction').replace(/\*\*/g, ''),
+    reportRemaining: field(section(source.implementationReport, '## Delivered outcome and progress'), 'Remaining Plan work'),
+    assurance: section(source.assurance, '## Delivery and material boundaries').split('\n')
+      .find((line) => line.startsWith('- [ ] Each hold distinguishes')) || ''
+  };
+  for (const [owner, text] of Object.entries(diagnosis)) {
+    requireHandoff(text, [/decision/i, /evidence/i, /ADR content(?:\/agreement\/persistence|[^\n]*agreement[^\n]*persistence)/i,
+      /capability/i, /permission/i, /affected effect/i, /next permitted route/i,
+      /independently authorized work/i, /(?:why|explain why) none exists/i,
+      /independent investigation is not source-edit authority/i], owner,
+    'classify the dependent effect and independently authorized work without inventing edit authority');
+  }
+  for (const [owner, text] of Object.entries({ implement: diagnosis.implement, safe: diagnosis.safe })) {
+    requireHandoff(text, [/Diagnose, correct and recheck supported in-boundary issues under actual authority/i,
+      /(?:rather than|do not) merely log them or defer for unpredicted files\/debugging/i,
+      /(?:do not bypass a real denial|Do not bypass a real denial)/i,
+      /(?:do not |or )relabel an approved-outcome defect as optional advice/i], owner,
+    'require authorized correction and recheck instead of report-only evasion');
+  }
+  const reportCorrections = field(section(source.implementationReport, '## Delivered outcome and progress'), 'Corrections');
+  requireHandoff(reportCorrections, [/diagnosis/i, /actual authorized attributable repair/i,
+    /relevant recheck and actual result/i, /next permitted route/i, /not report-only deferral/i],
+  'reportCorrections', 'record actual correction, recheck and unresolved dependencies in existing fields');
+  const reviewOwners = {
+    review: paragraph(coordinatorBody(source.review, 'Review'), 'Assess handoff evidence through'),
+    codeReview: section(source.codeReview, '## Procedure').split('\n').find((line) => line.startsWith('6. Assess handoff evidence')) || '',
+    reviewRubric: paragraph(section(source.reviewRubric, '## Finding format'), 'Classify actionability/uncertainty'),
+    reviewEvidence: field(section(source.reviewReport, '## Disposition and comparison'), 'Evidence and risks')
+  };
+  for (const [owner, text] of Object.entries(reviewOwners)) {
+    requireHandoff(text, [/observed messages\/tool chronology/i, /recorded claims/i,
+      /chronology[^.!?\n]*runtime effectiveness[^.!?\n]*unverified despite static passes/i], owner,
+    'distinguish observed chronology from claims and leave runtime unverified');
+  }
+  const reviewRoutes = {
+    review: reviewOwners.review, codeReview: reviewOwners.codeReview, reviewRubric: reviewOwners.reviewRubric,
+    reviewFindings: paragraph(section(source.reviewReport, '## Findings'), 'For each supported original-criteria defect'),
+    assuranceClosure: section(source.assurance, '## Conversation evidence rubric').split('\n')
+      .find((line) => line.startsWith('| Correction and closure |')) || ''
+  };
+  for (const [owner, text] of Object.entries(reviewRoutes)) {
+    requireHandoff(text, [/original-criteria defect/i, /manual Implement resumption/i,
+      /independent re-review/i, /optional advice|optional-advice evasion/i,
+      /unresolved findings/i, /engineer-owned|engineer decision/i,
+      /no source-edit|source-read-only|never gains source-edit/i], owner,
+    'route supported defects to manual correction and independent re-review without acceptance or scope expansion');
+  }
+  requireHandoff(diagnosis.safe, [/genuinely new requirement/i, /engineer evidence, affected effects and a recommended resolution/i,
+    /Plan-owned resolution before dependent material changes/i], 'safe',
+  'escalate material changes with evidence and a recommended engineer resolution');
+  const contradictionScopes = { ...diagnosis, reportCorrections, ...reviewOwners, ...reviewRoutes };
+  for (const [owner, text] of Object.entries(contradictionScopes)) {
+    if (/Supported in-boundary defects may be reported without repair|Independent investigation grants source-edit authority|A real denial may be bypassed|Review may edit source to close findings|Static passes prove runtime effectiveness|Unresolved findings may be accepted|Automatically invoke Implement for correction|Material changes may proceed without engineer direction/i.test(text)) {
+      fail(`${owner}: contradictory correction or evidence rule`, 'RPIR-HANDOFF-001');
+    }
+  }
 }
 
 function checkImplementSignoffContract(source) {
@@ -779,6 +898,7 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
     validation: '.github/skills/safe-implementation/validation-checklist.md',
     implementationReport: '.github/skills/safe-implementation/implementation-report-template.md',
     codeReview: '.github/skills/code-review/SKILL.md',
+    reviewRubric: '.github/skills/code-review/review-rubric.md',
     reviewReport: '.github/skills/code-review/review-report-template.md',
     assuranceSkill: '.github/skills/rpir-stage-assurance/SKILL.md',
     assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
@@ -890,8 +1010,7 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
     /Plan `edit` is limited to its working Plan, an eligible guarded Research status update, and the exact associated Proposed-ADR exception/i
   ], 'Plan coordinator guidance is missing associated-ADR ownership or binding safeguards');
   const adrSkillLink = '](../skills/architecture-decision-records/SKILL.md)';
-  const planADR = coordinatorBody(source.plan, 'Plan').split(/\n\s*\n/)
-    .find((paragraph) => paragraph.includes(adrSkillLink)) || '';
+  const planADR = planArchitectureGuidance(source.plan);
   // Ignore unrelated binding sentences before the owning ADR guidance.
   const planBinding = planADR.slice(planADR.indexOf(adrSkillLink) + adrSkillLink.length)
     .match(/\bBind\b[^.;\n]*[.;]/i)?.[0] || '';
@@ -1670,6 +1789,7 @@ if (require.main === module) {
 
 module.exports = {
   checkAgentMetadata, checkLocalLinks, checkManifestParity, checkPromptMetadata,
+  checkDecisionReadinessContract,
   checkCustomizationContracts, checkArchitectureDecisionRecordContract, checkIncrementalRpirContract, checkModelAuthoringContract, checkModelEffortContract, checkModelProfileCoverage, checkModelProjection,
   parseFrontmatterText, parseHandoffs, parseStringList
 };
