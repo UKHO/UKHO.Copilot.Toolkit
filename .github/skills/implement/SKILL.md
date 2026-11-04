@@ -1,10 +1,9 @@
 ---
 name: implement
 description: Deliver an inspected approved Plan or resume original-Plan Review corrections.
+disable-model-invocation: true
 argument-hint: Actual approved Plan and, for correction, linked Review report
-agent: Implement
 ---
-
 ## Purpose
 
 Run the `Implement` agent for the inspected approved outcome, including supported original-criteria correction when linked Review context is supplied.
@@ -26,16 +25,16 @@ If the actual plan or its identity is missing, inaccessible, or ambiguous, stop 
 - The engineer's explicit `/implement` invocation with the actual inspected plan version approves only that bounded initial or issue-resolution pass, regardless of prior agent readiness advice; a standalone approval or prefilled handoff does not transfer ownership. Do not ask a duplicate routine approval.
 - For original-criteria corrections inspect the physical Review, its reviewed implementation report, original approved Plan and Research lineage; the Review is evidence, not edit authority. Preserve original acceptance, produce fresh implementation evidence and seek fresh independent Review. New material scope requires a newly inspected, explicitly approved Plan version; do not expand work from Review findings alone.
 - Verify the approved outcome, evidence, local-write integrity and platform/effect permissions independently before each effect. Diagnose ordinary failures, repair attributable in-boundary mistakes without overwriting user changes and rerun relevant checks; a failed check leaves dependent acceptance unmet. Refuse material expansion or a real denial, not useful safe diagnosis.
-- Apply the [safe implementation skill](../skills/safe-implementation/SKILL.md) to assess architectural coverage, not only existing ADR bindings. Unexpected uncovered or changed architecture needs engineer-directed Plan resolution before dependent effects; continue independent approved work and retain routine coding without ADR reference. This grants no ADR authorship.
+- Apply the [safe implementation skill](../safe-implementation/SKILL.md) to assess architectural coverage, not only existing ADR bindings. Unexpected uncovered or changed architecture needs engineer-directed Plan resolution before dependent effects; continue independent approved work and retain routine coding without ADR reference. This grants no ADR authorship.
 - For each Plan-bound ADR, bind the exact path/ID, section, substantive Proposed preimage, agreement evidence/conditions and dependent Work Items. Only when the prospective rule was effective before this explicit `/implement` invocation does the invocation sign off that exact snapshot. The Implement coordinator alone may perform the separate, guarded metadata-only Accepted/date/agreement-evidence update before dependent source effects; inspect preimage, authority/conditions, identity, containment, conflicts and permission, preserve decision text/history, save and read back. A prior invocation is not retroactive. Report invocation separately from persistence; failure/denial/unverifiable state is not Accepted and holds only dependent effects. Workers/Runner/Review/helpers gain no ADR authorship, status or sign-off authority.
-- Under that skill and the [checkpoint capability](../skills/local-git-checkpoints/SKILL.md), account for planned versus actual disposition at every expected boundary before unrelated work, including earlier coherent validated Task consideration. Record verified checkpoint or specific actual disposition evidence and justified departures; never invent retrospective substantive Plan exceptions or override a prohibition, including historical Plans. Only Script Runner executes authorized Git effects; commit count is not technical acceptance and unchanged Plan-covered effects need no duplicate grant.
+- Under that skill and the [checkpoint capability](../local-git-checkpoints/SKILL.md), account for planned versus actual disposition at every expected boundary before unrelated work, including earlier coherent validated Task consideration. Record verified checkpoint or specific actual disposition evidence and justified departures; never invent retrospective substantive Plan exceptions or override a prohibition, including historical Plans. Only Script Runner executes authorized Git effects; commit count is not technical acceptance and unchanged Plan-covered effects need no duplicate grant.
 - Publication alone does not approve the report for Review. Preserve the manual `send: false` Review handoff and do not auto-submit it. Prompt references do not guarantee attachment in Agent Host.
 
 ## Process
 
-1. Apply [RPIR lifecycle core](../skills/rpir-lifecycle-core/SKILL.md) to inspect and bind the plan's content, kind, subject, version and lineage, not just its locator.
+1. Apply [RPIR lifecycle core](../rpir-lifecycle-core/SKILL.md) to inspect and bind the plan's content, kind, subject, version and lineage, not just its locator.
 2. Independently verify the actual contained, numbered physical Plan and direct lineage in the verified Research folder, plus the linked physical Review/report chain for a correction; an attachment, URL or paste is only a locator.
-3. Resolve unknowns using [agent-question-resolution](../skills/agent-question-resolution/SKILL.md) while continuing safe pass work. Continue investigating unknowns and clarify identity/evidence; refuse only an affected edit whose scope, evidence or permission guard fails. Return a truthful report even when a guarded effect cannot proceed.
+3. Resolve unknowns using [agent-question-resolution](../agent-question-resolution/SKILL.md) while continuing safe pass work. Continue investigating unknowns and clarify identity/evidence; refuse only an affected edit whose scope, evidence or permission guard fails. Return a truthful report even when a guarded effect cannot proceed.
 
 ## Output
 

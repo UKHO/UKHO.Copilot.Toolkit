@@ -50,10 +50,6 @@
     ".github/agents/test-strategist.agent.md",
     ".github/agents/test-worker.agent.md",
     ".github/agents/validation-worker.agent.md",
-    ".github/prompts/implement.prompt.md",
-    ".github/prompts/plan.prompt.md",
-    ".github/prompts/remediate-review.prompt.md",
-    ".github/prompts/review.prompt.md",
     ".github/skills/agent-model-selection",
     ".github/skills/agent-question-resolution",
     ".github/skills/architecture-decision-records",
@@ -65,8 +61,12 @@
     ".github/skills/create-copilot-prompt",
     ".github/skills/create-copilot-skill",
     ".github/skills/create-runbook",
+    ".github/skills/implement",
     ".github/skills/local-git-checkpoints",
     ".github/skills/maintain-copilot-artifacts",
+    ".github/skills/plan",
+    ".github/skills/remediate-review",
+    ".github/skills/review",
     ".github/skills/rpir-lifecycle-core",
     ".github/skills/rpir-stage-assurance",
     ".github/skills/safe-implementation",
@@ -135,20 +135,7 @@
         "path": ".github/agents/validation-worker.agent.md"
       }
     ],
-    "chatPromptFiles": [
-      {
-        "path": ".github/prompts/implement.prompt.md"
-      },
-      {
-        "path": ".github/prompts/plan.prompt.md"
-      },
-      {
-        "path": ".github/prompts/remediate-review.prompt.md"
-      },
-      {
-        "path": ".github/prompts/review.prompt.md"
-      }
-    ],
+    "chatPromptFiles": [],
     "chatSkills": [
       {
         "path": ".github/skills/agent-model-selection/SKILL.md"
@@ -184,10 +171,22 @@
         "path": ".github/skills/create-runbook/SKILL.md"
       },
       {
+        "path": ".github/skills/implement/SKILL.md"
+      },
+      {
         "path": ".github/skills/local-git-checkpoints/SKILL.md"
       },
       {
         "path": ".github/skills/maintain-copilot-artifacts/SKILL.md"
+      },
+      {
+        "path": ".github/skills/plan/SKILL.md"
+      },
+      {
+        "path": ".github/skills/remediate-review/SKILL.md"
+      },
+      {
+        "path": ".github/skills/review/SKILL.md"
       },
       {
         "path": ".github/skills/rpir-lifecycle-core/SKILL.md"

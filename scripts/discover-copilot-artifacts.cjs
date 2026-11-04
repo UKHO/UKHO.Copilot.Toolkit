@@ -7,7 +7,7 @@ const root = path.resolve(__dirname, '..');
 const classes = [
   { name: 'chatInstructions', directory: '.github/instructions', suffix: '.instructions.md', kind: 'file' },
   { name: 'chatAgents', directory: '.github/agents', suffix: '.agent.md', kind: 'file' },
-  { name: 'chatPromptFiles', directory: '.github/prompts', suffix: '.prompt.md', kind: 'file' },
+  { name: 'chatPromptFiles', directory: '.github/prompts', suffix: '.prompt.md', kind: 'file', optional: true },
   { name: 'chatSkills', directory: '.github/skills', suffix: 'SKILL.md', kind: 'skill' }
 ];
 
@@ -68,6 +68,14 @@ function entries(full, relative) {
 
 function discoverFiles(definition) {
   const base = path.join(root, definition.directory);
+  if (definition.optional) {
+    inspectPath(path.posix.dirname(definition.directory));
+    try { fs.lstatSync(base); }
+    catch (error) {
+      if (error.code === 'ENOENT') return [];
+      fail(`Cannot inspect ${definition.directory}: ${error.message}`);
+    }
+  }
   requireDirectory(base, definition.directory);
   const result = [];
   function visit(full, relative) {

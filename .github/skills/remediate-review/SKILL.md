@@ -1,10 +1,9 @@
 ---
 name: remediate-review
 description: Manually resume Implement for supported in-boundary Review corrections under the original approved Plan.
+disable-model-invocation: true
 argument-hint: Original approved Plan and linked issue-bearing Review report
-agent: Implement
 ---
-
 ## Purpose
 
 This VS Code Local shortcut **changes semantics**: it was a deprecated Plan alias; it now enters Implement for supported corrections to the original approved outcome. It is not backward-compatible with the former Plan route and does not approve material expansion.
@@ -19,11 +18,11 @@ If either input or the correction classification is missing, conflicting or unve
 
 ## Constraints
 
-- Apply [RPIR lifecycle core](../skills/rpir-lifecycle-core/SKILL.md): independently inspect the contained numbered physical original Plan, Review report, reviewed implementation report and direct same-folder Research lineage. Locators alone are not canonical records.
+- Apply [RPIR lifecycle core](../rpir-lifecycle-core/SKILL.md): independently inspect the contained numbered physical original Plan, Review report, reviewed implementation report and direct same-folder Research lineage. Locators alone are not canonical records.
 - The engineer's explicit invocation of Implement with the inspected original Plan and linked Review context approves only its original outcome and supported in-boundary correction. Review findings are evidence, not scope or edit authority. Preserve original acceptance criteria, user work, and unresolved findings; produce fresh implementation evidence and request fresh independent Review manually (`send: false`). A partial report is a checkpoint, not completed delivery.
 - New requirements, material public behavior, consequential dependencies, security or compatibility commitments or additional external effects require an engineer decision and a Plan-owned amendment/new Plan via `/plan`; do not implement that portion through this shortcut. Actual denial is not a fallback opportunity. Prompt references do not guarantee attachment in Agent Host.
-- Apply the [safe implementation skill](../skills/safe-implementation/SKILL.md) to assess missing/partial architectural coverage even with valid bindings. Unexpected uncovered or changed architecture needs engineer-directed Plan resolution before dependent effects; continue independent approved correction. Routine coding needs no ADR reference; this shortcut grants no ADR authorship.
-- Apply that skill's planned-versus-actual checkpoint accounting at every expected correction boundary before unrelated work, retaining earlier coherent validated Task consideration and specific actual disposition/exception evidence. Do not backfill substantive exceptions into the original approved Plan, override historical prohibitions or infer Git authority from findings. Only Script Runner executes covered effects under the [checkpoint capability](../skills/local-git-checkpoints/SKILL.md); unchanged Plan-covered effects need no duplicate grant and commit count is not technical acceptance.
+- Apply the [safe implementation skill](../safe-implementation/SKILL.md) to assess missing/partial architectural coverage even with valid bindings. Unexpected uncovered or changed architecture needs engineer-directed Plan resolution before dependent effects; continue independent approved correction. Routine coding needs no ADR reference; this shortcut grants no ADR authorship.
+- Apply that skill's planned-versus-actual checkpoint accounting at every expected correction boundary before unrelated work, retaining earlier coherent validated Task consideration and specific actual disposition/exception evidence. Do not backfill substantive exceptions into the original approved Plan, override historical prohibitions or infer Git authority from findings. Only Script Runner executes covered effects under the [checkpoint capability](../local-git-checkpoints/SKILL.md); unchanged Plan-covered effects need no duplicate grant and commit count is not technical acceptance.
 
 ## Output
 

@@ -2,6 +2,7 @@
 
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const contracts = require('../scripts/verify-copilot-contracts.cjs');
 const { discover, root } = require('../scripts/discover-copilot-artifacts.cjs');
@@ -22,8 +23,12 @@ const expectedSkillContributions = [
   '.github/skills/create-copilot-prompt/SKILL.md',
   '.github/skills/create-copilot-skill/SKILL.md',
   '.github/skills/create-runbook/SKILL.md',
+  '.github/skills/implement/SKILL.md',
   '.github/skills/local-git-checkpoints/SKILL.md',
   '.github/skills/maintain-copilot-artifacts/SKILL.md',
+  '.github/skills/plan/SKILL.md',
+  '.github/skills/remediate-review/SKILL.md',
+  '.github/skills/review/SKILL.md',
   '.github/skills/rpir-lifecycle-core/SKILL.md',
   '.github/skills/rpir-stage-assurance/SKILL.md',
   '.github/skills/safe-implementation/SKILL.md',
@@ -76,6 +81,34 @@ assert.deepEqual(manifest.files.filter((entry) => entry.startsWith('.github/skil
   expectedSkillContributions.map((entry) => path.posix.dirname(entry)),
   'package inclusion must retain complete Skill payload roots');
 assert.deepEqual(differences(manifest, inventory), [], 'the generated manifest projection must be idempotent');
+assert.doesNotThrow(() => contracts.checkManifestParity(sourceManifest, inventory),
+  'the checked-in manifest must match actual discovery');
+const discoveryFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-discovery-'));
+try {
+  for (const directory of ['scripts', '.github/instructions', '.github/agents', '.github/skills']) {
+    fs.mkdirSync(path.join(discoveryFixtureRoot, directory), { recursive: true });
+  }
+  const fixtureScript = path.join(discoveryFixtureRoot, 'scripts', 'discover-copilot-artifacts.cjs');
+  fs.copyFileSync(path.join(root, 'scripts', 'discover-copilot-artifacts.cjs'), fixtureScript);
+  const fixtureDiscover = require(fixtureScript).discover;
+  assert.deepEqual(fixtureDiscover().chatPromptFiles, [], 'an absent prompt directory is an empty inventory');
+  fs.writeFileSync(path.join(discoveryFixtureRoot, '.github', 'prompts'), 'not a directory');
+  assertRejected('a prompt path that is not a directory', () => fixtureDiscover(), /Expected directory/);
+} finally {
+  fs.rmSync(discoveryFixtureRoot, { recursive: true, force: true });
+}
+for (const name of ['implement', 'plan', 'remediate-review', 'review']) {
+  const skill = `.github/skills/${name}/SKILL.md`;
+  assert.ok(inventory.chatSkills.includes(skill), `${name} must be discovered as a Skill`);
+  assert.ok(!inventory.chatPromptFiles.includes(`.github/prompts/${name}.prompt.md`),
+    `${name} must not retain an obsolete prompt contribution`);
+  const text = readArtifact(skill);
+  assert.doesNotThrow(() => contracts.checkLocalLinks(skill, text));
+  const broken = text.replace('](../', '](../skills/');
+  assert.notEqual(broken, text, `${name} must include a sibling Skill link`);
+  assertRejected(`${name} retains a pre-migration relative link`,
+    () => contracts.checkLocalLinks(skill, broken), /local link does not resolve/);
+}
 const unrelatedFieldFixture = desiredManifest({
   ...clone(sourceManifest),
   customMetadata: { retained: true },
@@ -397,8 +430,8 @@ const adrPaths = {
   assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
   readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md',
   wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md',
-  wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', planPrompt: '.github/prompts/plan.prompt.md',
-  implementPrompt: '.github/prompts/implement.prompt.md'
+  wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', planPrompt: '.github/skills/plan/SKILL.md',
+  implementPrompt: '.github/skills/implement/SKILL.md'
 };
 const adrSources = Object.fromEntries(Object.entries(adrPaths).map(([key, relative]) => [key, readArtifact(relative)]));
 assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract(adrSources));
@@ -639,8 +672,8 @@ const executionPaths = {
   assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
   planAgent: '.github/agents/plan.agent.md', checkpointSkill: '.github/skills/local-git-checkpoints/SKILL.md',
   codeReview: '.github/skills/code-review/SKILL.md', assuranceSkill: '.github/skills/rpir-stage-assurance/SKILL.md',
-  planPrompt: '.github/prompts/plan.prompt.md', implementPrompt: '.github/prompts/implement.prompt.md',
-  remediatePrompt: '.github/prompts/remediate-review.prompt.md', reviewPrompt: '.github/prompts/review.prompt.md',
+  planPrompt: '.github/skills/plan/SKILL.md', implementPrompt: '.github/skills/implement/SKILL.md',
+  remediatePrompt: '.github/skills/remediate-review/SKILL.md', reviewPrompt: '.github/skills/review/SKILL.md',
   lifecycleInstruction: '.github/instructions/lifecycle-records.instructions.md',
   readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md', wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md',
   wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', wikiMaintenance: 'docs/Wiki/maintain-the-toolkit.md'
@@ -1440,10 +1473,8 @@ const handoffCases = [
 for (const [label, handoffs] of handoffCases) {
   assertRejected(label, () => contracts.parseHandoffs(implementPath, handoffs, ['Review'], agentNames));
 }
-const wrongPromptRoute = contracts.parseFrontmatterText(
-  readArtifact('.github/prompts/plan.prompt.md'),
-  '.github/prompts/plan.prompt.md'
-).values;
+const wrongPromptRoute = { name: 'plan', agent: 'Plan' };
+assert.doesNotThrow(() => contracts.checkPromptMetadata('.github/prompts/plan.prompt.md', wrongPromptRoute, agentNames));
 wrongPromptRoute.agent = 'Implement';
 assertRejected('wrong prompt route', () => contracts.checkPromptMetadata(
   '.github/prompts/plan.prompt.md', wrongPromptRoute, agentNames

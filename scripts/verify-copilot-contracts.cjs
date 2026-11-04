@@ -784,8 +784,8 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
     assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
     readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md',
     wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md',
-    wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', planPrompt: '.github/prompts/plan.prompt.md',
-    implementPrompt: '.github/prompts/implement.prompt.md'
+    wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', planPrompt: '.github/skills/plan/SKILL.md',
+    implementPrompt: '.github/skills/implement/SKILL.md'
   };
   const source = Object.fromEntries(Object.entries(paths).map(([key, relative]) => [key, sources[key] ?? readText(relative)]));
   const metadata = parseFrontmatterText(source.skill, paths.skill).values;
@@ -1207,8 +1207,8 @@ function checkIncrementalRpirContract(sources = {}) {
     assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
     planAgent: '.github/agents/plan.agent.md', checkpointSkill: '.github/skills/local-git-checkpoints/SKILL.md',
     codeReview: '.github/skills/code-review/SKILL.md', assuranceSkill: '.github/skills/rpir-stage-assurance/SKILL.md',
-    planPrompt: '.github/prompts/plan.prompt.md', implementPrompt: '.github/prompts/implement.prompt.md',
-    remediatePrompt: '.github/prompts/remediate-review.prompt.md', reviewPrompt: '.github/prompts/review.prompt.md',
+    planPrompt: '.github/skills/plan/SKILL.md', implementPrompt: '.github/skills/implement/SKILL.md',
+    remediatePrompt: '.github/skills/remediate-review/SKILL.md', reviewPrompt: '.github/skills/review/SKILL.md',
     lifecycleInstruction: '.github/instructions/lifecycle-records.instructions.md',
     readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md', wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md',
     wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', wikiMaintenance: 'docs/Wiki/maintain-the-toolkit.md'
