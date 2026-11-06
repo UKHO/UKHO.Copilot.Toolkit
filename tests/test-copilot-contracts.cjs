@@ -947,6 +947,145 @@ for (const [owner, key, heading, prefix, target, otherField] of [
 }
 console.log(`Passed ${cases - technicalStart} focused Research-complete handoff cases.`);
 
+// These are normative assurance owners, not the synthetic scenario pairs.
+// Mutations are confined to the actual selected line and require its own
+// diagnostic; a nearby correct rule cannot replace the missing obligation.
+const assuranceTechnicalStart = cases;
+const assuranceTechnicalOwners = [
+  ['assuranceOverview', 'assuranceSkill', '## Assessment', 'Assess whether Research establishes',
+    'inherited essential gap, architectural or not', '1. Compare claims of output'],
+  ['assuranceReadiness', 'assurance', '## Conversation evidence rubric', '| Downstream readiness |',
+    'unestablished essential mechanism, architectural or not', '| Framing |'],
+  ['assuranceResearch', 'assurance', '## Stage-specific outcome', '- **Research:**',
+    'unfinished essential feasibility', '- **Every phase:**'],
+  ['assurancePlan', 'assurance', '## Stage-specific outcome', '- **Plan:**',
+    'inherited essential gaps or newly reopened feasibility', '- **Every phase:**'],
+  ['assuranceImplement', 'assurance', '## Stage-specific outcome', '- **Implement:**',
+    'absent or invalid essential mechanism', '- **Every phase:**']
+];
+for (const [owner, key, heading, prefix, target, wrongField] of assuranceTechnicalOwners) {
+  const original = adrSources[key];
+  const owned = technicalUnit(original, heading, prefix, true);
+  const missing = replaceOnce(original, owned, replaceOnce(owned, target, 'omitted obligation'));
+  const check = (text, other = {}) => contracts.checkDecisionReadinessContract({ ...adrSources, ...other, [key]: text });
+  assertRejected(`${owner} omits its own obligation`, () => check(missing), technicalDiagnostic(owner));
+  for (const [label, text, other] of [
+    ['metadata', replaceOnce(missing, 'description: ', `description: ${target}; `), {}],
+    ['history', `${missing}\n\n## Historical assurance example\n\n${owned}\n`, {}],
+    ['wrong field', replaceOnce(missing, wrongField, `${wrongField} ${target}.`), {}],
+    ['wrong owner', missing, { review: `${adrSources.review}\n\n## Historical assurance example\n\n${owned}\n` }]
+  ]) assertRejected(`${owner} ${label} decoy`, () => check(text, other), technicalDiagnostic(owner));
+  assertRejected(`${owner} duplicate normative unit`, () => check(replaceOnce(original, owned, `${owned}\n${owned}`)),
+    technicalDiagnostic(owner));
+  for (const contradiction of [
+    'An unestablished essential mechanism is ready delivery work.',
+    'Plan may silently perform essential solution research.',
+    'An ordinary implementation failure alone automatically restarts Research.',
+    'Readiness advice may veto manual invocation.'
+  ]) {
+    assertRejected(`${owner} additive contradiction: ${contradiction}`, () => check(replaceOnce(original, owned,
+      `${owned} ${contradiction}`)), technicalDiagnostic(owner, 'contradictory technical handoff rule'));
+  }
+  // Appended historical examples are not operating policy.
+  assert.doesNotThrow(() => check(`${original}\n\n## Historical assurance example\n\nPlan may silently perform essential solution research.\n`));
+  cases += 1;
+}
+for (const [key, boundary, owner] of [
+  ['assuranceSkill', '## Boundary', 'assuranceAssessment'],
+  ['assurance', '## Delivery and material boundaries', 'assuranceRubric'],
+  ['assurance', 'Assurance cannot edit, execute, allocate', 'assuranceOutcomes']
+]) {
+  for (const contradiction of [
+    'Plan may silently perform essential solution research.',
+    'An ordinary implementation failure alone automatically restarts Research.'
+  ]) {
+    assertRejected(`${owner} separate-paragraph contradiction: ${contradiction}`, () => contracts.checkDecisionReadinessContract({
+      ...adrSources, [key]: replaceOnce(adrSources[key], boundary, `${contradiction}\n\n${boundary}`)
+    }), technicalDiagnostic(owner, 'contradictory technical handoff rule'));
+  }
+}
+for (const [owner, target] of [
+  ['assuranceOverview', 'evidence-supported viable mechanism and decision-critical feasibility'],
+  ['assuranceOverview', 'genuinely new requirements/evidence reopening feasibility'],
+  ['assuranceOverview', 'scoped engineer-directed Research continuation or supplementation where evidence is needed'],
+  ['assuranceOverview', 'supported mechanism tested, why the fact reasonably remains'],
+  ['assuranceOverview', 'truthful drafts and independent supported work'],
+  ['assuranceOverview', 'readiness veto on manual invocation'],
+  ['assuranceReadiness', 'viable mechanism and decision-critical feasibility'],
+  ['assuranceReadiness', 'unfinished Research with affected effects and an evidence route'],
+  ['assuranceReadiness', 'genuinely new requirements/evidence reopening feasibility'],
+  ['assuranceReadiness', 'scoped engineer-directed Research continuation or supplementation where evidence is needed'],
+  ['assuranceReadiness', 'supported mechanism tested'],
+  ['assuranceReadiness', 'why it reasonably remains'],
+  ['assuranceReadiness', 'a route alone does not justify accessible essential research left undone'],
+  ['assuranceReadiness', 'Truthful drafts, independent supported work and manual invocation remain'],
+  ['assuranceResearch', 'supported technical conclusion'],
+  ['assuranceResearch', 'affected-effect/evidence route'],
+  ['assuranceResearch', 'saved brief does not invoke Plan'],
+  ['assurancePlan', 'freshness and delivery conversion of the supported mechanism'],
+  ['assurancePlan', 'scoped engineer-directed Research continuation/supplementation where evidence is needed'],
+  ['assurancePlan', 'supported mechanism, reason it remains and bounded evidence/response'],
+  ['assurancePlan', 'independent planning and truthful drafts continue'],
+  ['assurancePlan', 'saved Plan alone does not invoke Implement'],
+  ['assuranceImplement', 'engineer/Plan resolution and scoped Research when evidence is needed'],
+  ['assuranceImplement', 'ordinary inspection, local decisions, related-file selection, failure diagnosis, repair and recheck'],
+  ['assuranceImplement', 'without an automatic Research restart']
+]) {
+  const [, key, heading, prefix] = assuranceTechnicalOwners.find((item) => item[0] === owner);
+  const owned = technicalUnit(adrSources[key], heading, prefix, true);
+  assertRejected(`${owner} independently omits ${target}`, () => contracts.checkDecisionReadinessContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], owned, replaceOnce(owned, target, 'omitted obligation'))
+  }), technicalDiagnostic(owner));
+}
+for (const [owner, target, equivalent] of [
+  ['assuranceOverview', 'an evidence-supported viable mechanism', 'a supported viable mechanism'],
+  ['assuranceOverview', 'recommendation distinct from actual engineer selections', 'recommendation separate from actual engineer selections'],
+  ['assuranceReadiness', 'freshness/applicability', 'freshness and applicability'],
+  ['assuranceReadiness', 'recommendation distinct from actual qualified/nonrecommended direction',
+    'recommendation separate from actual qualified or nonrecommended direction'],
+  ['assuranceResearch', 'supported technical conclusion', 'evidence-supported technical conclusion'],
+  ['assurancePlan', 'freshness and delivery conversion', 'freshness/applicability and delivery conversion'],
+  ['assurancePlan', 'Research continuation/supplementation', 'Research continuation or supplementation'],
+  ['assuranceImplement', 'without an automatic Research restart', 'ordinary implementation failure does not automatically restart Research']
+]) {
+  const [, key, heading, prefix] = assuranceTechnicalOwners.find((item) => item[0] === owner);
+  const owned = technicalUnit(adrSources[key], heading, prefix, true);
+  assert.doesNotThrow(() => contracts.checkDecisionReadinessContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], owned, replaceOnce(owned, target, equivalent))
+  }));
+  cases += 1;
+}
+for (const [key, heading, owner] of [
+  ['assuranceSkill', '## Assessment', 'assuranceOverview'],
+  ['assurance', '## Conversation evidence rubric', 'assuranceReadiness'],
+  ['assurance', '## Stage-specific outcome', 'assuranceResearch']
+]) {
+  assertRejected(`${owner} ambiguous heading`, () => contracts.checkDecisionReadinessContract({
+    ...adrSources, [key]: `${adrSources[key]}\n\n${heading}\n\nDecoy.\n`
+  }), technicalDiagnostic(owner));
+}
+for (const key of ['assuranceSkill', 'assurance']) {
+  for (const value of ['', '  ', null, undefined, {}]) {
+    for (const [api, check] of [['direct', contracts.checkDecisionReadinessContract], ['aggregate', contracts.checkArchitectureDecisionRecordContract]]) {
+      assertRejected(`${api} explicit invalid ${key} cannot fall back`, () => check({ ...adrSources, [key]: value }),
+        (error) => error.contractId === 'RPIR-HANDOFF-001' && error.message === `${key}: missing or ambiguous technical handoff source`);
+    }
+  }
+}
+for (const owner of ['assuranceOverview', 'assuranceReadiness']) {
+  const [, key, heading, prefix, target] = assuranceTechnicalOwners.find((item) => item[0] === owner);
+  const owned = technicalUnit(adrSources[key], heading, prefix, true);
+  assertRejected(`aggregate respects explicitly supplied ${owner}`, () => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], owned, replaceOnce(owned, target, 'omitted obligation'))
+  }), technicalDiagnostic(owner));
+}
+const legacyAssuranceSources = { ...adrSources };
+delete legacyAssuranceSources.assuranceSkill;
+delete legacyAssuranceSources.assurance;
+assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract(legacyAssuranceSources));
+cases += 1;
+console.log(`Passed ${cases - assuranceTechnicalStart} focused assurance technical-handoff cases.`);
+
 function rejectSignoff(label, key, target, replacement, diagnostic) {
   assertRejected(label, () => contracts.checkArchitectureDecisionRecordContract({
     ...adrSources, [key]: replaceOnce(adrSources[key], target, replacement)

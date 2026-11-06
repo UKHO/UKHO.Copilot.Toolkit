@@ -357,6 +357,14 @@ function discoverySource(sources) {
     : readText('.github/skills/agent-question-resolution/references/research-intent-discovery.md');
 }
 
+function checkExplicitAssuranceSources(sources) {
+  for (const key of ['assuranceSkill', 'assurance']) {
+    if (Object.hasOwn(sources, key) && (typeof sources[key] !== 'string' || !sources[key].trim())) {
+      fail(`${key}: missing or ambiguous technical handoff source`, 'RPIR-HANDOFF-001');
+    }
+  }
+}
+
 const noZeroUnknowns = /(?:do not|does not|never) require zero (?:factual )?unknowns|(?:do not|never) require zero unknown facts|do not (?:require|impose) (?:a )?zero[- ](?:factual[- ])?unknowns?(?: rule| requirement)?|(?:not a|no) zero[- ](?:factual[- ])?unknowns? (?:rule|requirement)/i;
 
 function checkCompleteArchitectureCoverage(source) {
@@ -540,6 +548,7 @@ function checkCompleteArchitectureCoverage(source) {
 }
 
 function checkDecisionReadinessContract(source) {
+  checkExplicitAssuranceSources(source);
   const researchAgent = paragraph(coordinatorBody(source.research, 'Research'), 'Explicitly identify architectural choices');
   const researchSkill = section(source.researchSkill, '## Procedure').split('\n').find((line) => line.startsWith('7. Before handoff')) || '';
   const researchTemplate = section(source.researchTemplate, '### ADR inputs and remaining gaps');
@@ -859,6 +868,52 @@ function checkResearchCompleteHandoffs(source) {
     requireOwner(owner, text, patterns, 'missing or ambiguous technical handoff obligation');
     scopes.set(`${key}|${heading}`, [key, scope(key, heading)]);
   }
+  // Scenario pairs illustrate assessment; only these actual Skill and
+  // checklist units own the normative assurance obligations.
+  const assuranceSpecs = [
+    ['assuranceOverview', 'assuranceSkill', '## Assessment', 'Assess whether Research establishes', true,
+      [/Research establishes (?:an? )?(?:evidence-supported|supported) viable mechanism and decision-critical feasibility/i,
+        /realistic alternatives/i, /recommendation (?:distinct|separate) from actual engineer selections/i,
+        /Plan checks freshness(?:\/| and )applicability and converts that conclusion into delivery/i,
+        /inherited essential gap, architectural or not/i, /genuinely new requirements(?:\/| or )evidence reopening feasibility/i,
+        /explained affected gap/i, /scoped engineer-directed Research continuation or supplementation where evidence is needed/i,
+        /truthful drafts and independent supported work/i, /without retroactive blame, automatic restart or a readiness veto on manual invocation/i,
+        /supported mechanism tested/i, /why the fact reasonably remains/i, /existing bounded route/i,
+        /neither zero unknowns nor an inspection ban/i, /inspection, diagnosis, repair and recheck/i]],
+    ['assuranceReadiness', 'assurance', '## Conversation evidence rubric', '| Downstream readiness |', true,
+      [/viable mechanism and decision-critical feasibility/i, /realistic alternatives/i, /recommendation (?:distinct|separate) from actual qualified(?:\/| or )nonrecommended direction/i,
+        /unestablished essential mechanism, architectural or not/i, /unfinished Research with affected effects and an evidence route/i,
+        /not a ready delivery task/i, /supported mechanism tested/i, /why it reasonably remains/i, /bounded resolution route/i,
+        /route alone does not justify accessible essential research left undone/i,
+        /Plan checks freshness(?:\/| and )applicability[^.!?\n]*converts supported conclusions/i,
+        /inherited essential gaps or genuinely new requirements(?:\/| or )evidence reopening feasibility/i,
+        /scoped engineer-directed Research continuation or supplementation where evidence is needed/i,
+        /not hidden research or retroactive blame/i, /Truthful drafts, independent supported work and manual invocation remain/i,
+        /zero-unknowns rule, inspection ban, automatic restart or readiness veto/i]],
+    ['assuranceResearch', 'assurance', '## Stage-specific outcome', '- **Research:**', true,
+      [/supported technical conclusion/i, /unfinished essential feasibility/i, /affected-effect\/evidence route/i,
+        /qualified\/nonrecommended choices and conditions/i, /saved brief does not invoke Plan/i]],
+    ['assurancePlan', 'assurance', '## Stage-specific outcome', '- **Plan:**', true,
+      [/freshness(?:\/applicability)? and delivery conversion of the supported mechanism/i,
+        /inherited essential gaps or newly reopened feasibility/i,
+        /scoped engineer-directed Research continuation(?:\/| or )supplementation where evidence is needed/i,
+        /independent planning and truthful drafts continue/i, /supported mechanism, reason it remains and bounded evidence\/response/i,
+        /affected effects, escalation and independent work/i, /saved Plan alone does not invoke Implement/i]],
+    ['assuranceImplement', 'assurance', '## Stage-specific outcome', '- **Implement:**', true,
+      [/absent or invalid essential mechanism/i, /engineer\/Plan resolution and scoped Research when evidence is needed/i,
+        /ordinary inspection, local decisions, related-file selection, failure diagnosis, repair and recheck/i,
+        /(?:without an automatic Research restart|ordinary (?:failed test|implementation failure) does not automatically restart Research)/i]]
+  ];
+  for (const [owner, key, heading, prefix, line, patterns] of assuranceSpecs) {
+    const text = unit(key, heading, prefix, line);
+    requireOwner(owner, text, patterns, 'missing or ambiguous technical handoff obligation');
+    scopes.set(`assurance-owner|${owner}`, [owner, text]);
+  }
+  for (const [owner, key, heading] of [
+    ['assuranceAssessment', 'assuranceSkill', '## Assessment'],
+    ['assuranceRubric', 'assurance', '## Conversation evidence rubric'],
+    ['assuranceOutcomes', 'assurance', '## Stage-specific outcome']
+  ]) scopes.set(`assurance-section|${owner}`, [owner, scope(key, heading)]);
   for (const [key, text] of scopes.values()) {
     const zeroRequirements = [...text.matchAll(/\b(?:require|requires|must have) zero (?:factual )?(?:unknowns|unknown facts)\b/gi)];
     const affirmativeZero = zeroRequirements.some((match) =>
@@ -866,7 +921,7 @@ function checkResearchCompleteHandoffs(source) {
     const substitutions = [...text.matchAll(/\b(?:(?:treat|use) the recommendation as the engineer[’']s (?:selection|answer)|(?:replace|substitute) (?:the )?(?:actual )?(?:engineer[’']s )?(?:selection|answer) with (?:the )?recommendation)/gi)];
     const affirmativeSubstitution = substitutions.some((match) =>
       !/(?:do not|does not|never)\s*$/i.test(text.slice(Math.max(0, match.index - 16), match.index)));
-    if (affirmativeZero || affirmativeSubstitution || /(?:Implement|Plan) (?:may|can|should) invent (?:an? )?(?:absent |missing )?essential (?:solution|mechanism)|(?:ban|prohibit|forbid) (?:all |ordinary )?inspection|(?:readiness|readiness advice) (?:vetoes|blocks|must veto|may veto) (?:manual )?(?:phase )?invocation|(?:Plan|Implement) (?:may|can|should) (?:silently |quietly )?(?:perform|conduct|complete) essential (?:solution )?research|(?:Plan|Implement) (?:may|can|should|will) (?:investigate|determine|discover|select) (?:the |an? )?(?:(?:missing|unestablished|essential|nonarchitectural) )+(?:solution|mechanism)\b|(?:ordinary|routine) (?:failed test|test failure) alone (?:automatically restarts Research|(?:is|triggers) an automatic Research restart)/i.test(text)) {
+    if (affirmativeZero || affirmativeSubstitution || /(?:Implement|Plan) (?:may|can|should) invent (?:an? )?(?:absent |missing )?essential (?:solution|mechanism)|(?:ban|prohibit|forbid) (?:all |ordinary )?inspection|(?:readiness|readiness advice) (?:vetoes|blocks|must veto|may veto) (?:manual )?(?:phase )?invocation|(?:Plan|Implement) (?:may|can|should) (?:silently |quietly )?(?:perform|conduct|complete) essential (?:solution )?research|(?:Plan|Implement) (?:may|can|should|will) (?:investigate|determine|discover|select) (?:the |an? )?(?:(?:missing|unestablished|essential|nonarchitectural) )+(?:solution|mechanism)\b|(?:ordinary|routine) (?:failed test|test failure|implementation failure) alone (?:automatically restarts Research|(?:is|triggers) an automatic Research restart)|(?:an? )?unestablished essential mechanism(?:, architectural or not,)? (?:is|constitutes) ready delivery work/i.test(text)) {
       fail(`${key}: contradictory technical handoff rule`, 'RPIR-HANDOFF-001');
     }
   }
@@ -1056,6 +1111,7 @@ function checkImplementSignoffContract(source) {
 }
 
 function checkArchitectureDecisionRecordContract(sources = {}) {
+  checkExplicitAssuranceSources(sources);
   const paths = {
     skill: '.github/skills/architecture-decision-records/SKILL.md',
     coverage: '.github/skills/architecture-decision-records/references/research-input-coverage.md',
