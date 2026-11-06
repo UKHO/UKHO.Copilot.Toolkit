@@ -419,6 +419,7 @@ const adrPaths = {
   lifecycleInstruction: '.github/instructions/lifecycle-records.instructions.md',
   researchSkill: '.github/skills/codebase-research/SKILL.md',
   researchTemplate: '.github/skills/codebase-research/research-brief-template.md',
+  discovery: '.github/skills/agent-question-resolution/references/research-intent-discovery.md',
   planning: '.github/skills/architecture-planning/SKILL.md',
   planTemplate: '.github/skills/architecture-planning/implementation-plan-template.md',
   safe: '.github/skills/safe-implementation/SKILL.md',
@@ -674,11 +675,277 @@ for (const [key, target, replacement] of [
   cases += 1;
 }
 
-const safeFactRoute = '**Residual factual unknown (include only when a material fact remains):** `Current evidence: the container image tag is not stated in the checked configuration. Bounded check/observation: inspect the configured image tag in the deployment descriptor. Expected interpretation and allowed in-scope response: if the tag matches the approved baseline, continue the existing Work Item; otherwise hold only the affected deployment effect. Affected Work Items/effects: WI1 deployment verification. Engineer-escalation condition: if the observed value changes a security or architecture commitment, ask the engineer before that effect. Independent work that can continue: complete unrelated documentation checks. A bare TBD is not actionable. Do not use this route for an unresolved architectural decision. Do not require zero unknown facts.`';
+const safeFactRoute = '**Residual factual unknown (include only when a material fact remains):** `Supported mechanism this fact tests: the approved deployment uses the established image baseline; why it reasonably remains: the execution-created deployment descriptor does not yet exist. Current evidence: the image baseline is approved and the descriptor will be generated during WI1. Bounded check/observation: inspect the configured image tag in the deployment descriptor after generation. Expected interpretation and allowed in-scope response: if the tag matches the approved baseline, continue the existing Work Item; otherwise hold only the affected deployment effect. Affected Work Items/effects and acceptance: WI1 deployment verification and its image-baseline acceptance. Engineer-escalation condition: if the observed value changes a security or architecture commitment, ask the engineer before that effect. Independent work that can continue: complete unrelated documentation checks. A bounded route alone does not justify accessible essential research left undone. Do not require proof earlier discovery was impossible. A bare TBD is not actionable. Do not use this route for an unresolved architectural decision or unestablished essential mechanism, architectural or not. Do not require zero unknown facts.`';
 assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({
   ...adrSources, planTemplate: replaceOnce(adrSources.planTemplate, residualFactTemplate, safeFactRoute)
 }), 'a concrete bounded non-decision fact route remains valid');
 cases += 1;
+
+// Every fixture targets the actual bounded owner, not a keyword elsewhere.
+// The owner labels match the verifier's individual diagnostics; direct calls
+// isolate this contract from unrelated structural checks and fixture failures.
+const technicalStart = cases;
+const legacyReadinessSources = { ...adrSources };
+delete legacyReadinessSources.discovery;
+assert.doesNotThrow(() => contracts.checkDecisionReadinessContract(legacyReadinessSources));
+cases += 1;
+assertRejected('explicitly missing discovery owner fails closed', () => contracts.checkDecisionReadinessContract({
+  ...adrSources, discovery: ''
+}), (error) => error.contractId === 'RPIR-HANDOFF-001' &&
+  error.message === 'discovery: missing or ambiguous technical handoff obligation');
+const technicalOwners = [
+  ['research', 'research', '# Research coordinator', 'Make readiness evidence inspectable', false, 'An unestablished essential mechanism or feasibility'],
+  ['researchSkill', 'researchSkill', '## Procedure', '8. Make readiness evidence inspectable', true, 'Establish an evidence-supported viable mechanism'],
+  ['researchTemplate', 'researchTemplate', '### ADR inputs and remaining gaps', '**Readiness evidence:**', false, 'Establish an evidence-supported viable mechanism'],
+  ['researchResidual', 'research', '# Research coordinator', 'Make readiness evidence inspectable', false, 'supported mechanism it tests'],
+  ['researchSkillResidual', 'researchSkill', '## Procedure', '8. Make readiness evidence inspectable', true, 'supported mechanism the residual tests'],
+  ['researchTemplateResidual', 'researchTemplate', '### ADR inputs and remaining gaps', '**Readiness evidence:**', false, 'supported mechanism it tests'],
+  ['researchRecommendation', 'researchTemplate', '## Recommendation and validation', '- **Recommended approach:**', true, 'evidence-supported viable mechanism'],
+  ['discovery', 'discovery', '## Read back, correct and stop', 'After investigation, assess foreseeable', false, 'an evidence-supported viable mechanism'],
+  ['plan', 'plan', '# Plan coordinator', "Check the Research conclusion's freshness", false, 'freshness and applicability'],
+  ['planningFreshness', 'planning', '## Procedure', '1. Read the inspected Research', true, 'freshness and applicability'],
+  ['planningConversion', 'planning', '## Procedure', '4. Convert the supported Research conclusion', true, 'ordered actions'],
+  ['planningGaps', 'planning', '### Resolve material planning gaps', 'An inherited unestablished essential mechanism', false, 'An inherited unestablished essential mechanism'],
+  ['planTemplateApproach', 'planTemplate', '## Outcome and boundaries', '- **Approach:**', true, 'freshness and applicability'],
+  ['planPromptConversion', 'planPrompt', '## Constraints', "- Check the Research conclusion's freshness", true, 'freshness and applicability'],
+  ['planResidual', 'plan', '# Plan coordinator', 'A completed Plan', false, 'Identify the supported mechanism it tests'],
+  ['planningResidual', 'planning', '## Procedure', '5. Inspect relevant', true, 'Identify the supported mechanism it tests'],
+  ['planningGapResidual', 'planning', '### Resolve material planning gaps', 'For any remaining material factual unknown', false, 'Name the supported mechanism tested'],
+  ['planPromptResidual', 'planPrompt', '## Constraints', '- A completed Plan', true, 'Identify the supported mechanism it tests'],
+  ['planTemplateResidual', 'planTemplate', '## Detailed work items', '**Residual factual unknown (include only when a material fact remains):**', true, 'supported mechanism this fact tests'],
+  ['implement', 'implement', '# Implement coordinator', 'If an essential mechanism or its feasibility', false, 'architectural or not'],
+  ['implementOperations', 'implement', '# Implement coordinator', 'Own the permitted direct edit–test–repair loop:', false, 'related files and tests'],
+  ['safe', 'safe', '## Procedure', 'Apply the supported mechanism', false, 'architectural or not'],
+  ['validation', 'validation', '## Scope and recovery', '- [ ] Apply an evidence-supported essential mechanism', true, 'architectural or not'],
+  ['implementPrompt', 'implementPrompt', '## Constraints', '- Apply the supported essential mechanism', true, 'whether architectural or not'],
+  ['planningScan', 'planning', '## Procedure', 'For execution alignment scans,', true, 'historical exclusions'],
+  ['templateScan', 'planTemplate', '## Execution guidance and validation', '- **Execution alignment scans:**', true, 'historical exclusions'],
+  ['safeScan', 'safe', '## Procedure', 'For an execution alignment scan,', false, 'historical exclusions'],
+  ['validationScan', 'validation', '## Scope and recovery', '- [ ] Bound execution alignment scans', true, 'historical exclusions'],
+  ['core', 'core', '## Transitions and outcome authority', 'Research establishes an evidence-supported', false, 'an unestablished essential mechanism'],
+  ['repository', 'repository', '## Lifecycle authority and transitions', '- Research establishes an evidence-supported', true, 'an unestablished essential mechanism'],
+  ['lifecycleResearch', 'lifecycleInstruction', '## Stage schemas', '- **Research brief:**', true, 'an unestablished essential mechanism'],
+  ['lifecyclePlan', 'lifecycleInstruction', '## Stage schemas', '- **Implementation plan:**', true, 'inherited essential gaps'],
+  ['lifecycleImplement', 'lifecycleInstruction', '## Stage schemas', '- **Implementation report:**', true, 'absent or invalid essential mechanism'],
+  ['adrResearch', 'skill', '## Phase operation', '1. **Research:**', true, 'an essential gap is unfinished Research whether architectural or not'],
+  ['adrPlan', 'skill', '## Phase operation', '2. **Plan:**', true, 'An inherited essential gap'],
+  ['adrImplement', 'skill', '## Phase operation', '3. **Implement:**', true, 'an absent or invalid essential mechanism']
+];
+function technicalUnit(text, heading, prefix, line) {
+  assert.equal(text.split('\n').filter((item) => item === heading).length, 1, `unique fixture heading ${heading}`);
+  const start = text.indexOf(`${heading}\n`) + heading.length + 1;
+  const depth = heading.match(/^#+/)[0].length;
+  const tail = text.slice(start);
+  const next = tail.search(new RegExp(`^#{1,${depth}} `, 'm'));
+  const body = next < 0 ? tail : tail.slice(0, next);
+  const matches = (line ? body.split('\n') : body.split(/\n\s*\n/))
+    .filter((part) => part.trimStart().startsWith(prefix));
+  assert.equal(matches.length, 1, `unique fixture owner ${prefix}`);
+  return matches[0];
+}
+function technicalDiagnostic(owner, rule = 'missing or ambiguous technical handoff obligation') {
+  return (error) => error.contractId === 'RPIR-HANDOFF-001' && error.message === `${owner}: ${rule}`;
+}
+// Reproduce A5 failures independently, preserving the valid rule in additive
+// cases. Every mutation is unique and must fail its own owner and reason.
+const a5Start = cases;
+for (const [owner, key, heading, prefix, line, target, equivalent] of [
+  ['research', 'research', '# Research coordinator', 'Make readiness evidence inspectable', false,
+    'rather than substitute the recommended answer', 'keep the recommendation separate from actual engineer direction'],
+  ['researchSkill', 'researchSkill', '## Procedure', '8. Make readiness evidence inspectable', true,
+    'Do not substitute the recommendation for the actual answer', 'Keep actual engineer answers distinct from the recommendation'],
+  ['researchTemplate', 'researchTemplate', '### ADR inputs and remaining gaps', '**Readiness evidence:**', false,
+    'Do not substitute a recommendation for an answer', 'Keep actual engineer answers separate from the recommendation'],
+  ['plan', 'plan', '# Plan coordinator', 'Reconcile supplied decisions before questioning', false,
+    'rather than substitute recommendations', 'keep actual engineer selections separate from recommendations'],
+  ['planning', 'planning', '### Resolve material planning gaps', 'Reconcile supplied decisions before questioning', false,
+    'Do not substitute recommendations', 'Keep actual engineer selections separate from recommendations']
+]) {
+  const owned = technicalUnit(adrSources[key], heading, prefix, line);
+  const mutate = (replacement) => ({ ...adrSources, [key]: replaceOnce(adrSources[key], owned,
+    replaceOnce(owned, target, replacement)) });
+  assert.doesNotThrow(() => contracts.checkDecisionReadinessContract(mutate(equivalent)));
+  cases += 1;
+  assertRejected(`${owner} loses recommendation/answer relationship`, () => contracts.checkDecisionReadinessContract(mutate('record recommendations')),
+    technicalDiagnostic(owner, 'keep recommendations distinct from actual engineer answers'));
+}
+for (const [owner, key, heading, prefix, line, target] of [
+  ['researchRecommendation', 'researchTemplate', '## Recommendation and validation', '- **Recommended approach:**', true,
+    'distinguish actual engineer selections and conditions from this recommendation'],
+  ['discovery', 'discovery', '## Read back, correct and stop', 'After investigation, assess foreseeable', false,
+    'recommendation, separate from actual qualified engineer selections'],
+  ['planningConversion', 'planning', '## Procedure', '4. Convert the supported Research conclusion', true,
+    'distinction between recommendation and actual qualified engineer selection'],
+  ['planTemplateApproach', 'planTemplate', '## Outcome and boundaries', '- **Approach:**', true,
+    'actual selections separately from recommendations']
+]) {
+  const owned = technicalUnit(adrSources[key], heading, prefix, line);
+  const replacement = target.includes('qualified') ? 'recommendation and actual qualified engineer selection'
+    : 'actual engineer selections and recommendation';
+  assertRejected(`${owner} has tokens without the relationship`, () => contracts.checkDecisionReadinessContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], owned, replaceOnce(owned, target, replacement))
+  }), technicalDiagnostic(owner));
+}
+for (const [key, heading, prefix, contradiction] of [
+  ['research', '# Research coordinator', 'Make readiness evidence inspectable', 'Treat the recommendation as the engineer’s selection.'],
+  ['plan', '# Plan coordinator', 'Reconcile supplied decisions before questioning', "Treat the recommendation as the engineer's selection."],
+  ['plan', '# Plan coordinator', "Check the Research conclusion's freshness", 'Plan should investigate the missing essential mechanism.'],
+  ['plan', '# Plan coordinator', "Check the Research conclusion's freshness", 'Plan will determine the essential solution during gap analysis.'],
+  ['plan', '# Plan coordinator', "Check the Research conclusion's freshness", 'Plan should investigate the missing essential nonarchitectural mechanism.'],
+  ['implement', '# Implement coordinator', 'If an essential mechanism or its feasibility', 'An ordinary failed test alone automatically restarts Research.'],
+  ['plan', '# Plan coordinator', "Check the Research conclusion's freshness", 'A routine test failure alone is an automatic Research restart.'],
+  ['plan', '# Plan coordinator', 'A completed Plan', 'Require zero unknowns.'],
+  ['plan', '# Plan coordinator', 'A completed Plan', 'Require zero unknown facts.']
+]) {
+  const owned = technicalUnit(adrSources[key], heading, prefix, false);
+  assertRejected(`${key} separate-paragraph contradiction: ${contradiction}`, () => contracts.checkDecisionReadinessContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], owned, `${owned}\n\n${contradiction}`)
+  }), technicalDiagnostic(key, 'contradictory technical handoff rule'));
+}
+for (const [key, heading, prefix, statement] of [
+  ['plan', '# Plan coordinator', "Check the Research conclusion's freshness", 'Plan should investigate the mechanism.'],
+  ['plan', '# Plan coordinator', "Check the Research conclusion's freshness", 'Plan should investigate the supported mechanism.'],
+  ['research', '# Research coordinator', 'Make readiness evidence inspectable', 'Do not treat the recommendation as the engineer’s selection.'],
+  ['plan', '# Plan coordinator', 'Reconcile supplied decisions before questioning', "Never treat the recommendation as the engineer's selection."]
+]) {
+  const owned = technicalUnit(adrSources[key], heading, prefix, false);
+  assert.doesNotThrow(() => contracts.checkDecisionReadinessContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], owned, `${owned}\n\n${statement}`)
+  }));
+  cases += 1;
+}
+const restartOwner = technicalUnit(adrSources.implement, '# Implement coordinator', 'If an essential mechanism or its feasibility', false);
+assertRejected('Implement affirmative restart reverses the actual owner rule', () => contracts.checkDecisionReadinessContract({
+  ...adrSources, implement: replaceOnce(adrSources.implement, restartOwner, replaceOnce(restartOwner,
+    'A routine failed test alone is not an automatic Research restart', 'A routine failed test alone is an automatic Research restart'))
+}), technicalDiagnostic('implement'));
+const conversionOwner = technicalUnit(adrSources.plan, '# Plan coordinator', "Check the Research conclusion's freshness", false);
+assertRejected('Plan affirmative restart reverses conversion prohibition', () => contracts.checkDecisionReadinessContract({
+  ...adrSources, plan: replaceOnce(adrSources.plan, conversionOwner, replaceOnce(conversionOwner,
+    'without automatic restart', 'with automatic restart'))
+}), technicalDiagnostic('plan'));
+for (const replacement of ['never require zero unknowns', 'never require zero factual unknowns', 'no zero-unknowns rule', 'do not require zero factual unknowns']) {
+  const prompt = replaceOnce(adrSources.planPrompt, 'do not require zero factual unknowns', replacement === 'do not require zero factual unknowns'
+    ? 'do not require zero factual unknowns at this stage' : replacement);
+  assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({ ...adrSources, planPrompt: prompt }));
+  cases += 1;
+}
+for (const replacement of ['Never require zero unknowns', 'No zero-unknowns rule']) {
+  const planTemplate = replaceOnce(adrSources.planTemplate, residualFactTemplate,
+    replaceOnce(residualFactTemplate, 'Do not require zero unknown facts', replacement));
+  assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({ ...adrSources, planTemplate }));
+  cases += 1;
+}
+assertRejected('Plan prompt reversed zero-unknowns safeguard', () => contracts.checkDecisionReadinessContract({
+  ...adrSources, planPrompt: replaceOnce(adrSources.planPrompt, 'do not require zero factual unknowns', 'require zero factual unknowns')
+}), (error) => error.contractId === 'ADR-CONTRACT-001' && error.message.startsWith('planPrompt: residual facts need'));
+for (const [label, discovery] of [
+  ['empty', ''], ['non-text', null], ['missing owner', replaceOnce(adrSources.discovery,
+    'After investigation, assess foreseeable', 'After investigation, record foreseeable')],
+  ['duplicate heading', `${adrSources.discovery}\n\n## Read back, correct and stop\n\nDuplicate owner.\n`]
+]) {
+  for (const [api, check] of [['direct', contracts.checkDecisionReadinessContract], ['aggregate', contracts.checkArchitectureDecisionRecordContract]]) {
+    assertRejected(`${api} explicit ${label} discovery does not fall back`, () => check({ ...adrSources, discovery }),
+      technicalDiagnostic('discovery'));
+  }
+}
+assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract(legacyReadinessSources));
+cases += 1;
+console.log(`Passed ${cases - a5Start} focused A5 regression cases.`);
+for (const [owner, key, heading, prefix, line, target] of technicalOwners) {
+  const original = adrSources[key];
+  const owned = technicalUnit(original, heading, prefix, line);
+  const omitted = replaceOnce(owned, target, 'omitted obligation');
+  const missing = replaceOnce(original, owned, omitted);
+  const test = (text, other = {}) => contracts.checkDecisionReadinessContract({ ...adrSources, ...other, [key]: text });
+  assert.doesNotThrow(() => test(replaceOnce(original, owned,
+    replaceOnce(owned, target, `${target} (within this bounded phase)`))));
+  cases += 1;
+  assertRejected(`${owner} omits its technical obligation`, () => test(missing), technicalDiagnostic(owner));
+  assertRejected(`${owner} historical decoy`, () => test(`${missing}\n\n## Historical example\n\n${owned}\n`), technicalDiagnostic(owner));
+  assertRejected(`${owner} wrong-owner decoy`, () => test(missing, {
+    [key === 'review' ? 'runner' : 'review']: `${adrSources[key === 'review' ? 'runner' : 'review']}\n\n## Historical technical example\n\n${owned}\n`
+  }), technicalDiagnostic(owner));
+  const ambiguityOwner = { researchResidual: 'research', researchSkillResidual: 'researchSkill',
+    researchTemplateResidual: 'researchTemplate' }[owner] || owner;
+  assertRejected(`${owner} ambiguous duplicate normative owner`, () => test(replaceOnce(original, owned,
+    line ? `${owned}\n${owned}` : `${owned}\n\n${owned}`)), technicalDiagnostic(ambiguityOwner));
+  for (const contradiction of [
+    'Implement may invent an essential solution.', 'Require zero unknowns.',
+    'Ban all inspection.', 'Readiness advice may veto manual invocation.',
+    'Plan may silently perform essential solution research.'
+  ]) {
+    assertRejected(`${owner} additive contradiction: ${contradiction}`, () => test(replaceOnce(original, owned,
+      `${owned} ${contradiction}`)), technicalDiagnostic(key, 'contradictory technical handoff rule'));
+  }
+}
+// Test independent sub-obligations, retaining the rest of each owner. This
+// includes nonarchitectural gaps, new evidence, execution facts, and scans.
+for (const [owner, target] of [
+  ['research', 'decision-critical feasibility'],
+  ['research', 'affected effects and a supported evidence route'],
+  ['researchSkill', 'its decision-critical feasibility'],
+  ['researchTemplate', 'before presenting the technical conclusion as ready for delivery conversion'],
+  ['plan', 'genuinely new requirements or evidence'],
+  ['plan', 'scoped engineer-directed Research continuation or supplementation'],
+  ['plan', 'without automatic restart, retroactive blame or a readiness veto on manual invocation'],
+  ['planningGaps', 'do not silently perform essential solution research'],
+  ['planningConversion', 'dependencies'],
+  ['planResidual', 'why the fact reasonably remains'],
+  ['planResidual', 'A bounded route alone does not justify accessible essential research left undone'],
+  ['planTemplateResidual', ' and acceptance'],
+  ['planTemplateResidual', 'unestablished essential mechanism, architectural or not'],
+  ['implement', 'recommend scoped Research continuation when evidence is needed'],
+  ['implement', 'A routine failed test alone is not an automatic Research restart'],
+  ['implementOperations', 'rerun relevant checks'],
+  ['validationScan', 'ordinary inspection, local decisions, related files/tests, diagnosis, repair and recheck'],
+  ['planningScan', 'relevant source roots and active owners'],
+  ['templateScan', 'a useful completion condition'],
+  ['safeScan', 'genuinely new material commitments'],
+  ['core', 'no automatic restart or retroactive blame'],
+  ['repository', 'not hidden essential research in Plan/Implement tasks'],
+  ['lifecyclePlan', 'manual invocation'],
+  ['adrImplement', 'ordinary diagnosis and recheck remain available']
+]) {
+  const [, key, heading, prefix, line] = technicalOwners.find((item) => item[0] === owner);
+  const owned = technicalUnit(adrSources[key], heading, prefix, line);
+  assertRejected(`${owner} independently omits ${target}`, () => contracts.checkDecisionReadinessContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], owned, replaceOnce(owned, target, 'omitted obligation'))
+  }), technicalDiagnostic(owner));
+}
+for (const [owner, target, replacement] of [
+  ['research', 'evidence-supported viable mechanism', 'supported viable mechanism'],
+  ['researchSkill', 'evidence-supported viable mechanism', 'supported viable mechanism'],
+  ['plan', 'freshness and applicability', 'freshness/applicability'],
+  ['planTemplateApproach', 'freshness and applicability', 'freshness/applicability'],
+  ['planResidual', 'supported mechanism it tests', 'supported mechanism being tested'],
+  ['planningGapResidual', 'supported mechanism tested', 'supported mechanism being tested'],
+  ['implement', 'architectural or not', 'whether architectural or not'],
+  ['validation', 'architectural or not', 'whether architectural or not']
+]) {
+  const [, key, heading, prefix, line] = technicalOwners.find((item) => item[0] === owner);
+  const owned = technicalUnit(adrSources[key], heading, prefix, line);
+  assert.doesNotThrow(() => contracts.checkDecisionReadinessContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], owned, replaceOnce(owned, target, replacement))
+  }));
+  cases += 1;
+}
+// Metadata and another field in the same section must not repair a missing
+// recommendation or residual field; the positive clause remains elsewhere.
+for (const [owner, key, heading, prefix, target, otherField] of [
+  ['researchRecommendation', 'researchTemplate', '## Recommendation and validation', '- **Recommended approach:**', 'evidence-supported viable mechanism', '- **Checks:**'],
+  ['planTemplateResidual', 'planTemplate', '## Detailed work items', '**Residual factual unknown (include only when a material fact remains):**', 'supported mechanism this fact tests', '**Validation:**']
+]) {
+  const owned = technicalUnit(adrSources[key], heading, prefix, true);
+  const missing = replaceOnce(adrSources[key], owned, replaceOnce(owned, target, 'omitted obligation'));
+  for (const [label, decoy] of [
+    ['metadata', replaceOnce(missing, 'description: ', `description: ${target}; `)],
+    ['wrong field', replaceOnce(missing, otherField, `${otherField} ${target}.`)]
+  ]) assertRejected(`${owner} ${label} decoy`, () => contracts.checkDecisionReadinessContract({
+    ...adrSources, [key]: decoy
+  }), technicalDiagnostic(owner));
+}
+console.log(`Passed ${cases - technicalStart} focused Research-complete handoff cases.`);
 
 function rejectSignoff(label, key, target, replacement, diagnostic) {
   assertRejected(label, () => contracts.checkArchitectureDecisionRecordContract({

@@ -349,6 +349,16 @@ function rejectArchitectureExemption(text, owner) {
   }
 }
 
+// Omission remains supported by the injectable API; an explicitly supplied
+// discovery source, even an invalid one, must never borrow workspace content.
+function discoverySource(sources) {
+  return Object.hasOwn(sources, 'discovery')
+    ? (typeof sources.discovery === 'string' ? sources.discovery : '')
+    : readText('.github/skills/agent-question-resolution/references/research-intent-discovery.md');
+}
+
+const noZeroUnknowns = /(?:do not|does not|never) require zero (?:factual )?unknowns|(?:do not|never) require zero unknown facts|do not (?:require|impose) (?:a )?zero[- ](?:factual[- ])?unknowns?(?: rule| requirement)?|(?:not a|no) zero[- ](?:factual[- ])?unknowns? (?:rule|requirement)/i;
+
 function checkCompleteArchitectureCoverage(source) {
   const owners = {
     skill: section(source.skill, '## Purpose and consumers'),
@@ -566,7 +576,7 @@ function checkDecisionReadinessContract(source) {
       /engineer-(?:escalation|direction) condition|(?:condition|escalation)[^.!?\n]*engineer direction/i,
       /independent work that can continue|independent[^.!?\n]*continue/i,
       /bare `TBD`[^.!?\n]*(?:not[^.!?\n]*actionable|insufficient)/i,
-      /(?:do not|does not|never) require zero (?:factual )?unknowns|do not (?:require|impose) (?:a )?zero[- ](?:factual[- ])?unknowns?(?: rule| requirement)?|not a zero-(?:factual-)?unknowns? (?:rule|requirement)/i,
+      noZeroUnknowns,
       /fact[^.!?\n]*(?:changes|invalidates)[^.!?\n]*architectural choice[^.!?\n]*hold[^.!?\n]*dependent effects/i
     ], `${owner}: residual facts need a bounded per-Work-Item route without a zero-unknowns rule`);
   }
@@ -581,7 +591,7 @@ function checkDecisionReadinessContract(source) {
     /independent work that can continue/i,
     /bare TBD[^.!?\n]*(?:not|insufficient)[^.!?\n]*actionable/i,
     /do not use this route for an unresolved architectural decision/i,
-    /do not require zero unknown facts/i
+    noZeroUnknowns
   ], 'Plan template: existing Work Item detail must provide the complete optional factual-unknown route');
 
   // Bounded authored obligations in their actual owners, never an evaluator
@@ -601,6 +611,12 @@ function checkDecisionReadinessContract(source) {
       /recommendation/i, /actual engineer direction/i, /material carry-forward/i], owner,
     'connect investigation, options, recommendation, actual direction and justified residuals');
   }
+  for (const [owner, pattern] of Object.entries({
+    research: /(?:rather than substitute the recommended answer|keep the recommendation separate from actual engineer direction)/i,
+    researchSkill: /(?:do not substitute the recommendation for the actual answer|keep actual engineer answers distinct from the recommendation)/i,
+    researchTemplate: /(?:do not substitute a recommendation for an answer|keep actual engineer answers separate from the recommendation)/i
+  })) requireHandoff(readinessOwners[owner], [pattern], owner,
+    'keep recommendations distinct from actual engineer answers');
   for (const owner of ['researchSkill', 'researchTemplate']) {
     requireHandoff(readinessOwners[owner], [/what was investigated/i, /why it reasonably remains/i,
       /downstream consequence and supported resolution route/i, /qualified (?:or|and) nonrecommended answers/i,
@@ -615,6 +631,10 @@ function checkDecisionReadinessContract(source) {
     requireHandoff(text, [/actual engineer selections/i, /qualified (?:or|and) nonrecommended answers/i,
       /genuinely new evidence/i, /consequence/i, /recheck/i], owner,
     'reuse actual selections and justify material reopening with new evidence');
+    requireHandoff(text, [owner === 'plan'
+      ? /(?:rather than substitute recommendations|keep actual engineer selections separate from recommendations)/i
+      : /(?:do not substitute recommendations|keep actual engineer selections separate from recommendations)/i], owner,
+      'keep recommendations distinct from actual engineer answers');
   }
   const destination = paragraph(coordinatorBody(source.plan, 'Plan'), 'Create/revise only a directly associated Proposed ADR');
   requireHandoff(destination, [/evidenced consumer conventions for an existing verified contained ADR destination/i,
@@ -690,6 +710,164 @@ function checkDecisionReadinessContract(source) {
   for (const [owner, text] of Object.entries(contradictionScopes)) {
     if (/Supported in-boundary defects may be reported without repair|Independent investigation grants source-edit authority|A real denial may be bypassed|Review may edit source to close findings|Static passes prove runtime effectiveness|Unresolved findings may be accepted|Automatically invoke Implement for correction|Material changes may proceed without engineer direction/i.test(text)) {
       fail(`${owner}: contradictory correction or evidence rule`, 'RPIR-HANDOFF-001');
+    }
+  }
+  checkResearchCompleteHandoffs(source);
+}
+
+// Select only unique normative headings and uniquely anchored paragraphs or
+// fields. Never recover a missing owner from metadata, history or another
+// field. These are bounded authored-text assertions, not a semantic oracle.
+function checkResearchCompleteHandoffs(source) {
+  function scope(key, heading) {
+    const text = key === 'discovery' ? discoverySource(source) : source[key] || '';
+    if (text.split('\n').filter((line) => line === heading).length !== 1) return '';
+    const body = section(text, heading);
+    return heading.startsWith('# ') ? body.split(/^## /m)[0] : body;
+  }
+  function unit(key, heading, prefix, line = false) {
+    const body = scope(key, heading);
+    const parts = line ? body.split('\n') : body.split(/\n\s*\n/);
+    const matches = parts.filter((part) => part.trimStart().startsWith(prefix));
+    return matches.length === 1 ? matches[0] : '';
+  }
+  function requireOwner(owner, text, patterns, rule) {
+    if (!text || patterns.some((pattern) => !pattern.test(text))) {
+      fail(`${owner}: ${rule}`, 'RPIR-HANDOFF-001');
+    }
+  }
+  const research = [
+    /(?:evidence-supported|supported) viable mechanism/i, /decision-critical feasibility/i,
+    /realistic alternatives/i, /recommendation/i, /actual (?:qualified )?engineer (?:direction|selections?)/i,
+    /(?:(?:unestablished|unresolved) essential (?:mechanism|feasibility)|essential feasibility or (?:the )?mechanism is unestablished)/i,
+    /architectural or not/i, /unfinished Research/i, /affected effects/i, /evidence route/i,
+    /(?:not|rather than) (?:a )?ready (?:implementation task|delivery work)/i,
+    /establish(?:es)?[^.!?\n]*(?:evidence-supported|supported) viable mechanism[^.!?\n]*decision-critical feasibility/i,
+    /(?:technical conclusion ready for delivery conversion establishes|before presenting the technical conclusion as ready for delivery conversion)/i
+  ];
+  const conversion = [
+    /freshness(?: and |\/)applicability/i, /(?:convert|converts)[^.!?\n]*(?:supported|viable mechanism|conclusion)/i,
+    /inherited[^.!?\n]*essential/i, /(?:genuinely )?new requirements(?: or |\/)evidence/i,
+    /(?:gap|affected effects)/i, /scoped engineer-directed Research continuation or supplementation/i,
+    /(?:when|where) evidence is needed/i, /(?:not hidden|do not (?:hide|silently perform)) essential (?:solution )?research/i,
+    /(?:independent(?:ly)? (?:supported )?planning|independent supported work)/i,
+    /truthful drafts/i, /(?:(?:without|no) automatic restart|(?:never|do not) automatically restart)/i,
+    /retroactive blame/i, /(?:manual invocation|veto manual invocation|invocation veto)/i
+  ];
+  const residual = [
+    /supported mechanism (?:(?:it|this fact|the residual) tests|(?:being )?tested)/i, /why (?:it|the fact) reasonably remains/i,
+    /bounded route alone (?:does not|cannot) (?:justify|excuse) accessible essential research left undone/i,
+    /(?:zero[- ](?:factual[- ])?unknowns|zero unknown facts)/i
+  ];
+  const execution = [
+    /(?:missing or invalid|absent or invalid)/i, /essential mechanism/i, /(?:architectural or not|whether architectural or not)/i,
+    /affected effects(?: and |\/)evidence/i, /engineer(?:-directed| and) Plan/i,
+    /scoped Research continuation/i, /(?:when|where) evidence is needed/i,
+    /independent approved work/i, /(?:ordinary|routine) (?:failed test|test failure)[^.!?\n]*alone (?:is not an automatic Research restart|does not (?:automatically )?restart Research)/i
+  ];
+  const scan = [/purpose/i, /relevant (?:source )?roots/i, /active owners/i, /historical exclusions/i,
+    /(?:useful )?completion condition/i, /routine contradictions/i, /genuinely new material commitments/i,
+    /(?:not|without|do not prescribe) (?:an )?exhaustive (?:file or command )?whitelist/i];
+  const specs = [
+    ['research', 'research', '# Research coordinator', 'Make readiness evidence inspectable', false, research],
+    ['researchSkill', 'researchSkill', '## Procedure', '8. Make readiness evidence inspectable', true, research],
+    ['researchTemplate', 'researchTemplate', '### ADR inputs and remaining gaps', '**Readiness evidence:**', false, research],
+    ['researchResidual', 'research', '# Research coordinator', 'Make readiness evidence inspectable', false, residual.slice(0, 3)],
+    ['researchSkillResidual', 'researchSkill', '## Procedure', '8. Make readiness evidence inspectable', true, residual],
+    ['researchTemplateResidual', 'researchTemplate', '### ADR inputs and remaining gaps', '**Readiness evidence:**', false, residual],
+    ['researchRecommendation', 'researchTemplate', '## Recommendation and validation', '- **Recommended approach:**', true,
+      [/evidence-supported viable mechanism/i, /decision-critical feasibility/i, /realistic alternatives/i, /actual engineer selections/i,
+        /distinguish actual engineer selections[^.!?\n]*from this recommendation/i,
+        /unestablished/i, /unfinished Research/i, /affected effects/i, /evidence route/i, /instead of ready delivery work/i]],
+    ['discovery', 'discovery', '## Read back, correct and stop', 'After investigation, assess foreseeable', false,
+      [/evidence-supported viable mechanism/i, /decision-critical feasibility/i, /realistic alternatives/i, /recommendation/i,
+        /recommendation, separate from actual qualified engineer selections/i, /unestablished essential feasibility/i, /architectural or not/i,
+        /unfinished Research/i, /affected effects/i, /evidence route/i, /not ready delivery work/i, /does not[^.!?\n]*create a `\/plan` gate/i]],
+    ['plan', 'plan', '# Plan coordinator', "Check the Research conclusion's freshness", false, conversion],
+    ['planningFreshness', 'planning', '## Procedure', '1. Read the inspected Research', true,
+      [/freshness and applicability/i, /evidence-supported viable mechanism/i, /decision-critical feasibility/i]],
+    ['planningConversion', 'planning', '## Procedure', '4. Convert the supported Research conclusion', true,
+      [/convert the supported Research conclusion/i, /delivery acceptance/i, /affected owners/i, /dependencies/i,
+        /ordered actions/i, /validation/i, /distinction between recommendation and actual qualified engineer selection/i, /complete Proposed decision and its sign-off/i]],
+    ['planningGaps', 'planning', '### Resolve material planning gaps', 'An inherited unestablished essential mechanism', false,
+      [/inherited unestablished essential mechanism/i, /nonarchitectural/i, /unfinished Research/i, /genuinely new requirements or evidence/i,
+        /affected gap/i, /scoped engineer-directed Research continuation or supplementation/i, /where evidence is needed/i,
+        /do not silently perform essential solution research/i, /independently supported planning/i, /truthful drafts/i,
+        /never automatically restart/i, /retroactive blame/i, /veto manual invocation/i]],
+    ['planTemplateApproach', 'planTemplate', '## Outcome and boundaries', '- **Approach:**', true,
+      [...conversion, /actual selections separately from recommendations/i]],
+    ['planPromptConversion', 'planPrompt', '## Constraints', "- Check the Research conclusion's freshness", true, conversion],
+    ['planResidual', 'plan', '# Plan coordinator', 'A completed Plan', false, residual],
+    ['planningResidual', 'planning', '## Procedure', '5. Inspect relevant', true, residual],
+    ['planningGapResidual', 'planning', '### Resolve material planning gaps', 'For any remaining material factual unknown', false, residual],
+    ['planPromptResidual', 'planPrompt', '## Constraints', '- A completed Plan', true, residual],
+    ['planTemplateResidual', 'planTemplate', '## Detailed work items', '**Residual factual unknown (include only when a material fact remains):**', true,
+      [...residual, /current evidence/i, /bounded check\/observation/i, /expected interpretation and allowed in-scope response/i,
+        /affected Work Items\/effects and acceptance/i, /engineer-escalation condition/i, /independent work that can continue/i,
+        /unestablished essential mechanism, architectural or not/i, /do not require proof earlier discovery was impossible/i]],
+    ['implement', 'implement', '# Implement coordinator', 'If an essential mechanism or its feasibility', false, execution],
+    ['implementOperations', 'implement', '# Implement coordinator', 'Own the permitted direct edit–test–repair loop:', false,
+      [/investigate ordinary failures/i, /related files and tests/i, /correct attributable errors/i, /rerun relevant checks/i,
+        /projected files or debugging steps[^.!?\n]*exhaustive repair whitelist/i]],
+    ['safe', 'safe', '## Procedure', 'Apply the supported mechanism', false,
+      [/supported mechanism/i, /absent essential solution/i, /essential feasibility or a mechanism is missing or invalid/i,
+        /architectural or not/i, /affected effects and evidence/i, /engineer-directed Plan resolution/i,
+        /scoped Research continuation or supplementation when evidence is needed/i, /independent approved work/i,
+        /not automatically restart Research for an ordinary failed test/i, ...residual]],
+    ['validation', 'validation', '## Scope and recovery', '- [ ] Apply an evidence-supported essential mechanism', true,
+      [...execution, /supported mechanism tested/i, /why it reasonably remains/i, /bounded route alone does not justify accessible essential research left undone/i, /zero unknowns/i]],
+    ['implementPrompt', 'implementPrompt', '## Constraints', '- Apply the supported essential mechanism', true, execution],
+    ['planningScan', 'planning', '## Procedure', 'For execution alignment scans,', true, scan],
+    ['templateScan', 'planTemplate', '## Execution guidance and validation', '- **Execution alignment scans:**', true, scan],
+    ['safeScan', 'safe', '## Procedure', 'For an execution alignment scan,', false,
+      [...scan, /ordinary inspection, local decisions, related-file\/test selection, diagnosis, repair and recheck/i]],
+    ['validationScan', 'validation', '## Scope and recovery', '- [ ] Bound execution alignment scans', true,
+      [...scan, /ordinary inspection, local decisions, related files\/tests, diagnosis, repair and recheck/i]],
+    ['core', 'core', '## Transitions and outcome authority', 'Research establishes an evidence-supported', false,
+      [...research.slice(0, 9), /evidence route/i, ...conversion.slice(0, 5), /scoped engineer-directed Research continuation or supplementation/i,
+        /not hidden essential research/i, /truthful drafts/i, /manual invocation/i, /no automatic restart or retroactive blame/i,
+        /ordinary inspection, local decisions, related files\/tests, diagnosis, repair and recheck/i, /failed test alone does not restart Research/i]],
+    ['repository', 'repository', '## Lifecycle authority and transitions', '- Research establishes an evidence-supported', true,
+      [...research.slice(0, 9), /evidence route/i, ...conversion.slice(0, 5), /scoped engineer-directed Research continuation or supplementation/i,
+        /not hidden essential research/i, /truthful drafts/i, /manual invocation/i, /no retroactive blame or automatic restart/i,
+        /ordinary inspection, local decisions and failure diagnosis/i]],
+    ['lifecycleResearch', 'lifecycleInstruction', '## Stage schemas', '- **Research brief:**', true,
+      [/evidence-supported viable mechanism/i, /decision-critical feasibility/i, /unestablished essential mechanism/i,
+        /architectural or not/i, /unfinished Research/i, /affected effects and an evidence route/i]],
+    ['lifecyclePlan', 'lifecycleInstruction', '## Stage schemas', '- **Implementation plan:**', true,
+      [/freshness\/applicability/i, /convert the supported mechanism/i, /inherited essential gaps/i, /genuinely new requirements\/evidence/i,
+        /scoped engineer-directed Research continuation or supplementation/i, /where evidence is needed/i, /do not hide essential research/i,
+        /truthful drafts/i, /independent planning/i, /manual invocation/i, /no automatic restart or retroactive blame/i]],
+    ['lifecycleImplement', 'lifecycleInstruction', '## Stage schemas', '- **Implementation report:**', true,
+      [/absent or invalid essential mechanism/i, /affected effects\/evidence/i, /engineer-directed Plan resolution/i,
+        /scoped Research continuation where evidence is needed/i, /independent approved work/i,
+        /ordinary inspection, diagnosis, repair and recheck/i, /failed test alone does not restart Research/i]],
+    ['adrResearch', 'skill', '## Phase operation', '1. **Research:**', true,
+      [/actual engineer selections separately from recommendations/i, /supported viable mechanism/i, /decision-critical feasibility/i,
+        /essential gap is unfinished Research whether architectural or not/i]],
+    ['adrPlan', 'skill', '## Phase operation', '2. **Plan:**', true,
+      [/freshness\/applicability/i, /convert the supported mechanism/i, /inherited essential gap/i, /genuinely new requirements\/evidence/i,
+        /affected-gap explanation/i, /scoped engineer-directed Research continuation or supplementation/i, /when evidence is needed/i,
+        /not hidden essential research/i, /truthful drafts/i, /independent planning/i, /manual invocation/i, /without automatic restart or retroactive blame/i]],
+    ['adrImplement', 'skill', '## Phase operation', '3. **Implement:**', true,
+      [/absent or invalid essential mechanism/i, /whether architectural or not/i, /affected effects through the engineer\/Plan/i,
+        /scoped Research when evidence is needed/i, /ordinary diagnosis and recheck remain available/i]]
+  ];
+  const scopes = new Map();
+  for (const [owner, key, heading, prefix, line, patterns] of specs) {
+    const text = unit(key, heading, prefix, line);
+    requireOwner(owner, text, patterns, 'missing or ambiguous technical handoff obligation');
+    scopes.set(`${key}|${heading}`, [key, scope(key, heading)]);
+  }
+  for (const [key, text] of scopes.values()) {
+    const zeroRequirements = [...text.matchAll(/\b(?:require|requires|must have) zero (?:factual )?(?:unknowns|unknown facts)\b/gi)];
+    const affirmativeZero = zeroRequirements.some((match) =>
+      !/(?:do not|does not|never|no)\s*$/i.test(text.slice(Math.max(0, match.index - 16), match.index)));
+    const substitutions = [...text.matchAll(/\b(?:(?:treat|use) the recommendation as the engineer[’']s (?:selection|answer)|(?:replace|substitute) (?:the )?(?:actual )?(?:engineer[’']s )?(?:selection|answer) with (?:the )?recommendation)/gi)];
+    const affirmativeSubstitution = substitutions.some((match) =>
+      !/(?:do not|does not|never)\s*$/i.test(text.slice(Math.max(0, match.index - 16), match.index)));
+    if (affirmativeZero || affirmativeSubstitution || /(?:Implement|Plan) (?:may|can|should) invent (?:an? )?(?:absent |missing )?essential (?:solution|mechanism)|(?:ban|prohibit|forbid) (?:all |ordinary )?inspection|(?:readiness|readiness advice) (?:vetoes|blocks|must veto|may veto) (?:manual )?(?:phase )?invocation|(?:Plan|Implement) (?:may|can|should) (?:silently |quietly )?(?:perform|conduct|complete) essential (?:solution )?research|(?:Plan|Implement) (?:may|can|should|will) (?:investigate|determine|discover|select) (?:the |an? )?(?:(?:missing|unestablished|essential|nonarchitectural) )+(?:solution|mechanism)\b|(?:ordinary|routine) (?:failed test|test failure) alone (?:automatically restarts Research|(?:is|triggers) an automatic Research restart)/i.test(text)) {
+      fail(`${key}: contradictory technical handoff rule`, 'RPIR-HANDOFF-001');
     }
   }
 }
@@ -892,6 +1070,7 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
     lifecycleInstruction: '.github/instructions/lifecycle-records.instructions.md',
     researchSkill: '.github/skills/codebase-research/SKILL.md',
     researchTemplate: '.github/skills/codebase-research/research-brief-template.md',
+    discovery: '.github/skills/agent-question-resolution/references/research-intent-discovery.md',
     planning: '.github/skills/architecture-planning/SKILL.md',
     planTemplate: '.github/skills/architecture-planning/implementation-plan-template.md',
     safe: '.github/skills/safe-implementation/SKILL.md',
@@ -907,7 +1086,8 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
     wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', planPrompt: '.github/skills/plan/SKILL.md',
     implementPrompt: '.github/skills/implement/SKILL.md'
   };
-  const source = Object.fromEntries(Object.entries(paths).map(([key, relative]) => [key, sources[key] ?? readText(relative)]));
+  const source = Object.fromEntries(Object.entries(paths).map(([key, relative]) => [key,
+    key === 'discovery' ? discoverySource(sources) : sources[key] ?? readText(relative)]));
   const metadata = parseFrontmatterText(source.skill, paths.skill).values;
   if (metadata.name !== 'architecture-decision-records' || metadata['user-invocable'] !== 'false') {
     fail('ADR Skill must use its directory name and remain non-invocable', 'ADR-CONTRACT-001');
