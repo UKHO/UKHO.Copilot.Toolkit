@@ -35,10 +35,12 @@ Working drafts may be revised and can retain genuine questions. Freeze the inspe
 ### What is evidence only
 
 - Research supplies findings and provenance for Plan, not edit approval. The initiating request retains its actual channel/locator; an attachment, HTTPS page or paste never replaces a verified physical predecessor.
-- An implementation report describes actual deliverables, correction history and performed, failed, unavailable and not-run checks. `/review` with its inspected physical version admits independent Review, not acceptance. A partial report is a checkpoint, not a substitute for the promised artifact.
+- An implementation report describes delivered/remaining work, consequential corrections/rechecks and performed, failed, unavailable and not-run checks, not a running change history. `/review` with its inspected physical version admits independent Review, not acceptance. A partial report is a checkpoint, not a substitute for the promised artifact.
 - Review classifies severity, actionability and original-criteria correction versus material change. Its findings support a manual decision but do not grant scope, mutate Plan hierarchy or authorize implementation.
 
 ### Architecture decision records are supplementary
+
+The [shared reader-facing rule](../../.github/skills/rpir-lifecycle-core/SKILL.md#reader-facing-outputs) separates required checks from required narration. Future reports state their phase's result and link inspected predecessors/ADR rationale rather than copy it. Omit irrelevant headings and repetitive empty entries, never material conditions, failed/unavailable/not-run required checks, unsaved tracking, consequential rechecks, every expected checkpoint disposition or per-record invocation/recording outcomes. Links need inspected destinations/sections/versions where material; missing sources require an affected-effect route, not invented inspection, authority or a blanket stop. Standalone ADRs retain their rationale and alternatives. Static checks do not establish live readability improvement.
 
 Research identifies architectural choices after permitted discovery; Plan reconciles every choice, including planning discoveries, to inspected ADR coverage. Proportionality governs detail, not coverage, even for small reversible spikes. Reuse verified appropriate records without duplicates; meaningful grouping preserves each choice's rationale, alternatives, actual selection/pending state, conditions and affected Work Items. One valid bound record or vague umbrella rationale cannot cover omissions. Routine naming, helper extraction and architecture-preserving repairs remain Implement-owned without ADR reference; material classification ambiguity goes to the engineer with evidence.
 

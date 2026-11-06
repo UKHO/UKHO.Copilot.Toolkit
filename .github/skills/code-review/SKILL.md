@@ -23,6 +23,8 @@ Use this Skill for independent, source-read-only review of actual changed work, 
 
 ## Output and validation
 
+Follow the [shared reader-facing rule](../rpir-lifecycle-core/SKILL.md#reader-facing-outputs): report Review's independent conclusion, comparison, actionable findings and limits, not an implementation retelling. Link inspected Plan/report evidence and standalone ADR rationale; identify material sections/versions. Omit irrelevant headings and repetitive empty entries, never required failed/unavailable/not-run checks or unresolved findings. Concision neither supplies missing evidence nor permits acceptance with unresolved findings.
+
 ### Checkpoint planning and boundary assessment
 
 Apply the [shared checkpoint capability](../local-git-checkpoints/SKILL.md). Assess every prospective Plan for one explicit bounded strategy and every detailed Work Item for a strategy reference, normal post-validation boundary and coherent content/purpose, or a specific justified combination/deferral/no-commit exception. Each exception must identify the actual constraint/reason, affected IDs, validation/dependency consequence, later boundary if one exists and why the normal boundary is unsuitable. Missing entries, empty headings, generic exemptions and unexplained blanket bans fail planning assessment; actual prohibitions, including historical Plans, still grant no Git authority. Do not demand historical rewrites or fabricate future obstacles.

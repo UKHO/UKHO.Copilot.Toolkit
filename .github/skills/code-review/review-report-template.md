@@ -4,7 +4,7 @@ description: "Template for an evidence-backed RPIR Review report"
 
 # Review report: <short title>
 
-Use prospectively; preserve finalized historical reports. Review evidence never grants edit scope.
+Use prospectively; preserve finalized historical reports. Follow the [shared reader-facing rule](../rpir-lifecycle-core/SKILL.md#reader-facing-outputs): state the independent conclusion, comparison and actionable findings, not an implementation retelling. Link inspected Plan/report evidence and standalone ADR rationale; identify material sections/versions. Omit irrelevant fields/headings and repeated empty entries, never unresolved findings or required failed, unavailable and not-run checks. Required actions still occur even when routine successful save narration is omitted. Review evidence never grants edit scope.
 
 ## Disposition and comparison
 
@@ -17,16 +17,13 @@ Use prospectively; preserve finalized historical reports. Review evidence never 
 
 ## Findings
 
-List deduplicated findings, or `None` only when clean evidence supports acceptance. For each: `<severity; actionable or unclear; original-criteria correction or material change; file/section; cited evidence; impact; smallest supported next action>`. Preserve unresolved questions; an unclear finding prevents acceptance. Supported in-boundary corrections may return manually to Implement under the **original approved Plan** plus linked Review context for fresh implementation evidence and fresh independent Review. Material changes need an engineer decision and Plan-owned amendment/new Plan; Review never edits source or approves expansion.
+List deduplicated findings when present; a clean conclusion may state no unresolved findings without an empty Findings heading. For each: `<severity; actionable or unclear; original-criteria correction or material change; file/section; cited evidence; impact; smallest supported next action>`. Preserve unresolved questions; an unclear finding prevents acceptance. Supported in-boundary corrections may return manually to Implement under the **original approved Plan** plus linked Review context for fresh implementation evidence and fresh independent Review. Material changes need an engineer decision and Plan-owned amendment/new Plan; Review never edits source or approves expansion.
 
 For each supported original-criteria defect, name the correction and relevant recheck via manual Implement resumption and fresh independent re-review; do not relabel an approved-outcome defect as optional advice or accept unresolved findings. For a genuine material change, recommend an evidence-backed engineer-owned resolution and affected dependent effects; do not silently expand scope or automatically invoke another phase. A recorded refusal is not an observed platform denial; independent investigation is not source-edit authority. Review remains source-read-only.
 
 ## Validation
 
-- **Performed:** `<checks actually performed and outcome; None if applicable>`.
-- **Failed:** `<failed checks and disposition; None if applicable>`.
-- **Unavailable:** `<unavailable checks and reason; None if applicable>`.
-- **Not run:** `<available checks not attempted and reason; None if applicable>`.
+Use a compact table or prose for **Performed**, **Failed**, **Unavailable** and **Not run** evidence. State actual outcomes, reasons, consequences and next actions; link inspected implementation checks once, and distinguish Review's independent checks. Omit inapplicable empty categories, never required failed, unavailable or not-run checks. Do not treat static passes as runtime evidence or accept unresolved findings.
 
 ## Identity, lineage and next action
 

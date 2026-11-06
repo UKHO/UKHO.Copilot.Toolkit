@@ -30,6 +30,7 @@ Use this Skill for read-only investigation that turns an ambiguous request into 
 ## Outputs
 
 - A narrow evidence report for the Research coordinator, with material claims tied to precise repository paths and symbols; omit unsupported categories.
+- Follow the [shared reader-facing rule](../rpir-lifecycle-core/SKILL.md#reader-facing-outputs): retain current understanding, provenance, actual qualified/nonrecommended selections and conditions, meaningful alternative-framing outcome and material unknowns, not a running discovery/Q&A or answer-change history. This does not remove adaptive discovery, actual acknowledgment/waiting or explicit-deferral safeguards.
 
 ## Limits
 

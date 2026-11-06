@@ -19,6 +19,8 @@ Component topology (for example separate web/API components), technology/toolcha
 
 Use the [Research input coverage map](references/research-input-coverage.md) proportionately and the [ADR template](templates/adr.md) for necessary authorized drafts. Reuse existing answers and citations; do not restart the Research interview or require all map fields for every decision.
 
+Use the [shared reader-facing rule](../rpir-lifecycle-core/SKILL.md#reader-facing-outputs) for lifecycle reports: link inspected ADR rationale/alternatives instead of copying them, while keeping exact path/section/substantive version/state, actual agreement/conditions, affected work and each record's invocation/recording result visible. ADRs themselves remain standalone and understandable without local lifecycle records; do not replace their context, realistic alternatives, reasoning or conditions with links alone. Missing/unreadable sources need an explicit affected-effect gap and resolution route, not a claimed inspection or phase-wide stop.
+
 ## Complete coverage and reuse
 
 For each architectural choice, preserve its identifiable subject, drivers/rationale, realistic alternatives and option-specific reasoning, actual selection or explicit pending state, conditions and affected work. Research identifies likely affected work; Plan maps it to its existing Work Item IDs. Plan binds coverage to each inspected ADR's actual path/ID, identifiable section, substantive version or snapshot, decision state, actual agreement evidence and conditions. A valid binding for one choice does not cover omitted choices.

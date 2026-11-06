@@ -65,5 +65,6 @@ Check that the plan's outcome, boundaries, acceptance and relevant validation ar
 
 ## Outputs
 
+- Follow the [shared reader-facing rule](../rpir-lifecycle-core/SKILL.md#reader-facing-outputs). Plan owns deliverables, acceptance and one actionable Work Item → Task → Step hierarchy with dependencies and explicit exit gates. Link inspected Research evidence and standalone ADR rationale/alternatives rather than repeat them; retain exact binding, actual selections/conditions, bounded factual routes and checkpoint strategy. Concise links do not replace inspection, approval or verified saves.
 - A narrow, cited planning-lens report for a delegated analyst; it is non-persistent input to the Plan coordinator.
 - A contained, numbered physical working implementation plan saved and read back only by the Plan coordinator, with its unresolved questions and evidence limits explicit; otherwise an honestly unfinished draft.

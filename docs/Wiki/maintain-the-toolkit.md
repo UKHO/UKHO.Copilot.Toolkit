@@ -27,6 +27,8 @@ Make identity, applicability, activation, inputs, outputs, exclusions, side effe
 
 ### Prefer composition and canonical links
 
+Apply the lifecycle core's [shared reader-facing output rule](../../.github/skills/rpir-lifecycle-core/SKILL.md#reader-facing-outputs) when maintaining RPIR guidance: plain-English phase-owned reports/chat, inspected predecessor links instead of retelling analysis, proportionate questions and no Q&A/change diary or compulsory empty categories. Required evidence and authority remain explicit. Use the [four synthetic output pairs](../../.github/skills/rpir-stage-assurance/concise-output-scenarios.md) for semantic comparison alongside contract tests, not as measured runtime improvement or permission to launch sessions.
+
 Link to canonical policy and authoring guidance instead of copying procedures. Keep repository links relative and descriptive. This page provides orientation only; the linked sources remain authoritative, and customization files guide a probabilistic model rather than providing deterministic security enforcement.
 
 When adding a resource-backed Skill, include only resources that materially improve repeatability, place detailed material in the appropriate resource directory, and link it from `SKILL.md`. Review links, metadata, tool boundaries, discovery, and representative behavior when platform support or dependencies change.

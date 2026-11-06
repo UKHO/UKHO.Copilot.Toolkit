@@ -21,7 +21,7 @@ Use this skill to keep implementation within the approved scope.
 2. Make the smallest coherent in-boundary change, selecting related files and tests when necessary. Preserve unrelated user work and public commitments.
 3. Diagnose ordinary failures, correct implementation or invocation and rerun relevant checks. Restore attributable accidental changes from actual preimages without overwriting user edits. A failed check keeps dependent acceptance unmet until a passing recheck.
 4. Re-read changed files, inspect the diff, links and principal output, and apply the [validation checklist](./validation-checklist.md). Seek fresh independent Review after corrections.
-5. Report actual files, behavior, correction history, four validation states and limitations. A partial report is a checkpoint, not successful delivery.
+5. Report actual delivered/remaining work, files/behavior, consequential correction/recheck evidence, four validation states and limitations. Link inspected Plan and upstream rationale rather than retell them; do not keep a running change history. A partial report is a checkpoint, not successful delivery.
 
 Assess complete architectural choice coverage against Research, the approved Plan and actual changes, including missing or partial coverage even when a valid ADR is bound. For unexpected uncovered or changed architecture, obtain engineer-directed Plan resolution before dependent architectural effects; continue independent approved work. Routine naming, helper extraction and architecture-preserving repairs remain Implement-owned without ADR reference; resolve material classification ambiguity with the engineer using evidence. Use the [ADR capability](../architecture-decision-records/SKILL.md); no Implement or worker ADR authorship is granted.
 
@@ -69,5 +69,6 @@ Classify validation as **Performed**, **Failed**, **Unavailable**, and **Not run
 
 ## Outputs
 
-- Actual changed files and delivered behavior, completed and remaining Plan work, correction history and four validation states.
+- Follow the [shared reader-facing rule](../rpir-lifecycle-core/SKILL.md#reader-facing-outputs) and sole report template: plain-English delivery/results, inspected predecessor links and no compulsory empty categories. Keep exact Plan/ADR bindings, each record's invocation versus verified recording, required failed/unavailable/not-run checks, consequential repairs/rechecks, unsaved tracking and every expected checkpoint disposition visible. Required actions still occur even when routine successful edit/save narration is omitted; concise linked evidence is not chronology proof or permission.
+- Actual changed files and delivered behavior, completed and remaining Plan work, consequential correction/recheck evidence and four validation states; no running change history.
 - A truthful report using the [implementation report template](./implementation-report-template.md), including refused effects and limitations; no partial report is successful delivery.

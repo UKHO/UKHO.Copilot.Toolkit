@@ -1,5 +1,7 @@
 # ADR <consumer-assigned ID>: <decision title>
 
+Keep this ADR self-contained: context, rationale, realistic alternatives and decision conditions remain understandable without local lifecycle records. Link supporting evidence once with its inspected section/version where material, but never substitute an unreadable link for a decision or actual agreement. Omit irrelevant optional fields, not unknown conditions or exact Plan bindings; do not keep a running Q&A/change diary. This presentation guidance does not grant ADR authorship or status-write authority.
+
 ## Record metadata
 
 - **Status:** <consumer convention; distinguish proposed decision state from delivery progress>

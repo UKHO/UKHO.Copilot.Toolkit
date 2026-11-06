@@ -29,6 +29,8 @@ Identify all architectural choices after Research's discovery/acknowledgment or 
 
 ## Supporting ADR content
 
+Keep the current material understanding and actual qualified/nonrecommended selections with conditions, not a Q&A or decision-change diary. Lifecycle reports may link inspected sources/sections/versions once; standalone ADR context, rationale, realistic alternatives and conditions must remain understandable if those local links are unavailable. A missing source is an explicit evidence gap with affected work and a resolution route, not permission or proof of inspection.
+
 - **Practice alignment:** Include relevant security, integration, cloud, resilience, and data-governance standards only when actual sources/evidence exist. Unknown standards remain unknown; justified N/A is acceptable.
 - **Assumptions and costs:** Distinguish facts, engineer statements, estimates, and untested assumptions. Capture decision-relevant licensing, compatibility, operating, and cost trade-offs.
 - **Diagrams and evidence:** Inspect only relevant sources within Research's existing boundaries. Diagrams are optional; target renderer compatibility requires separate evidence.

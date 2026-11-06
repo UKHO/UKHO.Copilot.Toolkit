@@ -6,22 +6,17 @@ description: "Template for a prospective RPIR Research brief"
 
 ## Answer and scope
 
-- **Question and answer:** `<request and evidence-based conclusion or current finding>`.
-- **Success and boundaries:** `<intended outcome, included/excluded investigation and what remains unproved>`.
+- **Current understanding and answer:** `<agreed problem, intended outcome, concrete example/boundary, supplied constraints and evidence-based conclusion; distinguish engineer statements from inference and label provisional understanding>`.
+- **Boundaries and unknowns:** `<included/excluded investigation, material assumptions and what remains unproved with affected work and next route>`.
 - **Provenance:** `<initiating request's actual channel/locator, subject and inspected sources; no invented phase predecessor>`.
 
 ## Intent and discovery
 
-- **Original request:** `<the engineer's request in its actual channel/locator; do not invent a local predecessor>`.
-- **Shared understanding:** `<clarified problem and desired outcome, or explicitly provisional objective; distinguish engineer statements from inference>`.
-- **Examples and boundaries:** `<concrete expected example, relevant boundary/counterexample, exclusions and exact supplied constraints>`.
-- **Understanding changes:** `<consequential choices offered, relevant trade-offs/recommendation when supported, actual engineer direction and answer-to-understanding changes; do not infer selection of a recommended option; omit transcript-level detail>`.
-- **Depth and readiness:** `<for each materially relevant motivation/affected people, outcome, example/boundary, constraints/priorities, consequential assumptions and foreseeable decisions: disposition as engineer-answered, evidence-supported, not applicable with reason, or unresolved with consequence/next step; supplied facts count; note useful answer-dependent follow-up and downstream choices resolved or carried with affected work/route>`.
-- **Alternative framing:** `<when applicable: labelled hypothesis, brief probe and its result, engineer direction choice before deeper exploration, and retained/revised objective or unresolved disposition>`.
+- **Actual direction and conditions:** `<material qualified or nonrecommended selections and their conditions; keep recommendation distinct from the answer, not a conversation history>`.
+- **Alternative framing:** `<when material: resulting retained/revised objective or unresolved direction and consequence; the method still requires a labelled hypothesis, brief probe and engineer direction choice before deeper exploration, not a reconstructed conversation>`.
 - **Acknowledgment or deferral:** `<actual engineer acknowledgment/correction and reconciled interpretation, pending acknowledgment, or actual explicit engineer-directed deferral with its provisional objective and scope/timing; sending a readback is not acknowledgment; never label provisional understanding confirmed>`.
-- **Unknowns and dependent limits:** `<remaining assumptions, factual questions and what dependent investigation or conclusions they limit>`.
 
-Keep this compact enough to preserve a reconstructible objective without a chat transcript or duplicate ledger. Follow the [discovery method](../agent-question-resolution/references/research-intent-discovery.md), including for detailed, apparently factual or solution-led requests; develop consequential reasoning rather than treating a dimension list, formatted paraphrase or question count as proof of understanding. Record actual acknowledgment or explicit deferral, not an emitted readback as consent. Silence, uncertainty, prompt clarity or generic “keep going” pressure is not confirmation or deferral. A truthfully provisional brief is valid evidence, not a transition approval; unresolved questions do not suppress eligible persistence or authorize broader pre-acknowledgment work. Initial investigability is distinct from technical readiness, and neither grants Research Plan-owned outcome, scope, acceptance or hierarchy.
+Keep the current understanding, not a running discovery/Q&A history or per-answer change account. Omit irrelevant fields rather than fill empty headings. Follow the [discovery method](../agent-question-resolution/references/research-intent-discovery.md), including for detailed, apparently factual or solution-led requests; develop consequential reasoning rather than treating a dimension list, formatted paraphrase or question count as proof of understanding. Record actual acknowledgment or explicit deferral, not an emitted readback as consent. Silence, uncertainty, prompt clarity or generic “keep going” pressure is not confirmation or deferral. A truthfully provisional brief is valid evidence, not a transition approval; unresolved questions do not suppress eligible persistence or authorize broader pre-acknowledgment work. Initial investigability is distinct from technical readiness, and neither grants Research Plan-owned outcome, scope, acceptance or hierarchy. Use the [shared reader-facing rule](../rpir-lifecycle-core/SKILL.md#reader-facing-outputs) for plain English, concise chat, links and evidence that may not be omitted.
 
 ## Evidence and reasoning
 

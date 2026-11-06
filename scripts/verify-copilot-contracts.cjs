@@ -1686,6 +1686,103 @@ function checkModelEffortContract(sources = {}) {
   return true;
 }
 
+// Bounded authored-output owners, not a prose judge or conversation evaluator.
+// Missing/ambiguous owners fail closed; metadata/history/wrong-owner mentions
+// cannot supply a rule removed from its normative location.
+function checkConciseRpirContract(sources = {}) {
+  const paths = {
+    core: '.github/skills/rpir-lifecycle-core/SKILL.md',
+    questions: '.github/skills/agent-question-resolution/SKILL.md',
+    clarification: '.github/skills/agent-question-resolution/templates/clarification-message.md',
+    discovery: '.github/skills/agent-question-resolution/references/research-intent-discovery.md',
+    research: '.github/skills/codebase-research/research-brief-template.md',
+    researchAgent: '.github/agents/research.agent.md',
+    assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
+    planReport: '.github/skills/architecture-planning/implementation-plan-template.md',
+    implementationReport: '.github/skills/safe-implementation/implementation-report-template.md',
+    reviewReport: '.github/skills/code-review/review-report-template.md'
+  };
+  const source = Object.fromEntries(Object.entries(paths).map(([key, relative]) => [key, sources[key] ?? readText(relative)]));
+  function owned(text, heading, owner) {
+    if (text.split('\n').filter((line) => line === heading).length !== 1) {
+      fail(`${owner}: missing or ambiguous output owner`, 'RPIR-OUTPUT-001');
+    }
+    return section(text, heading);
+  }
+  function requireOutput(text, patterns, owner, rule) {
+    if (patterns.some((pattern) => !pattern.test(text))) fail(`${owner}: ${rule}`, 'RPIR-OUTPUT-001');
+  }
+  const outputs = owned(source.core, '## Reader-facing outputs', 'core');
+  requireOutput(outputs, [/plain English/i, /each phase's own result once/i,
+    /[Ll]ink inspected predecessors/i, /source, section and version where material/i,
+    /link is not proof of inspection or permission/i, /Chat opens with the result/i,
+    /no hard length limit/i, /compulsory empty headings/i, /running discovery\/Q&A history/i,
+    /qualified or nonrecommended selections and conditions/i, /failed, unavailable and not-run checks/i,
+    /partial delivery/i, /consequential corrections\/rechecks/i, /unsaved tracking/i,
+    /every expected checkpoint boundary[^.!?\n]*actual disposition and evidence/i,
+    /invocation versus each record's verified recording/i, /final markers\/history do not prove chronology/i,
+    /Missing or unreadable sources[^.!?\n]*evidence-gap route/i,
+    /independently authorized work may continue/i, /manual transitions[^.!?\n]*independent Review/i,
+    /do not establish live behavior or measured readability improvement/i], 'core', 'retain concise output and material evidence');
+  const questions = owned(source.questions, '## Procedure', 'questions');
+  const framing = questions.split('\n').find((line) => line.startsWith('6. ')) || '';
+  requireOutput(framing, [/simple clarification[^.!?\n]*direct contextual question/i,
+    /without mandatory four-label or lettered formatting/i,
+    /material choices[^.!?\n]*supported advice[^.!?\n]*meaningful alternatives/i,
+    /evidence-supply\/acquisition route instead of guessing/i,
+    /Presentation never replaces actual acknowledgment, waiting, explicit deferral or manual approval/i],
+  'questions', 'proportionate questions retain decision and approval safeguards');
+  const answer = questions.split('\n').find((line) => line.startsWith('7. ')) || '';
+  requireOutput(answer, [/actual qualified or nonrecommended answers and conditions/i,
+    /rather than automatically selecting the recommendation/i,
+    /do not invoke or approve a phase transition/i], 'questions', 'retain actual answers and manual transitions');
+  const clarification = source.clarification.split('\n\n**Known:**')[0];
+  requireOutput(clarification, [/simple clarification[^\n]*direct contextual question/i,
+    /without mandatory labels or letters/i, /optional aids/i], 'clarification', 'allow direct simple clarification');
+  const discovery = owned(source.discovery, '## Read back, correct and stop', 'discovery');
+  requireOutput(discovery, [/actual acknowledgment|readback is acknowledged/i,
+    /end the turn/i, /Do not emit a readback and start dependent investigation/i,
+    /Silence and passive non-response are not confirmation/i], 'discovery', 'retain actual acknowledgment and waiting');
+  const intent = owned(source.research, '## Intent and discovery', 'research');
+  requireOutput(intent, [/Actual direction and conditions/i, /qualified or nonrecommended selections and their conditions/i,
+    /not a running discovery\/Q&A history/i, /actual engineer acknowledgment/i,
+    /scope\/timing/i, /never label provisional understanding confirmed/i], 'research', 'current substance is not a discovery history');
+  const rubric = owned(source.assurance, '## Conversation evidence rubric', 'assurance');
+  requireOutput(rubric, [/Simple clarification may be direct without mandatory labels or letters/i,
+    /qualified or nonrecommended direction and conditions/i,
+    /recorded claim, not an observed conversation/i], 'assurance', 'assess proportionate questions and observed evidence');
+  const reportScopes = {};
+  for (const owner of ['planReport', 'implementationReport', 'reviewReport']) {
+    const opening = source[owner].split(/^## /m)[0];
+    const introductions = opening.split(/\n\s*\n/).filter((part) => part.startsWith('Use prospectively;'));
+    if (introductions.length !== 1) fail(`${owner}: missing or ambiguous report introduction`, 'RPIR-OUTPUT-001');
+    requireOutput(introductions[0], [/shared reader-facing rule/i, /[Ll]ink inspected/i,
+      /(?:rather than retell|not a retelling|not an implementation retelling)/i,
+      /Omit irrelevant fields\/headings and repeated empty entries/i,
+      /[Rr]equired actions/i], owner, 'retain phase-owned linked reporting');
+    if (owner !== 'planReport') {
+      const validation = owned(source[owner], '## Validation', owner);
+      requireOutput(validation, [/required failed, unavailable (?:or|and) not-run checks/i,
+        /actual outcomes|actual state/i, /consequence/i,
+        /static passes do not prove live behavior|Do not treat static passes as runtime evidence/i],
+      owner, 'retain required validation outcomes without empty categories');
+    }
+    // Exclude metadata and appended history; these are the actual schema owners.
+    reportScopes[owner] = introductions[0] + '\n' + (owner === 'planReport'
+      ? owned(source[owner], '## Outcome and boundaries', owner) + owned(source[owner], '## Planned work', owner)
+      : owned(source[owner], owner === 'implementationReport' ? '## Delivered outcome and progress' : '## Disposition and comparison', owner) +
+        section(source[owner], '## Validation') + section(source[owner], '## Execution and review evidence') + section(source[owner], '## Findings'));
+  }
+  const scopes = { core: outputs, questions, clarification, discovery, research: intent,
+    researchAgent: coordinatorBody(source.researchAgent, 'Research'), assurance: rubric, ...reportScopes };
+  for (const [owner, text] of Object.entries(scopes)) {
+    if (/Every question must use four labels|All questions require lettered paths|A running discovery history is required|Acknowledgment may be assumed|An answer approves the next phase|Always substitute the recommendation|Required failures may be omitted|Invocation proves persisted acceptance|Final markers prove timely handling|A real denial may be bypassed|Unresolved findings may be accepted|Decision conditions may be omitted/i.test(text)) {
+      fail(`${owner}: contradictory output or authority rule`, 'RPIR-OUTPUT-001');
+    }
+  }
+  return true;
+}
+
 function checkCustomizationContracts(inventory) {
   const artifacts = classes.flatMap((definition) => definition.kind === 'skill'
     ? inventory[definition.name]
@@ -1734,6 +1831,7 @@ function checkCustomizationContracts(inventory) {
   checkIncrementalRpirContract();
   checkModelAuthoringContract();
   checkModelEffortContract();
+  checkConciseRpirContract();
   return { artifactCount: artifacts.length, resourceCount: resources.length };
 }
 
@@ -1790,6 +1888,7 @@ if (require.main === module) {
 module.exports = {
   checkAgentMetadata, checkLocalLinks, checkManifestParity, checkPromptMetadata,
   checkDecisionReadinessContract,
+  checkConciseRpirContract,
   checkCustomizationContracts, checkArchitectureDecisionRecordContract, checkIncrementalRpirContract, checkModelAuthoringContract, checkModelEffortContract, checkModelProfileCoverage, checkModelProjection,
   parseFrontmatterText, parseHandoffs, parseStringList
 };

@@ -1767,4 +1767,131 @@ assert.match(packagingWorkflow, /package:\s*\n\s+if: false/,
 assert.match(packagingPolicy, /Real packaging remains deferred outside this prospective local-candidate task/);
 cases += 38;
 
+// Concise presentation must not become evidence/approval loss. These fixtures
+// mutate normative owners in memory; no agent or packaging operation is run.
+const conciseStart = cases;
+const concisePaths = {
+  core: '.github/skills/rpir-lifecycle-core/SKILL.md',
+  questions: '.github/skills/agent-question-resolution/SKILL.md',
+  clarification: '.github/skills/agent-question-resolution/templates/clarification-message.md',
+  discovery: '.github/skills/agent-question-resolution/references/research-intent-discovery.md',
+  research: '.github/skills/codebase-research/research-brief-template.md',
+  researchAgent: '.github/agents/research.agent.md',
+  assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
+  planReport: '.github/skills/architecture-planning/implementation-plan-template.md',
+  implementationReport: '.github/skills/safe-implementation/implementation-report-template.md',
+  reviewReport: '.github/skills/code-review/review-report-template.md'
+};
+const conciseSources = Object.fromEntries(Object.entries(concisePaths).map(([key, relative]) => [key, readArtifact(relative)]));
+assert.doesNotThrow(() => contracts.checkConciseRpirContract(conciseSources));
+cases += 1;
+for (const [owner, target, replacement] of [
+  ['questions', 'direct contextual question', 'direct contextual question in plain English'],
+  ['clarification', 'Which local file contains the example you mean?', 'Which saved example should I inspect?'],
+  ['core', 'plain English', 'clear plain English']
+]) {
+  assert.doesNotThrow(() => contracts.checkConciseRpirContract({ ...conciseSources,
+    [owner]: replaceOnce(conciseSources[owner], target, replacement) }));
+  cases += 1;
+}
+const conciseDiagnostic = (owner, rule) => (error) => error.contractId === 'RPIR-OUTPUT-001' &&
+  error.message === `${owner}: ${rule}`;
+for (const [owner, target, replacement, rule] of [
+  ['questions', 'Presentation never replaces actual acknowledgment, waiting, explicit deferral or manual approval',
+    'Presentation replaces acknowledgment', 'proportionate questions retain decision and approval safeguards'],
+  ['questions', 'Preserve actual qualified or nonrecommended answers and conditions',
+    'Preserve recommended answers only', 'retain actual answers and manual transitions'],
+  ['questions', 'do not invoke or approve a phase transition', 'approve a phase transition', 'retain actual answers and manual transitions'],
+  ['core', 'required failed, unavailable and not-run checks', 'successful checks only', 'retain concise output and material evidence'],
+  ['core', 'every expected checkpoint boundary', 'selected checkpoint boundaries', 'retain concise output and material evidence'],
+  ['research', 'never label provisional understanding confirmed', 'label provisional understanding confirmed', 'current substance is not a discovery history'],
+  ['discovery', 'Do not emit a readback and start dependent investigation', 'Emit a readback and start dependent investigation', 'retain actual acknowledgment and waiting']
+]) {
+  assertRejected(`${owner} concise contract loses ${target}`, () => contracts.checkConciseRpirContract({
+    ...conciseSources, [owner]: replaceOnce(conciseSources[owner], target, replacement)
+  }), conciseDiagnostic(owner, rule));
+}
+for (const [owner, boundary] of [
+  ['core', '## Inspect and bind one actual document'], ['questions', '## Outputs'],
+  ['discovery', '## Honor explicit engineer-directed deferral'], ['research', '## Evidence and reasoning'],
+  ['assurance', '## Delivery and material boundaries']
+]) {
+  for (const contradiction of ['Every question must use four labels.', 'All questions require lettered paths.',
+    'A running discovery history is required.', 'Acknowledgment may be assumed.', 'An answer approves the next phase.',
+    'Always substitute the recommendation.', 'Required failures may be omitted.',
+    'Invocation proves persisted acceptance.', 'Final markers prove timely handling.']) {
+    assertRejected(`${owner} additive output contradiction: ${contradiction}`, () => contracts.checkConciseRpirContract({
+      ...conciseSources, [owner]: replaceOnce(conciseSources[owner], boundary, `${contradiction}\n\n${boundary}`)
+    }), conciseDiagnostic(owner, 'contradictory output or authority rule'));
+  }
+}
+const conciseEvidenceRule = 'required failed, unavailable and not-run checks';
+const missingConciseEvidence = replaceOnce(conciseSources.core, conciseEvidenceRule, 'successful checks only');
+for (const [label, core, research] of [
+  ['history', `${missingConciseEvidence}\n\n## Historical example\n\n${conciseEvidenceRule}`, conciseSources.research],
+  ['metadata', replaceOnce(missingConciseEvidence, 'description: ', `description: ${conciseEvidenceRule}. `), conciseSources.research],
+  ['wrong-owner', missingConciseEvidence, `${conciseSources.research}\n\n${conciseEvidenceRule}`],
+  ['wrong-section', replaceOnce(missingConciseEvidence, '## Inspect and bind one actual document',
+    `## Inspect and bind one actual document\n\n${conciseEvidenceRule}`), conciseSources.research]
+]) {
+  assertRejected(`concise evidence ${label} decoy`, () => contracts.checkConciseRpirContract({
+    ...conciseSources, core, research
+  }), conciseDiagnostic('core', 'retain concise output and material evidence'));
+}
+for (const heading of ['## Reader-facing outputs', '## Intent and discovery']) {
+  const owner = heading.includes('Reader') ? 'core' : 'research';
+  assertRejected(`${owner} ambiguous output owner`, () => contracts.checkConciseRpirContract({
+    ...conciseSources, [owner]: `${conciseSources[owner]}\n\n${heading}\n\nDecoy.\n`
+  }), conciseDiagnostic(owner, 'missing or ambiguous output owner'));
+}
+for (const owner of ['planReport', 'implementationReport', 'reviewReport']) {
+  for (const [target, replacement] of [
+    ['Link inspected', 'Link inspected and version-bound'],
+    ['Omit irrelevant fields/headings and repeated empty entries', 'Omit irrelevant fields/headings and repeated empty entries where inapplicable']
+  ]) {
+    assert.doesNotThrow(() => contracts.checkConciseRpirContract({ ...conciseSources,
+      [owner]: replaceOnce(conciseSources[owner], target, replacement) }));
+    cases += 1;
+  }
+  for (const contradiction of ['Required failures may be omitted.', 'Decision conditions may be omitted.',
+    'Invocation proves persisted acceptance.', 'Final markers prove timely handling.',
+    'A real denial may be bypassed.', 'Unresolved findings may be accepted.']) {
+    const boundary = owner === 'planReport' ? '## Planned work' : owner === 'implementationReport' ? '## Validation' : '## Findings';
+    assertRejected(`${owner} additive report contradiction`, () => contracts.checkConciseRpirContract({
+      ...conciseSources, [owner]: replaceOnce(conciseSources[owner], boundary, `${contradiction}\n\n${boundary}`)
+    }), conciseDiagnostic(owner, 'contradictory output or authority rule'));
+  }
+  const intro = conciseSources[owner].split(/\n\s*\n/).find((part) => part.startsWith('Use prospectively;'));
+  assert.ok(intro);
+  const missing = replaceOnce(conciseSources[owner], intro, 'Report the result.');
+  for (const [label, text] of [
+    ['missing', missing], ['history', `${missing}\n\n## Historical example\n\n${intro}`],
+    ['metadata', replaceOnce(missing, 'description: ', `description: ${intro.replace(/\n/g, ' ')} `)],
+    ...(owner === 'planReport' ? [] : [
+      ['wrong-section', replaceOnce(missing, '## Validation', `## Validation\n\n${intro}`)]
+    ])
+  ]) {
+    assertRejected(`${owner} ${label} report-owner decoy`, () => contracts.checkConciseRpirContract({
+      ...conciseSources, [owner]: text
+    }), conciseDiagnostic(owner, 'missing or ambiguous report introduction'));
+  }
+  assertRejected(`${owner} duplicate report introduction`, () => contracts.checkConciseRpirContract({
+    ...conciseSources, [owner]: replaceOnce(conciseSources[owner], intro, `${intro}\n\n${intro}`)
+  }), conciseDiagnostic(owner, 'missing or ambiguous report introduction'));
+}
+for (const owner of ['implementationReport', 'reviewReport']) {
+  const rule = 'required failed, unavailable or not-run checks';
+  // The introduction also retains evidence; only Validation can satisfy its
+  // own outcome rule. Mutation stays scoped to that normative section.
+  const start = conciseSources[owner].indexOf('\n## Validation\n');
+  const end = conciseSources[owner].indexOf('\n## ', start + 1);
+  const validation = conciseSources[owner].slice(start, end);
+  for (const [target, replacement] of [[rule, 'successful checks'],
+    [owner === 'implementationReport' ? 'actual state and consequence' : 'actual outcomes, reasons, consequences', 'summary only']]) {
+    assertRejected(`${owner} hides required check evidence`, () => contracts.checkConciseRpirContract({
+      ...conciseSources, [owner]: replaceOnce(conciseSources[owner], validation, replaceOnce(validation, target, replacement))
+    }), conciseDiagnostic(owner, 'retain required validation outcomes without empty categories'));
+  }
+}
+console.log(`Passed ${cases - conciseStart} focused concise-output cases.`);
 console.log(`Passed ${cases} Copilot contract cases, including valid structure and rejected privilege/parity/link defects.`);
