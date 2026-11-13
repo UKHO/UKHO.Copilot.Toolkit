@@ -2,8 +2,8 @@
 
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
+const vm = require('node:vm');
 const contracts = require('../scripts/verify-copilot-contracts.cjs');
 const { discover, root } = require('../scripts/discover-copilot-artifacts.cjs');
 const { desiredManifest, differences } = require('../scripts/sync-copilot-manifest.cjs');
@@ -70,6 +70,243 @@ function agentPath(name) {
   return [...agents].find(([, parsed]) => parsed.values.name === name)[0];
 }
 
+// Native checks are authored-contract checks, not proof of actual loading,
+// dispatch, tool isolation or effective model selection.
+const nativeProfile = readArtifact('.github/skills/agent-model-selection/references/role-profiles.md');
+const nativeSkill = readArtifact('.github/skills/agent-model-selection/SKILL.md');
+const nativeSkillNames = new Set(inventory.chatSkills.map((relative) =>
+  contracts.parseFrontmatterText(readArtifact(relative), relative).values.name));
+const nativeLock = JSON.parse(readArtifact('package-lock.json'));
+const nativeCheck = (relative, text = readArtifact(relative), skills = nativeSkillNames, profile = nativeProfile) =>
+  contracts.checkNativeAgentContract(relative, contracts.parseFrontmatterText(text, relative), agentNames, skills, profile);
+for (const relative of agentPaths) {
+  assert.doesNotThrow(() => nativeCheck(relative));
+  cases += 1;
+}
+assert.doesNotThrow(() => contracts.checkNativeSupportMetadata(sourceManifest, nativeLock));
+assert.doesNotThrow(() => contracts.checkNativeModelObservationContract(nativeSkill, nativeProfile));
+cases += 2;
+for (const [label, manifestInput, lockInput] of [
+  ['old manifest baseline', { ...sourceManifest, engines: { vscode: '^1.130.0' } }, nativeLock],
+  ['missing lock baseline', sourceManifest, { packages: { '': {} } }]
+]) assertRejected(label, () => contracts.checkNativeSupportMetadata(manifestInput, lockInput),
+  (error) => error.contractId === 'NATIVE-SUPPORT-001');
+
+const nativeResearchPath = agentPath('Research');
+const nativeResearch = readArtifact(nativeResearchPath);
+const researchTools = "tools: ['read', 'search', 'web', 'edit', 'edit/createDirectory', 'agent']";
+assert.ok(nativeResearch.includes(researchTools), 'Research retains the qualified directory reference alongside edit');
+assert.doesNotThrow(() => nativeCheck(nativeResearchPath, nativeResearch));
+cases += 1;
+for (const [label, replacement] of [
+  ['omitted directory reference', "tools: ['read', 'search', 'web', 'edit', 'agent']"],
+  ['unqualified directory reference', "tools: ['read', 'search', 'web', 'edit', 'createDirectory', 'agent']"],
+  ['invented extension prefix', "tools: ['read', 'search', 'web', 'edit', 'github.copilot/edit/createDirectory', 'agent']"],
+  ['omitted edit alias', "tools: ['read', 'search', 'web', 'edit/createDirectory', 'agent']"]
+]) assertRejected(`native Research ${label}`, () => nativeCheck(nativeResearchPath,
+  replaceOnce(nativeResearch, researchTools, replacement)),
+  (error) => error.contractId === 'NATIVE-AGENT-001' && /tools differ from the nonempty role boundary/.test(error.message));
+
+const nativePlanPath = agentPath('Plan');
+const nativePlan = readArtifact(nativePlanPath);
+for (const [label, target, replacement] of [
+  ['wrong target', 'target: github-copilot', 'target: vscode'],
+  ['empty tools', "tools: ['read', 'search', 'edit', 'agent']", 'tools: []'],
+  ['unsupported Local delegation metadata', 'target: github-copilot', "target: github-copilot\nagents: ['Script Runner']"],
+  ['wrong body specialist', 'Requirements Analyst, Architecture Analyst', 'Test Worker, Architecture Analyst'],
+  ['wildcard body specialist', 'Requirements Analyst, Architecture Analyst', '*, Architecture Analyst'],
+  ['fallback model list', "model: 'gpt-6.1-sol'", "model: ['gpt-6.1-sol', 'gpt-6.1-terra']"],
+  ['wrong effort', 'reasoning-effort: high', 'reasoning-effort: xhigh']
+]) assertRejected(`native ${label}`, () => nativeCheck(nativePlanPath, replaceOnce(nativePlan, target, replacement)));
+assertRejected('unresolved named skill', () => nativeCheck(nativePlanPath, nativePlan,
+  new Set([...nativeSkillNames].filter((name) => name !== 'architecture-planning'))),
+  (error) => error.contractId === 'NATIVE-AGENT-001' && /named skills/.test(error.message));
+assertRejected('missing native profile row', () => nativeCheck(nativePlanPath, nativePlan, nativeSkillNames,
+  replaceOnce(nativeProfile, '| `plan.agent.md` | `gpt-6.1-sol` | `high` |', '')),
+  (error) => error.contractId === 'NATIVE-AGENT-001' && /one role row/.test(error.message));
+const routeSentence = nativePlan.split('\n').find((line) => line.startsWith('Permitted specialists are exactly'));
+assert.ok(routeSentence);
+for (const [label, text] of [
+  ['history decoy', `${replaceOnce(nativePlan, routeSentence, 'Specialists are selected as needed.')}\n\n## Historical example\n\n${routeSentence}`],
+  ['metadata decoy', replaceOnce(replaceOnce(nativePlan, routeSentence, 'Specialists are selected as needed.'),
+    'description: ', `description: ${routeSentence} `)],
+  ['duplicate normative route', replaceOnce(nativePlan, routeSentence, `${routeSentence}\n${routeSentence}`)],
+  ['additive contradiction', replaceOnce(nativePlan, routeSentence, `${routeSentence}\n\nAny workers may be used.`)]
+]) assertRejected(`native route ${label}`, () => nativeCheck(nativePlanPath, text),
+  (error) => error.contractId === 'NATIVE-AGENT-001');
+assert.doesNotThrow(() => nativeCheck(nativePlanPath, replaceOnce(nativePlan,
+  'reconcile returned evidence and effects', 'reconcile returned evidence and effects before relying on them')));
+cases += 1;
+for (const [name, nextAction] of [
+  ['Research', 'manual request to the selected Plan coordinator with the actual inspected physical Research brief and version'],
+  ['Plan', 'manual request to Implement with the inspected physical Plan'],
+  ['Implement', 'manual independent Review with the actual inspected physical implementation report'],
+  ['Review', 'manual Implement request with the original approved physical Plan and linked Review'],
+  ['Review', 'manual Plan request with the physical Review']
+]) {
+  const relative = agentPath(name);
+  const original = readArtifact(relative);
+  const entry = original.split(/\n\s*\n/).find((part) => part.startsWith('Prospectively,'));
+  assert.ok(entry && entry.includes(nextAction), `${name} has its actual native entry owner`);
+  const missing = replaceOnce(original, entry, 'Stage requests are considered.');
+  for (const [label, changed] of [
+    ['deleted owner', missing],
+    ['history decoy', `${missing}\n\n## Historical example\n\n${entry}\n`],
+    ['metadata decoy', replaceOnce(missing, 'description: ', `description: ${entry} `)],
+    ['wrong-section decoy', `${missing}\n\n## Other instructions\n\n${entry}\n`],
+    ['duplicate owner', replaceOnce(original, entry, `${entry}\n\n${entry}`)],
+    ['wrong or absent next action', replaceOnce(original, nextAction, 'automatic request to an unspecified agent')],
+    ['additive automatic transition', replaceOnce(original, entry, `${entry}\n\nAutomatically invoke the next stage.`)]
+  ]) assertRejected(`${name} native entry ${label}`, () => nativeCheck(relative, changed),
+    (error) => error.contractId === 'NATIVE-AGENT-001');
+}
+assert.doesNotThrow(() => nativeCheck(agentPath('Implement'), replaceOnce(readArtifact(agentPath('Implement')),
+  'manual independent Review with the actual inspected physical implementation report',
+  'manual independent Review with the inspected physical implementation report')));
+cases += 1;
+const nativeImplementPath = agentPath('Implement');
+const nativeImplement = readArtifact(nativeImplementPath);
+const implementEntry = nativeImplement.split(/\n\s*\n/).find((part) => part.startsWith('Prospectively,'));
+const implementEntryError = (error) => error.contractId === 'NATIVE-AGENT-001' &&
+  /native entry and manual next-stage safeguards/.test(error.message);
+assert.ok(implementEntry);
+assert.doesNotThrow(() => nativeCheck(nativeImplementPath, nativeImplement));
+cases += 1;
+for (const target of [
+  'receiving-role rule is already effective before invocation',
+  'Where policy effective at invocation requires explicit `/implement`, use that route to bootstrap',
+  'does not self-upgrade a session',
+  'or make an earlier invocation retroactive'
+]) {
+  const missing = replaceOnce(nativeImplement, implementEntry, replaceOnce(implementEntry, target, 'omitted safeguard'));
+  for (const [label, changed] of [
+    ['missing', missing],
+    ['history decoy', `${missing}\n\n## Historical example\n\n${implementEntry}\n`],
+    ['wrong-section decoy', `${missing}\n\n## Other instructions\n\n${implementEntry}\n`],
+    ['metadata decoy', replaceOnce(missing, 'description: ', `description: ${target}; `)]
+  ]) assertRejected(`Implement conditional bootstrap ${label}: ${target}`,
+    () => nativeCheck(nativeImplementPath, changed), implementEntryError);
+}
+for (const statement of ['Policy edits automatically self-upgrade a session.',
+  'Earlier invocations are retroactive.', 'Explicit `/implement` is always required.']) {
+  assertRejected(`Implement additive bootstrap contradiction: ${statement}`, () => nativeCheck(nativeImplementPath,
+    replaceOnce(nativeImplement, implementEntry, `${implementEntry}\n\n${statement}`)), implementEntryError);
+}
+assert.doesNotThrow(() => nativeCheck(nativeImplementPath,
+  `${nativeImplement}\n\n## Historical example\n\nEarlier invocations are retroactive.\n`));
+cases += 1;
+const nativeWorkerPath = agentPath('Implementation Worker');
+const nativeWorker = readArtifact(nativeWorkerPath);
+const nondelegation = nativeWorker.split('\n').find((line) => line.startsWith('Do not delegate or accept work beyond'));
+assert.ok(nondelegation);
+for (const [label, text] of [
+  ['missing owner', replaceOnce(nativeWorker, nondelegation, 'Work within the delegated scope.')],
+  ['history decoy', `${replaceOnce(nativeWorker, nondelegation, 'Work within the delegated scope.')}\n\n## Historical example\n\n${nondelegation}`],
+  ['additive contradiction', replaceOnce(nativeWorker, nondelegation, `${nondelegation}\n\nWorkers may delegate.`)]
+]) assertRejected(`native worker ${label}`, () => nativeCheck(nativeWorkerPath, text),
+  (error) => error.contractId === 'NATIVE-AGENT-001');
+
+for (const [owner, original, boundary] of [
+  ['skill', nativeSkill, '## Output and boundary'],
+  ['profile', nativeProfile, 'The forward target is Copilot']
+]) {
+  const check = (changed) => contracts.checkNativeModelObservationContract(
+    owner === 'skill' ? changed : nativeSkill, owner === 'profile' ? changed : nativeProfile);
+  for (const contradiction of [
+    'Fallback was caused by an unavailable model.',
+    'Unknown selection is a success.',
+    'A known mismatch is a default pass.'
+  ]) assertRejected(`${owner} additive model contradiction`, () => check(replaceOnce(original, boundary,
+    `${contradiction}\n\n${boundary}`)), (error) => error.contractId === 'NATIVE-MODEL-001');
+  const missing = replaceOnce(original, 'fallback cause not exposed', 'fallback explained');
+  for (const [label, changed] of [
+    ['history', `${missing}\n\n## Historical example\n\nfallback cause not exposed\n`],
+    ...(owner === 'skill' ? [['metadata', replaceOnce(missing, 'description: ',
+      'description: fallback cause not exposed; ')]] : [])
+  ]) assertRejected(`${owner} ${label} cannot restore model observation rule`, () => check(changed),
+    (error) => error.contractId === 'NATIVE-MODEL-001');
+}
+assertRejected('wrong model owner cannot restore observation rule', () => contracts.checkNativeModelObservationContract(
+  replaceOnce(nativeSkill, 'fallback cause not exposed', 'fallback explained'),
+  `${nativeProfile}\n\n## Historical example\n\nfallback cause not exposed\n`
+), (error) => error.contractId === 'NATIVE-MODEL-001');
+
+for (const [name, forbidden] of [['Research', 'Implementation Worker'], ['Plan', 'Security Reviewer'],
+  ['Implement', 'Architecture Analyst'], ['Review', 'Test Worker']]) {
+  const relative = agentPath(name);
+  const original = readArtifact(relative);
+  const route = original.split('\n').find((line) => line.startsWith('Permitted specialists are exactly'));
+  const allowed = route.match(/\*\*([^*]+)\*\*/)[1].replace(/, and /g, ', ').split(', ');
+  for (const statement of ['Only a subset of the permitted specialists may be invoked.',
+    `Only ${allowed[0]} may be invoked.`, 'Only Script Runner may be delegated to.', `The coordinator may invoke ${forbidden}.`,
+    `Use ${forbidden} instead.`, 'Use a generic worker instead.', 'Use an arbitrary worker.']) {
+    assertRejected(`${name} additive route contradiction: ${statement}`, () => nativeCheck(relative,
+      replaceOnce(original, route, `${route}\n\n${statement}`)),
+    (error) => error.contractId === 'NATIVE-AGENT-001' && /contradictory body route/.test(error.message));
+  }
+  assert.doesNotThrow(() => nativeCheck(relative, replaceOnce(original, route,
+    `${route}\n\nThe coordinator may invoke ${allowed[0]} or ${allowed[1]} when appropriate.`)));
+  assert.doesNotThrow(() => nativeCheck(relative, replaceOnce(original, route,
+    `${route}\n\nOnly ${allowed.join(', ')} may be invoked.`)));
+  assert.doesNotThrow(() => nativeCheck(relative, replaceOnce(original, route,
+    `${route}\n\nOnly ${allowed.join(', ')} may be delegated to.`)));
+  assert.doesNotThrow(() => nativeCheck(relative, replaceOnce(original, route,
+    `${route}\n\nDo not use an arbitrary worker.`)));
+  assertRejected(`${name} hardcoded generated ID route`, () => nativeCheck(relative,
+    replaceOnce(original, route, `${route}\n\nUse hardcoded generated ID \`copilot-native-agent-7f3a\`.`)),
+  (error) => error.contractId === 'NATIVE-AGENT-001' && /contradictory body route/.test(error.message));
+  assertRejected(`${name} literal opaque generated ID route`, () => nativeCheck(relative,
+    replaceOnce(original, route, `${route}\n\nInvoke \`copilot-native-agent-7f3a11\`.`)),
+  (error) => error.contractId === 'NATIVE-AGENT-001' && /contradictory body route/.test(error.message));
+  for (const statement of ['Invoke `vscode-agent-7f3a`.', 'Choose `vscode-agent-7f3a1`.',
+    'Do not invoke `vscode-agent-7f3a`; but invoke `vscode-agent-7f3a`.']) {
+    assertRejected(`${name} short generated ID route: ${statement}`, () => nativeCheck(relative,
+      replaceOnce(original, route, `${route}\n\n${statement}`)),
+    (error) => error.contractId === 'NATIVE-AGENT-001' && /contradictory body route/.test(error.message));
+  }
+  assert.doesNotThrow(() => nativeCheck(relative, replaceOnce(original, route,
+    `${route}\n\nDo not use hardcoded generated ID \`copilot-native-agent-7f3a\`.`)));
+  assert.doesNotThrow(() => nativeCheck(relative, replaceOnce(original, route,
+    `${route}\n\nDo not invoke \`copilot-native-agent-7f3a11\`.`)));
+  for (const statement of ['Do not invoke `vscode-agent-7f3a`.', 'Never invoke `vscode-agent-7f3a`.',
+    'An illustrative generated ID is `vscode-agent-7f3a`; do not hardcode it.']) {
+    assert.doesNotThrow(() => nativeCheck(relative, replaceOnce(original, route, `${route}\n\n${statement}`)));
+    cases += 1;
+  }
+  assert.doesNotThrow(() => nativeCheck(relative, `${original}\n\n## Historical example\n\nOnly Script Runner may be delegated to.\nUse an arbitrary worker.\n`));
+  cases += 7;
+}
+for (const [owner, original, boundary] of [['skill', nativeSkill, '## Output and boundary'],
+  ['profile', nativeProfile, 'The forward target is Copilot']]) {
+  const check = (changed) => contracts.checkNativeModelObservationContract(
+    owner === 'skill' ? changed : nativeSkill, owner === 'profile' ? changed : nativeProfile);
+  assert.doesNotThrow(() => check(replaceOnce(original, boundary,
+    `Observed evidence from runtime logs confirms fallback was caused by an unavailable model.\n\n${boundary}`)));
+  assert.doesNotThrow(() => check(replaceOnce(original, boundary,
+    `Fallback was caused by an unavailable model according to captured diagnostic logs.\n\n${boundary}`)));
+  assert.doesNotThrow(() => check(replaceOnce(original, boundary,
+    `Do not assert fallback was caused by an unavailable model.\n\n${boundary}`)));
+  for (const statement of [
+    'Do not assert the model was unavailable, which caused the fallback.',
+    'Never assert that the model is unavailable, which caused fallback.'
+  ]) {
+    assert.doesNotThrow(() => check(replaceOnce(original, boundary, `${statement}\n\n${boundary}`)));
+    cases += 1;
+  }
+  assert.doesNotThrow(() => check(replaceOnce(original, boundary,
+    `Observed evidence from runtime logs confirms the model was unavailable, which caused the fallback.\n\n${boundary}`)));
+  assert.doesNotThrow(() => check(replaceOnce(original, boundary,
+    `The model was unavailable, which caused the fallback, according to captured diagnostic logs.\n\n${boundary}`)));
+  assert.doesNotThrow(() => check(`${original}\n\n## Historical notes\n\nFallback was caused by an unavailable model.\n`));
+  cases += 6;
+  for (const statement of ['Fallback was caused by an unavailable model.', 'The model was unavailable, which caused the fallback.',
+    'Do not assert the model was unavailable, which caused the fallback; but the model was unavailable, which caused the fallback.',
+    'Do not assert fallback was caused by an unavailable model; but fallback was caused by an unavailable model.']) {
+    assertRejected(`${owner} invented fallback cause: ${statement}`, () => check(replaceOnce(original, boundary,
+      `${statement}\n\n${boundary}`)), (error) => error.contractId === 'NATIVE-MODEL-001');
+  }
+}
+
 // Positive controls: current discovered artifacts, tool boundaries, routes,
 // manifest parity, and all supported local links are structurally valid.
 assert.deepEqual(inventory.chatSkills, expectedSkillContributions,
@@ -83,20 +320,29 @@ assert.deepEqual(manifest.files.filter((entry) => entry.startsWith('.github/skil
 assert.deepEqual(differences(manifest, inventory), [], 'the generated manifest projection must be idempotent');
 assert.doesNotThrow(() => contracts.checkManifestParity(sourceManifest, inventory),
   'the checked-in manifest must match actual discovery');
-const discoveryFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-discovery-'));
-try {
-  for (const directory of ['scripts', '.github/instructions', '.github/agents', '.github/skills']) {
-    fs.mkdirSync(path.join(discoveryFixtureRoot, directory), { recursive: true });
-  }
-  const fixtureScript = path.join(discoveryFixtureRoot, 'scripts', 'discover-copilot-artifacts.cjs');
-  fs.copyFileSync(path.join(root, 'scripts', 'discover-copilot-artifacts.cjs'), fixtureScript);
-  const fixtureDiscover = require(fixtureScript).discover;
-  assert.deepEqual(fixtureDiscover().chatPromptFiles, [], 'an absent prompt directory is an empty inventory');
-  fs.writeFileSync(path.join(discoveryFixtureRoot, '.github', 'prompts'), 'not a directory');
-  assertRejected('a prompt path that is not a directory', () => fixtureDiscover(), /Expected directory/);
-} finally {
-  fs.rmSync(discoveryFixtureRoot, { recursive: true, force: true });
-}
+// Exercise the real discovery source against a tiny in-memory filesystem;
+// neither fixture setup nor cleanup writes to the host filesystem.
+const discoverySource = readArtifact('scripts/discover-copilot-artifacts.cjs');
+const fixtureRoot = path.resolve(root, '__discovery_fixture__');
+const fixtureDirectories = new Set([fixtureRoot, path.join(fixtureRoot, '.github'),
+  ...['instructions', 'agents', 'skills'].map((name) => path.join(fixtureRoot, '.github', name))]);
+let promptIsFile = false;
+const fixtureFs = {
+  lstatSync(full) {
+    const directory = fixtureDirectories.has(full);
+    const file = promptIsFile && full === path.join(fixtureRoot, '.github', 'prompts');
+    if (!directory && !file) throw Object.assign(new Error('missing fixture path'), { code: 'ENOENT' });
+    return { isDirectory: () => directory, isFile: () => file, isSymbolicLink: () => false };
+  },
+  readdirSync() { return []; }
+};
+const fixtureModule = { exports: {} };
+vm.runInNewContext(discoverySource, { module: fixtureModule, __dirname: path.join(fixtureRoot, 'scripts'),
+  require: (name) => name === 'fs' ? fixtureFs : require(name) });
+const fixtureDiscover = fixtureModule.exports.discover;
+assert.equal(fixtureDiscover().chatPromptFiles.length, 0, 'an absent prompt directory is an empty inventory');
+promptIsFile = true;
+assertRejected('a prompt path that is not a directory', () => fixtureDiscover(), /Expected directory/);
 for (const name of ['implement', 'plan', 'remediate-review', 'review']) {
   const skill = `.github/skills/${name}/SKILL.md`;
   assert.ok(inventory.chatSkills.includes(skill), `${name} must be discovered as a Skill`);
@@ -120,15 +366,15 @@ assert.doesNotThrow(() => contracts.checkManifestParity(manifest, inventory));
 const profilePath = '.github/skills/agent-model-selection/references/role-profiles.md';
 const profileText = readArtifact(profilePath);
 const expectedProfiles = {
-  'architecture-analyst': ['GPT-6.1 Sol', 'high'], 'codebase-investigator': ['GPT-6.1 Terra', 'high'],
-  'correctness-reviewer': ['GPT-6.1 Sol', 'high'], 'domain-investigator': ['GPT-6.1 Terra', 'high'],
-  'feasibility-investigator': ['GPT-6.1 Terra', 'xhigh'], 'implement': ['GPT-6.1 Sol', 'high'],
-  'implementation-worker': ['GPT-6.1 Terra', 'xhigh'], 'maintainability-reviewer': ['GPT-6.1 Terra', 'high'],
-  'plan': ['GPT-6.1 Sol', 'high'], 'requirements-analyst': ['GPT-6.1 Terra', 'high'],
-  'research': ['GPT-6.1 Sol', 'high'], 'review': ['GPT-6.1 Sol', 'high'],
-  'script-runner': ['GPT-6.1 Sol', 'high'], 'security-reviewer': ['GPT-6.1 Sol', 'high'],
-  'stage-assurance': ['GPT-6.1 Sol', 'high'], 'test-strategist': ['GPT-6.1 Terra', 'xhigh'],
-  'test-worker': ['GPT-6.1 Terra', 'high'], 'validation-worker': ['GPT-6 Luna', 'high']
+  'architecture-analyst': ['gpt-6.1-sol', 'high'], 'codebase-investigator': ['gpt-6.1-terra', 'high'],
+  'correctness-reviewer': ['gpt-6.1-sol', 'high'], 'domain-investigator': ['gpt-6.1-terra', 'high'],
+  'feasibility-investigator': ['gpt-6.1-terra', 'xhigh'], 'implement': ['gpt-6.1-sol', 'high'],
+  'implementation-worker': ['gpt-6.1-terra', 'xhigh'], 'maintainability-reviewer': ['gpt-6.1-terra', 'high'],
+  'plan': ['gpt-6.1-sol', 'high'], 'requirements-analyst': ['gpt-6.1-terra', 'high'],
+  'research': ['gpt-6.1-sol', 'high'], 'review': ['gpt-6.1-sol', 'high'],
+  'script-runner': ['gpt-6.1-sol', 'high'], 'security-reviewer': ['gpt-6.1-sol', 'high'],
+  'stage-assurance': ['gpt-6.1-sol', 'high'], 'test-strategist': ['gpt-6.1-terra', 'xhigh'],
+  'test-worker': ['gpt-6.1-terra', 'high'], 'validation-worker': ['gpt-6-luna', 'high']
 };
 function assertBaselinePairs(profiles) {
   for (const [name, [model, effort]] of Object.entries(expectedProfiles)) {
@@ -195,8 +441,8 @@ for (const [relative, effort] of [[effortPaths[0], 'high'], [effortPaths[1], 'xh
       (error) => error.contractId === 'STRUCT-001' && diagnostic.test(error.message));
   }
 }
-const highRow = '| `codebase-investigator.agent.md` | GPT-6.1 Terra | `high` |';
-const xhighRow = '| `feasibility-investigator.agent.md` | GPT-6.1 Terra | `xhigh` |';
+const highRow = '| `codebase-investigator.agent.md` | `gpt-6.1-terra` | `high` |';
+const xhighRow = '| `feasibility-investigator.agent.md` | `gpt-6.1-terra` | `xhigh` |';
 const swappedEfforts = replaceOnce(replaceOnce(profileText, highRow, highRow.replace('`high`', '`xhigh`')),
   xhighRow, xhighRow.replace('`xhigh`', '`high`'));
 const swappedProfiles = contracts.checkModelProfileCoverage(swappedEfforts, agentPaths);
@@ -220,7 +466,7 @@ for (const [owner, target, replacement, sectionName] of [
   ['profile', 'target effort is declared as `reasoning-effort` intent, not an observed effective setting', 'target effort is an effective setting', 'introduction'],
   ['profile', 'without requiring runtime support proof before declaration', 'after runtime support proof', 'selection'],
   ['profile', 'does not establish runtime consumption, compatibility, harmless ignoring or effective effort', 'establishes effective effort', 'selection'],
-  ['profile', 'Local child effort is not assumed to follow the parent', 'Local child effort follows the parent', 'selection'],
+  ['profile', 'Child effort is not assumed to follow the parent', 'Child effort follows the parent', 'selection'],
   ['profile', 'effort declaration or escalation never expands authority', 'effort declaration or escalation expands authority', 'selection']
 ]) {
   assertRejected(`${owner} ${sectionName} missing or reversed effort rule`, () => contracts.checkModelEffortContract({
@@ -230,7 +476,7 @@ for (const [owner, target, replacement, sectionName] of [
 for (const [owner, boundary, sectionName] of [
   ['skill', '## Output and boundary', 'procedure'],
   ['profile', '| Agent definition | Recommended model | Target effort |', 'introduction'],
-  ['profile', 'The profile is Local-only for this delivery;', 'selection']
+  ['profile', 'The forward target is Copilot', 'selection']
 ]) {
   for (const contradiction of [
     'Runtime support proof is required before declaration.',
@@ -300,18 +546,25 @@ for (const [owner, boundary] of authoringOwners) {
   const projection = owner === 'agentTemplate'
     ? 'its own canonical profile effort as `reasoning-effort` beside its model'
     : `each role's own canonical profile effort${owner === 'agent' ? '' : ' declaration'} as \`reasoning-effort\` beside its model`;
+  const observation = owner === 'agent' ? 'assigned model and declared effort intent from observed effective'
+    : owner === 'agentTemplate' ? 'assigned model and effort intent from separately observed effective'
+      : owner === 'maintenance' ? 'assigned model and declared intent from observed effective'
+        : 'recommended effort, declared intent, supported model configuration and separately observed effective effort';
+  const runtime = owner === 'agent' || owner === 'agentTemplate' ? 'Runtime consumption and compatibility'
+    : 'Runtime consumption, compatibility and harmless ignoring';
+  const unknown = owner === 'agent' || owner === 'agentTemplate' ? 'unobservable effective model'
+    : owner === 'maintenance' ? 'unobservable effective model' : 'disclose unknown support';
   for (const target of [projection, 'without requiring runtime support proof before declaration',
     'do not default all roles to `high` or inherit another role\'s effort',
-    'recommended effort, declared intent, supported model configuration and separately observed effective effort',
-    'Runtime consumption, compatibility and harmless ignoring are unestablished',
-    'disclose unknown support', 'Do not assume root effort reaches a child']) {
+    observation, runtime, unknown, ['agentTemplate', 'maintenance'].includes(owner) ? 'do not assume root effort reaches a child' : 'Do not assume root effort reaches a child']) {
     assertRejected(`${owner} omits effort rule: ${target}`, () => contracts.checkModelAuthoringContract({
       ...modelAuthoringSources, [owner]: replaceOnce(modelAuthoringSources[owner], target, 'rule omitted')
     }), (error) => error.contractId === 'MODEL-AUTHORING-001' &&
       error.message === `${modelAuthoringPaths[owner]} is missing its effort authoring safeguard`);
   }
   const noAuthority = owner === 'agent' ? 'escalation grants no authority'
-    : owner === 'agentTemplate' ? 'neither escalation nor model choice grants authority' : 'effort declarations grant no authority';
+    : owner === 'agentTemplate' ? 'neither escalation nor model choice grants authority'
+      : owner === 'maintenance' ? 'Effort declarations grant no authority' : 'effort declarations grant no authority';
   assertRejected(`${owner} omits authority boundary`, () => contracts.checkModelAuthoringContract({
     ...modelAuthoringSources, [owner]: replaceOnce(modelAuthoringSources[owner], noAuthority, 'authority expanded')
   }), (error) => error.contractId === 'MODEL-AUTHORING-001' &&
@@ -334,7 +587,7 @@ for (const [owner, boundary] of authoringOwners) {
     error.message === `${modelAuthoringPaths[owner]} is missing its effort authoring safeguard`);
   for (const [target, replacement] of [
     ['without requiring runtime support proof before declaration', 'without runtime support proof as a prerequisite to declaration'],
-    ['Runtime consumption, compatibility and harmless ignoring are unestablished', 'Runtime consumption, compatibility and harmless ignoring are not established']
+    ...(owner === 'checklist' ? [['Runtime consumption, compatibility and harmless ignoring are unestablished', 'Runtime consumption, compatibility and harmless ignoring are not established']] : [])
   ]) {
     assert.doesNotThrow(() => contracts.checkModelAuthoringContract({
       ...modelAuthoringSources, [owner]: replaceOnce(modelAuthoringSources[owner], target, replacement)
@@ -350,10 +603,10 @@ for (const entry of ['model: "<model>"', 'reasoning-effort: "<effort>"', 'reason
     error.message === `${modelAuthoringPaths.agentTemplate} must keep model and effort frontmatter inert`);
 }
 const futurePath = '.github/agents/future.agent.md';
-const futureValues = { name: 'Future Role', model: 'GPT-6.1 Terra', 'reasoning-effort': 'xhigh',
+const futureValues = { name: 'Future Role', model: 'gpt-6.1-terra', 'reasoning-effort': 'xhigh',
   tools: "['read', 'search']", 'user-invocable': 'false' };
 const classifiedFuture = contracts.checkModelProfileCoverage(
-  `${profileText}\n| \`future.agent.md\` | GPT-6.1 Terra | \`xhigh\` |\n`, [...agentPaths, futurePath]);
+  `${profileText}\n| \`future.agent.md\` | \`gpt-6.1-terra\` | \`xhigh\` |\n`, [...agentPaths, futurePath]);
 assert.doesNotThrow(() => contracts.checkModelProjection(futurePath, futureValues, classifiedFuture));
 cases += 1;
 assertRejected('profile entry cannot bypass unknown-role authority guard', () => contracts.checkAgentMetadata(
@@ -367,31 +620,31 @@ for (const [relative, parsed] of agents) {
 const projectionPath = '.github/agents/validation-worker.agent.md';
 const projectionValues = agents.get(projectionPath).values;
 for (const [label, model] of [
-  ['missing', undefined], ['wrong role model', "'GPT-6.1 Sol'"],
-  ['fallback list', "['GPT-6 Luna', 'GPT-6.1 Terra']"],
+  ['missing', undefined], ['wrong role model', "'gpt-6.1-sol'"],
+  ['fallback list', "['gpt-6-luna', 'gpt-6.1-terra']"],
   ['alias', '*luna'], ['empty', '']
 ]) {
   assertRejected(`${label} model projection`, () => contracts.checkModelProjection(
     projectionPath, { ...projectionValues, model }, profiles
   ), (error) => error.contractId === 'MODEL-PROJECTION-001');
 }
-for (const model of ['GPT-6 Luna', "'GPT-6 Luna'", '"GPT-6 Luna"']) {
+for (const model of ['gpt-6-luna', "'gpt-6-luna'", '"gpt-6-luna"']) {
   assert.doesNotThrow(() => contracts.checkModelProjection(projectionPath, { ...projectionValues, model }, profiles));
 }
-const sampleRow = '| `validation-worker.agent.md` | GPT-6 Luna | `high` |';
+const sampleRow = '| `validation-worker.agent.md` | `gpt-6-luna` | `high` |';
 for (const [label, text, paths, diagnostic] of [
   ['missing profile', replaceOnce(profileText, sampleRow, ''), agentPaths, /Missing model profile/],
   ['duplicate profile', replaceOnce(profileText, sampleRow, `${sampleRow}\n${sampleRow}`), agentPaths, /Duplicate model profile/],
-  ['orphan profile', `${profileText}\n| ` + '`orphan.agent.md` | GPT-6 Luna | `high` |\n', agentPaths, /Orphan model profile/],
+  ['orphan profile', `${profileText}\n| ` + '`orphan.agent.md` | `gpt-6-luna` | `high` |\n', agentPaths, /Orphan model profile/],
   ['invalid effort', replaceOnce(profileText, sampleRow, sampleRow.replace('`high`', '`max`')), agentPaths, /Unsupported model profile row/],
-  ['unquoted duplicate profile', replaceOnce(profileText, sampleRow, `${sampleRow}\n| validation-worker.agent.md | GPT-6 Luna | \`high\` |`), agentPaths, /Unsupported model profile row/],
-  ['unquoted orphan profile', `${profileText}\n| orphan.agent.md | GPT-6 Luna | \`high\` |\n`, agentPaths, /Unsupported model profile row/],
+  ['unquoted duplicate profile', replaceOnce(profileText, sampleRow, `${sampleRow}\n| validation-worker.agent.md | \`gpt-6-luna\` | \`high\` |`), agentPaths, /Unsupported model profile row/],
+  ['unquoted orphan profile', `${profileText}\n| orphan.agent.md | \`gpt-6-luna\` | \`high\` |\n`, agentPaths, /Unsupported model profile row/],
   ['unclassified future agent', profileText, [...agentPaths, '.github/agents/future.agent.md'], /Missing model profile/]
 ]) assertRejected(label, () => contracts.checkModelProfileCoverage(text, paths),
   (error) => error.contractId === 'MODEL-PROFILE-001' && diagnostic.test(error.message));
-const futureProfile = `${profileText}\n| ` + '`future.agent.md` | GPT-6 Luna | `high` |\n';
+const futureProfile = `${profileText}\n| ` + '`future.agent.md` | `gpt-6-luna` | `high` |\n';
 assert.equal(contracts.checkModelProfileCoverage(futureProfile, [...agentPaths, '.github/agents/future.agent.md']).size, agentPaths.length + 1);
-const swapped = replaceOnce(profileText, sampleRow, sampleRow.replace('GPT-6 Luna', 'GPT-6.1 Sol'));
+const swapped = replaceOnce(profileText, sampleRow, sampleRow.replace('gpt-6-luna', 'gpt-6.1-sol'));
 assertRejected('current role pair drift', () => assertBaselinePairs(contracts.checkModelProfileCoverage(swapped, agentPaths)), /validation-worker allocation/);
 for (const [relative, parsed] of agents) {
   assert.doesNotThrow(() => contracts.checkAgentMetadata(relative, parsed.values, parsed.blocks, agentNames));
@@ -432,14 +685,55 @@ const adrPaths = {
   assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
   readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md',
   wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md',
-  wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', planPrompt: '.github/skills/plan/SKILL.md',
-  implementPrompt: '.github/skills/implement/SKILL.md'
+  wikiCatalogue: 'docs/Wiki/artifact-catalogue.md'
 };
 const adrSources = Object.fromEntries(Object.entries(adrPaths).map(([key, relative]) => [key, readArtifact(relative)]));
 assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract(adrSources));
 assert.doesNotThrow(() => contracts.checkLocalLinks(adrPaths.skill, adrSources.skill));
 cases += 5;
 cases += 2;
+// Retained entry skills are inventory during overlap, not normative owners.
+// Bad or missing adapter content must not replace the real coordinator rules.
+assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({
+  ...adrSources, planPrompt: '', implementPrompt: ''
+}));
+cases += 1;
+assertRejected('legacy adapter cannot replace Plan decision readiness', () => contracts.checkArchitectureDecisionRecordContract({
+  ...adrSources,
+  plan: replaceOnce(adrSources.plan, 'A completed Plan has no unresolved architectural choice', 'Plan readiness is assessed'),
+  planPrompt: adrSources.plan
+}), (error) => error.contractId === 'ADR-CONTRACT-001' && /Plan must resolve architecture/.test(error.message));
+assertRejected('legacy adapter cannot replace Implement sign-off authority', () => contracts.checkArchitectureDecisionRecordContract({
+  ...adrSources,
+  implement: replaceOnce(adrSources.implement, 'Workers, Script Runner, Review and helpers receive no ADR authorship/status authority.',
+    'Other roles may record status.'),
+  implementPrompt: adrSources.implement
+}), (error) => error.contractId === 'ADR-CONTRACT-001' && /Implement coordinator must bind exact sign-off/.test(error.message));
+
+const transitionRow = adrSources.core.split('\n').find((line) => line.startsWith('| Plan -> Implement |'));
+assert.ok(transitionRow);
+const transitionDiagnostic = (error) => error.contractId === 'ADR-CONTRACT-001' &&
+  /Lifecycle core Plan-to-Implement transition must bind sign-off/.test(error.message);
+for (const target of ['deliberate engineer-sent Implement request with the inspected physical approved Plan',
+  'when that rule is already effective before the request', 'Plan handoff identifies the exact Proposed ADR snapshot(s)',
+  'signs off only those snapshots', 'no separate routine approval',
+  'Plan or Review requests, answers, reports, workers and unsent prefills do not sign off']) {
+  const missing = replaceOnce(adrSources.core, transitionRow, replaceOnce(transitionRow, target, 'omitted safeguard'));
+  for (const [label, core, plan] of [
+    ['missing', missing, adrSources.plan],
+    ['history decoy', `${missing}\n\n## Historical example\n\n${transitionRow}\n`, adrSources.plan],
+    ['wrong-owner decoy', missing, `${adrSources.plan}\n\n${transitionRow}\n`]
+  ]) assertRejected(`native transition ${label}: ${target}`, () =>
+    contracts.checkArchitectureDecisionRecordContract({ ...adrSources, core, plan }), transitionDiagnostic);
+}
+assertRejected('duplicate transition owner', () => contracts.checkArchitectureDecisionRecordContract({
+  ...adrSources, core: replaceOnce(adrSources.core, transitionRow, `${transitionRow}\n${transitionRow}`)
+}), transitionDiagnostic);
+assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({
+  ...adrSources, core: replaceOnce(adrSources.core, transitionRow,
+    transitionRow.replace('no separate routine approval is requested', 'no separate routine approval is requested for those snapshots'))
+}));
+cases += 1;
 
 // Plan's decision-reuse and architecture owners both start with "Reconcile".
 // Coverage must follow the actual architecture owner in either order, while
@@ -632,9 +926,9 @@ for (const [label, research, researchTemplate] of [
 for (const [label, key, target, replacement, diagnostic] of [
   ['Plan procedure permits unresolved architecture', 'planning', 'A completed Plan has no unresolved architectural choice: resolve foreseeable choices where practicable', 'A Plan may retain unresolved architectural choices', /Plan must resolve architecture/],
   ['Plan gap guidance permits unresolved architecture', 'planning', 'A completed Plan has no unresolved architectural choice;', 'A Plan may retain unresolved architectural choices;', /Plan must resolve architecture/],
-  ['Plan prompt permits unresolved architecture', 'planPrompt', 'A completed Plan has no unresolved architectural choice', 'A Plan may retain unresolved architectural choices', /Plan must resolve architecture/],
+  ['Plan coordinator permits unresolved architecture', 'plan', 'A completed Plan has no unresolved architectural choice', 'A Plan may retain unresolved architectural choices', /Plan must resolve architecture/],
   ['Plan procedure permits bare TBD', 'planning', 'A bare `TBD` or “investigate later” is not actionable. If a fact changes or invalidates an architectural choice', 'A bare `TBD` or “investigate later” is an acceptable route. If a fact changes or invalidates an architectural choice', /residual facts need a bounded per-Work-Item route/],
-  ['Plan prompt permits bare TBD', 'planPrompt', 'A bare `TBD` or “investigate later” is insufficient', 'A bare `TBD` or “investigate later” is sufficient', /residual facts need a bounded per-Work-Item route/]
+  ['Plan coordinator permits bare TBD', 'plan', 'A bare `TBD` or “investigate later” is not actionable', 'A bare `TBD` or “investigate later” is sufficient', /residual facts need a bounded per-Work-Item route/]
 ]) {
   assertRejected(label, () => contracts.checkArchitectureDecisionRecordContract({
     ...adrSources, [key]: replaceOnce(adrSources[key], target, replacement)
@@ -665,9 +959,9 @@ for (const [key, target, replacement] of [
   ['research', 'Resolve foreseeable engineer-owned choices where practicable', 'Resolve foreseeable choices when practical'],
   ['research', 'distinguish decisions from factual evidence gaps', 'separate factual evidence gaps from unresolved decisions'],
   ['plan', 'no unresolved architectural choice', 'no unsettled architectural decision'],
-  ['planPrompt', 'affected Work Items/effects', 'affected items and effects'],
-  ['planPrompt', 'engineer-escalation condition', 'condition for engineer direction'],
-  ['planPrompt', 'do not require zero factual unknowns', 'this is not a zero-unknowns requirement']
+  ['plan', 'affected Work Items/effects', 'affected items and effects'],
+  ['plan', 'escalation condition for engineer direction', 'engineer-escalation condition'],
+  ['plan', 'do not require zero factual unknowns', 'this is not a zero-unknowns requirement']
 ]) {
   assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({
     ...adrSources, [key]: replaceOnce(adrSources[key], target, replacement)
@@ -702,22 +996,22 @@ const technicalOwners = [
   ['researchTemplateResidual', 'researchTemplate', '### ADR inputs and remaining gaps', '**Readiness evidence:**', false, 'supported mechanism it tests'],
   ['researchRecommendation', 'researchTemplate', '## Recommendation and validation', '- **Recommended approach:**', true, 'evidence-supported viable mechanism'],
   ['discovery', 'discovery', '## Read back, correct and stop', 'After investigation, assess foreseeable', false, 'an evidence-supported viable mechanism'],
-  ['plan', 'plan', '# Plan coordinator', "Check the Research conclusion's freshness", false, 'freshness and applicability'],
+  ['plan', 'plan', '# Plan coordinator', "Check the Research conclusion's freshness", false, 'genuinely new requirements or evidence'],
   ['planningFreshness', 'planning', '## Procedure', '1. Read the inspected Research', true, 'freshness and applicability'],
   ['planningConversion', 'planning', '## Procedure', '4. Convert the supported Research conclusion', true, 'ordered actions'],
   ['planningGaps', 'planning', '### Resolve material planning gaps', 'An inherited unestablished essential mechanism', false, 'An inherited unestablished essential mechanism'],
   ['planTemplateApproach', 'planTemplate', '## Outcome and boundaries', '- **Approach:**', true, 'freshness and applicability'],
-  ['planPromptConversion', 'planPrompt', '## Constraints', "- Check the Research conclusion's freshness", true, 'freshness and applicability'],
+  ['plan', 'plan', '# Plan coordinator', "Check the Research conclusion's freshness", false, 'freshness and applicability'],
   ['planResidual', 'plan', '# Plan coordinator', 'A completed Plan', false, 'Identify the supported mechanism it tests'],
   ['planningResidual', 'planning', '## Procedure', '5. Inspect relevant', true, 'Identify the supported mechanism it tests'],
+  ['planningGapResidual', 'planning', '### Resolve material planning gaps', 'For any remaining material factual unknown', false, 'why the fact reasonably remains'],
   ['planningGapResidual', 'planning', '### Resolve material planning gaps', 'For any remaining material factual unknown', false, 'Name the supported mechanism tested'],
-  ['planPromptResidual', 'planPrompt', '## Constraints', '- A completed Plan', true, 'Identify the supported mechanism it tests'],
   ['planTemplateResidual', 'planTemplate', '## Detailed work items', '**Residual factual unknown (include only when a material fact remains):**', true, 'supported mechanism this fact tests'],
-  ['implement', 'implement', '# Implement coordinator', 'If an essential mechanism or its feasibility', false, 'architectural or not'],
+  ['implement', 'implement', '# Implement coordinator', 'If an essential mechanism or its feasibility', false, 'recommend scoped Research continuation when evidence is needed'],
   ['implementOperations', 'implement', '# Implement coordinator', 'Own the permitted direct edit–test–repair loop:', false, 'related files and tests'],
   ['safe', 'safe', '## Procedure', 'Apply the supported mechanism', false, 'architectural or not'],
   ['validation', 'validation', '## Scope and recovery', '- [ ] Apply an evidence-supported essential mechanism', true, 'architectural or not'],
-  ['implementPrompt', 'implementPrompt', '## Constraints', '- Apply the supported essential mechanism', true, 'whether architectural or not'],
+  ['implement', 'implement', '# Implement coordinator', 'If an essential mechanism or its feasibility', false, 'architectural or not'],
   ['planningScan', 'planning', '## Procedure', 'For execution alignment scans,', true, 'historical exclusions'],
   ['templateScan', 'planTemplate', '## Execution guidance and validation', '- **Execution alignment scans:**', true, 'historical exclusions'],
   ['safeScan', 'safe', '## Procedure', 'For an execution alignment scan,', false, 'historical exclusions'],
@@ -825,9 +1119,9 @@ assertRejected('Plan affirmative restart reverses conversion prohibition', () =>
     'without automatic restart', 'with automatic restart'))
 }), technicalDiagnostic('plan'));
 for (const replacement of ['never require zero unknowns', 'never require zero factual unknowns', 'no zero-unknowns rule', 'do not require zero factual unknowns']) {
-  const prompt = replaceOnce(adrSources.planPrompt, 'do not require zero factual unknowns', replacement === 'do not require zero factual unknowns'
+  const plan = replaceOnce(adrSources.plan, 'do not require zero factual unknowns', replacement === 'do not require zero factual unknowns'
     ? 'do not require zero factual unknowns at this stage' : replacement);
-  assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({ ...adrSources, planPrompt: prompt }));
+  assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({ ...adrSources, plan }));
   cases += 1;
 }
 for (const replacement of ['Never require zero unknowns', 'No zero-unknowns rule']) {
@@ -836,9 +1130,9 @@ for (const replacement of ['Never require zero unknowns', 'No zero-unknowns rule
   assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({ ...adrSources, planTemplate }));
   cases += 1;
 }
-assertRejected('Plan prompt reversed zero-unknowns safeguard', () => contracts.checkDecisionReadinessContract({
-  ...adrSources, planPrompt: replaceOnce(adrSources.planPrompt, 'do not require zero factual unknowns', 'require zero factual unknowns')
-}), (error) => error.contractId === 'ADR-CONTRACT-001' && error.message.startsWith('planPrompt: residual facts need'));
+assertRejected('Plan coordinator reversed zero-unknowns safeguard', () => contracts.checkDecisionReadinessContract({
+  ...adrSources, plan: replaceOnce(adrSources.plan, 'do not require zero factual unknowns', 'require zero factual unknowns')
+}), (error) => error.contractId === 'ADR-CONTRACT-001' && error.message.startsWith('planAgent: residual facts need'));
 for (const [label, discovery] of [
   ['empty', ''], ['non-text', null], ['missing owner', replaceOnce(adrSources.discovery,
     'After investigation, assess foreseeable', 'After investigation, record foreseeable')],
@@ -1093,8 +1387,63 @@ function rejectSignoff(label, key, target, replacement, diagnostic) {
 }
 
 const signoffCoreDiagnostic = /Lifecycle core sign-off effect:/;
+const signoffHeading = '### Prospective exact-ADR sign-off recording effect';
+const signoffEffect = technicalUnit(adrSources.core, signoffHeading, 'This Toolkit rule applies only', false);
+for (const prefix of ['This Toolkit rule applies only', 'Only the Implement coordinator may record', 'Assess multiple bound ADRs independently']) {
+  const owned = technicalUnit(adrSources.core, signoffHeading, prefix, false);
+  assertRejected(`duplicate sign-off paragraph: ${prefix}`, () => contracts.checkImplementSignoffContract({
+    ...adrSources, core: replaceOnce(adrSources.core, owned, `${owned}\n\n${owned}`)
+  }), (error) => error.contractId === 'ADR-CONTRACT-001' && /Lifecycle core sign-off effect: missing or ambiguous normative owner/.test(error.message));
+}
+const recordingOwner = technicalUnit(adrSources.core, signoffHeading, 'Only the Implement coordinator may record', false);
+const preserveDecision = 'Preserve the decision text, all other metadata, and accepted/superseded history';
+const misplacedPreservation = replaceOnce(replaceOnce(adrSources.core, recordingOwner,
+  replaceOnce(recordingOwner, preserveDecision, 'Preserve the recorded result')), signoffEffect,
+  `${signoffEffect} ${preserveDecision}.`);
+assertRejected('sign-off wrong paragraph cannot restore decision preservation', () => contracts.checkImplementSignoffContract({
+  ...adrSources, core: misplacedPreservation
+}), (error) => error.contractId === 'ADR-CONTRACT-001' && /Lifecycle core sign-off effect: decision and history preservation/.test(error.message));
+const safeSignoffOwner = technicalUnit(adrSources.safe, '## Procedure', 'Apply the prospective Implement-request sign-off', false);
+const safeSignoffMissing = replaceOnce(adrSources.safe, safeSignoffOwner, 'Sign-off is considered separately.');
+for (const [label, core, safe] of [
+  ['duplicate core section', `${adrSources.core}\n\n${signoffHeading}\n\nHistorical copy.\n`, adrSources.safe],
+  ['safe owner deleted', adrSources.core, safeSignoffMissing],
+  ['safe history decoy', adrSources.core, `${safeSignoffMissing}\n\n## Historical example\n\n${safeSignoffOwner}\n`],
+  ['safe wrong section', adrSources.core, `${safeSignoffMissing}\n\n## Other instructions\n\n${safeSignoffOwner}\n`],
+  ['safe duplicate owner', adrSources.core, replaceOnce(adrSources.safe, safeSignoffOwner, `${safeSignoffOwner}\n\n${safeSignoffOwner}`)],
+  ['safe duplicate section', adrSources.core, `${adrSources.safe}\n\n## Procedure\n\n${safeSignoffOwner}\n`]
+]) assertRejected(`sign-off ${label}`, () => contracts.checkImplementSignoffContract({ ...adrSources, core, safe }),
+  (error) => error.contractId === 'ADR-CONTRACT-001' && /Lifecycle core sign-off effect:|Safe implementation Skill must sequence/.test(error.message));
+assertRejected('safe sign-off wrong-owner decoy', () => contracts.checkImplementSignoffContract({
+  ...adrSources, safe: safeSignoffMissing, template: `${adrSources.template}\n\n## Historical example\n\n${safeSignoffOwner}\n`
+}), (error) => error.contractId === 'ADR-CONTRACT-001' && /Safe implementation Skill must sequence/.test(error.message));
+for (const [label, core, safe] of [
+  ['deleted core owner', replaceOnce(adrSources.core, signoffEffect, ''), adrSources.safe],
+  ['historical core decoy', `${replaceOnce(adrSources.core, signoffEffect, '')}\n\n## Historical example\n\n${signoffEffect}\n`, adrSources.safe],
+  ['wrong-owner core decoy', replaceOnce(adrSources.core, signoffEffect, ''), `${adrSources.safe}\n\n## Historical example\n\n${signoffEffect}\n`]
+]) assertRejected(`sign-off ${label}`, () => contracts.checkImplementSignoffContract({ ...adrSources, core, safe }),
+  (error) => error.contractId === 'ADR-CONTRACT-001' && /Lifecycle core sign-off effect:/.test(error.message));
+const implementSignoffOwner = technicalUnit(adrSources.implement, '# Implement coordinator', 'If the approved Plan binds an ADR', false);
+for (const [key, anchor] of [['core', signoffHeading], ['safe', safeSignoffOwner], ['implement', implementSignoffOwner]]) {
+  for (const contradiction of ['Workers may sign off ADRs.', 'Script Runner may write ADR status.',
+    'Review may update ADR status.', 'Prior invocations are retroactive.', 'A prior-policy invocation signs off ADRs.',
+    'Implement coordinator may rewrite ADR decision text.']) {
+    assertRejected(`${key} additive sign-off contradiction: ${contradiction}`, () => contracts.checkImplementSignoffContract({
+      ...adrSources, [key]: replaceOnce(adrSources[key], anchor, `${anchor}\n\n${contradiction}`)
+    }), (error) => error.contractId === 'ADR-CONTRACT-001' && /contradictory sign-off authority/.test(error.message));
+  }
+  assert.doesNotThrow(() => contracts.checkImplementSignoffContract({ ...adrSources,
+    [key]: `${adrSources[key]}\n\n## Historical example\n\nWorkers may sign off ADRs. Implement coordinator may rewrite ADR decision text.\n` }));
+  assert.doesNotThrow(() => contracts.checkImplementSignoffContract({ ...adrSources,
+    [key]: replaceOnce(adrSources[key], anchor, `${anchor}\n\nDo not assert the Implement coordinator may rewrite ADR decision text.`) }));
+  cases += 2;
+}
+assertRejected('Implement sign-off contradiction inside its ADR paragraph', () => contracts.checkImplementSignoffContract({
+  ...adrSources, implement: replaceOnce(adrSources.implement, implementSignoffOwner,
+    `${implementSignoffOwner} Implement coordinator may rewrite ADR decision text.`)
+}), (error) => error.contractId === 'ADR-CONTRACT-001' && /Implement coordinator: contradictory sign-off authority/.test(error.message));
 for (const [label, target, replacement, rule] of [
-  ['sign-off effective after invocation', 'effective before the qualifying explicit `/implement` invocation', 'effective after the qualifying explicit `/implement` invocation', /effective-before-invocation guard/],
+  ['sign-off effective after invocation', 'effective before the qualifying deliberate engineer-sent Implement request with the inspected physical approved Plan', 'effective after the qualifying deliberate engineer-sent Implement request with the inspected physical approved Plan', /effective-before-invocation guard/],
   ['retroactive invocation accepted', 'not retroactive sign-off', 'is retroactive sign-off', /no-retroactive-sign-off guard/],
   ['non-Proposed preimage accepted', 'current `Proposed` state', 'any decision state', /Proposed preimage state/],
   ['metadata scope broadened', 'Update only `Status: Accepted`, the actual decision date, and actual agreement evidence', 'Update ADR decision content and status metadata', /metadata-only update fields/],
@@ -1118,10 +1467,10 @@ for (const [label, core, template] of [
 }), (error) => error.contractId === 'ADR-CONTRACT-001' && /Lifecycle core sign-off effect: exact binding identity/.test(error.message));
 
 for (const [label, target, replacement, rule] of [
-  ['handoff omits exact substantive version', "Visibly enumerate every bound ADR's exact path/ID, section, substantive version/snapshot", "Visibly enumerate every bound ADR's exact path/ID and section", /exact ADR identity, section and version/],
-  ['handoff asks duplicate approval', 'no separate routine approval is requested', 'a separate routine approval is required', /no duplicate approval/],
-  ['handoff makes prefill sign-off', 'The handoff is a manual prefill, not approval or invocation.', 'The handoff is an approval and invocation.', /manual handoff is not approval or invocation/],
-  ['handoff allows retroactive sign-off', 'Never treat a prior invocation as retroactive.', 'Treat a prior invocation as retroactive.', /no retroactive sign-off/]
+  ['handoff omits exact substantive version', 'visibly enumerate each exact ADR path/ID, identifiable decision section, substantive version/snapshot', 'visibly enumerate each exact ADR path/ID and section', /exact identity, section and version/],
+  ['handoff asks duplicate approval', 'no duplicate routine approval is requested', 'a separate routine approval is required', /no duplicate approval/],
+  ['handoff makes prefill sign-off', '`/plan`, answer, report, worker, Script Runner, unsent prefill or `/review` is not sign-off', 'an unsent prefill is sign-off', /non-sign-off events/],
+  ['handoff allows retroactive sign-off', 'a prior invocation is not retroactive', 'a prior invocation is retroactive', /no retroactive sign-off/]
 ]) rejectSignoff(label, 'plan', target, replacement, rule);
 
 for (const [label, target, replacement, rule] of [
@@ -1132,7 +1481,7 @@ for (const [label, target, replacement, rule] of [
 
 for (const [key, target, replacement] of [
   ['core', 'Do not request a duplicate routine approval.', 'Do not request another confirmation.'],
-  ['plan', 'no separate routine approval is requested', 'no additional routine approval is requested'],
+  ['plan', 'no duplicate routine approval is requested', 'no separate routine approval is requested'],
   ['core', 'A successful record is not rolled back because another record failed',
     'Keep a successfully recorded ADR if another independent record fails']
 ]) {
@@ -1178,24 +1527,75 @@ assertRejected('Assurance historical decoy cannot replace its sign-off assessmen
 rejectSignoff('Assurance checklist grants status authority', 'assurance', 'Assurance is advisory and grants no ADR status-write authority.',
   'Assurance may write ADR status.', /Stage Assurance checklist must compare sign-off evidence/);
 
-for (const [key, prefix, target, replacement, diagnostic] of [
-  ['readme', 'Under the prospective exact-snapshot rule', 'explicit `/implement` invocation signs off only the exact Proposed ADR preimage',
-    'any invocation accepts the ADR', /README summary must present/],
-  ['wikiRpir', 'When the prospective exact-snapshot rule', 'A prior invocation is not retroactive',
-    'A prior invocation is retroactive', /RPIR Wiki summary must distinguish/],
-  ['wikiEvidence', 'The prospective ADR sign-off rule', 'no prior invocation is retroactive',
-    'prior invocations apply retroactively', /Lifecycle evidence Wiki summary must state/]
-]) {
-  const summaryWithoutRule = replaceOnce(adrSources[key], target, replacement);
-  assertRejected(`${key} historical decoy cannot replace its summary rule`, () => contracts.checkArchitectureDecisionRecordContract({
-    ...adrSources,
-    [key]: `${summaryWithoutRule}\n\n## Historical note\n\n${target}\n`
-  }), (error) => error.contractId === 'ADR-CONTRACT-001' && diagnostic.test(error.message));
+const documentationSignoffOwners = [
+  ['readme', '### Complete upfront architectural coverage', 'Under the prospective exact-snapshot rule', false,
+    'deliberate Implement request with the inspected approved Plan signs off only the exact Proposed ADR preimages visibly identified in its handoff', /README summary must present/],
+  ['wikiRpir', '## Complete upfront architectural coverage', 'When the prospective exact-snapshot rule', false,
+    'policy edits do not self-upgrade the session and no invocation is retroactive', /RPIR Wiki summary must distinguish/],
+  ['wikiEvidence', '### Architecture decision records are supplementary', 'The prospective ADR sign-off rule', false,
+    'no prior invocation is retroactive', /Lifecycle evidence Wiki summary must state/],
+  ['wikiCatalogue', '### Skills', '| Apply lifecycle input, provenance, phase boundaries and exact-snapshot ADR recording |', true,
+    'prospective rule was effective before invocation', /Artifact catalogue must summarize/],
+  ['wikiCatalogue', '### Prompt files', 'No prompt files are contributed.', false,
+    'no fixed wording or slash dependency', /Artifact catalogue must describe the prospective natural-language entry/]
+];
+for (const [key, heading, prefix, line, target, diagnostic] of documentationSignoffOwners) {
+  const owned = technicalUnit(adrSources[key], heading, prefix, line);
+  const missing = replaceOnce(adrSources[key], owned, replaceOnce(owned, target, 'omitted safeguard'));
+  const check = (changed, other = {}) => contracts.checkArchitectureDecisionRecordContract({ ...adrSources, ...other, [key]: changed });
+  const expected = (error) => error.contractId === 'ADR-CONTRACT-001' && diagnostic.test(error.message);
+  assertRejected(`${key} sign-off owner missing safeguard`, () => check(missing), expected);
+  assertRejected(`${key} sign-off owner deleted`, () => check(replaceOnce(adrSources[key], owned, '')), expected);
+  assertRejected(`${key} historical sign-off decoy`, () => check(`${missing}\n\n## Historical note\n\n${owned}\n`), expected);
+  assertRejected(`${key} wrong-section sign-off decoy`, () => check(`${missing}\n\n## Unrelated note\n\n${owned}\n`), expected);
+  assertRejected(`${key} wrong-owner sign-off decoy`, () => check(missing, {
+    [key === 'readme' ? 'wikiRpir' : 'readme']: `${adrSources[key === 'readme' ? 'wikiRpir' : 'readme']}\n\n## Historical note\n\n${owned}\n`
+  }), expected);
+  assertRejected(`${key} ambiguous sign-off owner`, () => check(replaceOnce(adrSources[key], owned,
+    line ? `${owned}\n${owned}` : `${owned}\n\n${owned}`)), expected);
+  if (key !== 'readme') assertRejected(`${key} metadata sign-off decoy`, () => check(replaceOnce(missing,
+    'description: ', `description: ${target}; `)), expected);
+  for (const contradiction of [
+    'Any implementation invocation accepts all ADRs.', 'Review may write ADR status.',
+    'Invocation alone proves persistence.', 'Prior invocations are retroactive.', 'A slash command is required.'
+  ]) assertRejected(`${key} additive sign-off contradiction: ${contradiction}`, () => check(replaceOnce(adrSources[key], owned,
+    `${owned} ${contradiction}`)), (error) => error.contractId === 'ADR-CONTRACT-001' && /contradictory documentation sign-off rule/.test(error.message));
+  assert.doesNotThrow(() => check(`${adrSources[key]}\n\n## Historical note\n\nReview may write ADR status.\n`));
+  cases += 1;
 }
-
-rejectSignoff('catalogue summary overstates sign-off authority', 'wikiCatalogue',
-  'only an explicit `/implement` invocation with the inspected Plan signs off the exact visible Proposed preimage',
-  'any implementation invocation accepts all ADRs', /Artifact catalogue must summarize/);
+for (const [key, target] of [
+  ['readme', 'invocation alone is not proof of persistence'],
+  ['readme', 'failed/denied/unverified writes are not `Accepted`'],
+  ['readme', 'Review remains source-read-only and records delivery acceptance only'],
+  ['readme', 'assurance is advisory'],
+  ['readme', 'Authored sources do not establish runtime behavior'],
+  ['wikiRpir', 'report and physical ADR postimage must establish whether it persisted'],
+  ['wikiRpir', 'Review independently compares actual invocation/persistence evidence but remains source-read-only'],
+  ['wikiRpir', 'Stage Assurance only advises and receives no status-write authority'],
+  ['wikiRpir', 'These authored rules do not prove installed behavior'],
+  ['wikiEvidence', 'preimage, authority/condition, identity, containment, conflict and permission checks, non-overwriting save and complete readback'],
+  ['wikiEvidence', "report distinguishes invocation from each record's actual persistence outcome"],
+  ['wikiEvidence', 'failure or denial is not `Accepted`'],
+  ['wikiEvidence', 'Review is read-only and assesses delivery'],
+  ['wikiEvidence', 'assurance remains advisory'],
+  ['wikiCatalogue', 'Implement coordinator separately verifies each record\'s preimage, conditions, containment, conflict absence and permission before recording permitted metadata and reading back the complete postimage'],
+  ['wikiCatalogue', 'Review assesses invocation and persistence']
+]) {
+  const diagnostic = documentationSignoffOwners.find(([owner]) => owner === key)[5];
+  rejectSignoff(`${key} loses sign-off safeguard: ${target}`, key, target, 'omitted safeguard', diagnostic);
+}
+for (const [key, target, replacement] of [
+  ['readme', 'before that request', 'before that invocation'],
+  ['wikiRpir', 'Proposed ADR preimages visibly identified', 'Proposed ADR preimage visibly identified'],
+  ['wikiEvidence', 'only a deliberate Implement request', 'only a deliberate engineer-sent Implement request'],
+  ['wikiCatalogue', 'when the prospective rule was effective before invocation, the deliberate Implement request with the inspected approved Plan signs off only exact Proposed preimages visibly enumerated in its handoff',
+    'deliberate engineer-sent Implement request with the inspected Plan and exact visible Proposed preimage, effective before invocation']
+]) {
+  assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, [key]: replaceOnce(adrSources[key], target, replacement)
+  }));
+  cases += 1;
+}
 
 for (const [key, target, replacement] of [
   ['review', 'plus the implementation report\'s actual invocation and per-record persistence evidence',
@@ -1212,13 +1612,13 @@ for (const [key, target, replacement] of [
 
 const readinessSentence = 'A completed Plan has no unresolved architectural choice';
 const planWithoutReadiness = replaceOnce(adrSources.plan, readinessSentence, 'Plan readiness is assessed');
-for (const [label, plan, prompt] of [
-  ['historical decoy', `${planWithoutReadiness}\n\n## Historical example, not operating policy\n\n${readinessSentence}\n`, adrSources.planPrompt],
-  ['metadata decoy', replaceOnce(planWithoutReadiness, 'description: ', `description: ${readinessSentence}. `), adrSources.planPrompt],
-  ['wrong-owner decoy', planWithoutReadiness, `${adrSources.planPrompt}\n\n${readinessSentence}`]
+for (const [label, plan, planning] of [
+  ['historical decoy', `${planWithoutReadiness}\n\n## Historical example, not operating policy\n\n${readinessSentence}\n`, adrSources.planning],
+  ['metadata decoy', replaceOnce(planWithoutReadiness, 'description: ', `description: ${readinessSentence}. `), adrSources.planning],
+  ['wrong-owner decoy', planWithoutReadiness, `${adrSources.planning}\n\n${readinessSentence}`]
 ]) {
   assertRejected(`Plan readiness ${label} cannot replace its normative rule`, () => contracts.checkArchitectureDecisionRecordContract({
-    ...adrSources, plan, planPrompt: prompt
+    ...adrSources, plan, planning
   }), (error) => error.contractId === 'ADR-CONTRACT-001' && /Plan must resolve architecture/.test(error.message));
 }
 
@@ -1236,15 +1636,387 @@ const executionPaths = {
   assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
   planAgent: '.github/agents/plan.agent.md', checkpointSkill: '.github/skills/local-git-checkpoints/SKILL.md',
   codeReview: '.github/skills/code-review/SKILL.md', assuranceSkill: '.github/skills/rpir-stage-assurance/SKILL.md',
-  planPrompt: '.github/skills/plan/SKILL.md', implementPrompt: '.github/skills/implement/SKILL.md',
-  remediatePrompt: '.github/skills/remediate-review/SKILL.md', reviewPrompt: '.github/skills/review/SKILL.md',
   lifecycleInstruction: '.github/instructions/lifecycle-records.instructions.md',
   readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md', wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md',
   wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', wikiMaintenance: 'docs/Wiki/maintain-the-toolkit.md'
 };
 const executionSources = Object.fromEntries(Object.entries(executionPaths).map(([key, relative]) => [key, readArtifact(relative)]));
+executionSources.researchSkill = readArtifact('.github/skills/codebase-research/SKILL.md');
 assert.doesNotThrow(() => contracts.checkIncrementalRpirContract(executionSources));
 cases += 1;
+
+const correctionOwnerStart = cases;
+const executionError = (pattern) => (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' && pattern.test(error.message);
+// General numbered records have their own owner, independent of the Research
+// directory/brief setup and the separate ADR or marker effects.
+const recordCaseStart = cases;
+const recordOwner = technicalUnit(executionSources.core, '## Contain allocation and effects', 'For each numbered record,', false);
+const lineageOwner = technicalUnit(executionSources.core, '## Preserve physical lineage and historical evidence',
+  'Every canonical phase predecessor and output', false);
+const recordError = executionError(/Lifecycle core numbered record allocation owner/);
+const lineageError = executionError(/Lifecycle core physical record lineage owner/);
+assert.doesNotThrow(() => contracts.checkPhysicalRecordContract(executionSources.core));
+cases += 1;
+for (const target of [
+  'existing files of its exact artifact suffix in the verified topic',
+  'choose `001` when none exists or one greater than the highest valid three-digit prefix',
+  'save only an absent exact candidate with actual containment and effective permission',
+  're-read the inventory and select an absent next number in that same verified topic if identity and ownership remain clear; otherwise resolve ambiguity',
+  'Read back the saved physical file to verify identity, intended content and direct same-folder links',
+  'unsuccessful save or unreadable/mismatched result is not persisted evidence',
+  'A real platform denial is a stop, not an invitation to use another route',
+  'Do not require double inventories, a fixed retry quota, standalone terminal/reparse or ACL probes',
+  'inconclusive actual containment still refuses the affected write'
+]) {
+  const missing = replaceOnce(executionSources.core, recordOwner, replaceOnce(recordOwner, target, 'omitted safeguard'));
+  assertRejected(`numbered record loses ${target}`, () => contracts.checkPhysicalRecordContract(missing), recordError);
+  assertRejected(`numbered record history cannot restore ${target}`, () => contracts.checkPhysicalRecordContract(
+    `${missing}\n\n## Historical example\n\n${recordOwner}\n`), recordError);
+}
+const missingRecord = replaceOnce(executionSources.core, recordOwner, 'Record allocation is handled elsewhere.');
+for (const [label, core] of [
+  ['deleted', missingRecord],
+  ['history', `${missingRecord}\n\n## Historical example\n\n${recordOwner}\n`],
+  ['metadata', replaceOnce(missingRecord, 'description: ', `description: ${recordOwner} `)],
+  ['wrong section', replaceOnce(missingRecord, '## Status, questions and validation',
+    `## Status, questions and validation\n\n${recordOwner}`)],
+  ['duplicate paragraph', replaceOnce(executionSources.core, recordOwner, `${recordOwner}\n\n${recordOwner}`)],
+  ['duplicate section', `${executionSources.core}\n\n## Contain allocation and effects\n\n${recordOwner}\n`]
+]) assertRejected(`numbered record ${label}`, () => contracts.checkPhysicalRecordContract(core), recordError);
+assertRejected('record wrong-owner decoy cannot restore core', () => contracts.checkIncrementalRpirContract({
+  ...executionSources, core: missingRecord, researchAgent: `${executionSources.researchAgent}\n\n${recordOwner}\n`
+}), recordError);
+for (const target of ['real, contained, numbered physical Markdown record in the verified Research lifecycle folder',
+  'accessible direct same-folder links to the expected-kind predecessor',
+  'Verify the Research -> Plan -> implementation report -> Review chain as applicable']) {
+  const missing = replaceOnce(executionSources.core, lineageOwner, replaceOnce(lineageOwner, target, 'omitted safeguard'));
+  assertRejected(`physical lineage loses ${target}`, () => contracts.checkPhysicalRecordContract(missing), lineageError);
+  assertRejected(`physical lineage history cannot restore ${target}`, () => contracts.checkPhysicalRecordContract(
+    `${missing}\n\n## Historical example\n\n${lineageOwner}\n`), lineageError);
+}
+assertRejected('physical lineage duplicate owner', () => contracts.checkPhysicalRecordContract(
+  replaceOnce(executionSources.core, lineageOwner, `${lineageOwner}\n\n${lineageOwner}`)), lineageError);
+for (const statement of ['Overwrite the existing record.', 'Reuse the colliding candidate.',
+  'Switch to another topic after a collision.', 'Skip the collision inventory.', 'Skip the readback.',
+  'Skip containment.', 'Skip permission.', 'Skip lineage.', 'Treat a denied save as persisted.',
+  'Claim a mismatched result as persisted.', 'Bypass a real platform denial.', 'Use another route after a denial.',
+  'Require a standalone terminal.', 'Mandate double inventories.']) {
+  assertRejected(`record additive contradiction: ${statement}`, () => contracts.checkPhysicalRecordContract(
+    replaceOnce(executionSources.core, recordOwner, `${recordOwner}\n\n${statement}`)),
+  executionError(/contradictory numbered record safeguard/));
+}
+for (const core of [
+  replaceOnce(executionSources.core, recordOwner, replaceOnce(recordOwner,
+    'one greater than the highest valid three-digit prefix', 'one greater than the maximum valid three-digit prefix')),
+  replaceOnce(executionSources.core, recordOwner, `${recordOwner}\n\nDo not overwrite the existing record.`),
+  `${executionSources.core}\n\n## Historical example\n\nOverwrite the existing record.\n`
+]) { assert.doesNotThrow(() => contracts.checkPhysicalRecordContract(core)); cases += 1; }
+console.log(`Passed ${cases - recordCaseStart} focused physical-record owner cases.`);
+
+// Exercise the authored shape subset in memory. This illustrative matcher is
+// deliberately not a claim about VS Code's glob attachment semantics.
+const candidateCaseStart = cases;
+const instruction = executionSources.lifecycleInstruction;
+const instructionValues = contracts.parseFrontmatterText(instruction, 'lifecycle-records.instructions.md').values;
+const candidatePatterns = instructionValues.applyTo.split(',');
+function illustrativeMatch(pattern, value) {
+  let regex = '^';
+  for (let i = 0; i < pattern.length;) {
+    if (pattern.startsWith('**/', i)) { regex += '(?:[^/]+/)*'; i += 3; }
+    else if (pattern.startsWith('[0-9]', i)) { regex += '[0-9]'; i += 5; }
+    else if (pattern.startsWith('[a-z0-9]', i)) { regex += '[a-z0-9]'; i += 8; }
+    else if (pattern[i] === '*') { regex += '[^/]*'; i += 1; }
+    else { regex += pattern[i].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); i += 1; }
+  }
+  return new RegExp(`${regex}$`).test(value);
+}
+assert.doesNotThrow(() => contracts.checkLifecycleCandidatePatterns(instruction));
+cases += 1;
+for (const suffix of ['research-brief', 'implementation-plan', 'implementation-report', 'review-report']) {
+  for (const example of [`docs/planning/topic/001-${suffix}.md`, `docs/delivery/topic/001-${suffix}.md`,
+    `docs/copilot/001-subject/001-${suffix}.md`, `team/handbook/copilot/001-subject/001-${suffix}.md`]) {
+    assert.ok(candidatePatterns.some((pattern) => illustrativeMatch(pattern, example)), example);
+    cases += 1;
+  }
+}
+for (const example of ['docs/copilot/subject/001-research-brief.md', 'docs/copilot/001-subject/research-brief.md',
+  'docs/copilot/001-subject/001-adr.md', 'team/handbook/other/001-subject/001-implementation-plan.md',
+  'docs/planning/topic/01-review-report.md', 'docs/delivery/topic/001-review-report.txt']) {
+  assert.ok(!candidatePatterns.some((pattern) => illustrativeMatch(pattern, example)), example);
+  cases += 1;
+}
+assert.ok(candidatePatterns.some((pattern) => illustrativeMatch(pattern, 'archive/copilot/001-subject/001-review-report.md')),
+  'a matching candidate need not be an actual lifecycle record');
+cases += 1;
+const applyLine = instruction.split('\n').find((line) => line.startsWith('applyTo: '));
+const candidateError = (error) => error.contractId === 'RPIR-RECORD-001' && /exactly the twelve authored candidate patterns/.test(error.message);
+for (const [label, patterns] of [
+  ['missing', candidatePatterns.slice(1)], ['duplicate', [...candidatePatterns.slice(1), candidatePatterns[1]]],
+  ['extra', [...candidatePatterns, '**/*.md']],
+  ['broadened legacy', candidatePatterns.map((p, i) => i === 0 ? p.replace('docs/planning/', '**/') : p)],
+  ['broadened topic', candidatePatterns.map((p, i) => i === 8 ? p.replace('[a-z0-9]*', '*') : p)],
+  ['wrong suffix', candidatePatterns.map((p, i) => i === 11 ? p.replace('review-report', 'adr') : p)]
+]) {
+  const changed = replaceOnce(instruction, applyLine, `applyTo: '${patterns.join(',')}'`);
+  assertRejected(`candidate patterns ${label}`, () => contracts.checkLifecycleCandidatePatterns(changed), candidateError);
+  assertRejected(`candidate patterns ${label} through aggregate`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, lifecycleInstruction: changed
+  }), candidateError);
+}
+assert.doesNotThrow(() => contracts.checkLifecycleCandidatePatterns(replaceOnce(instruction, applyLine,
+  `applyTo: '${[...candidatePatterns].reverse().join(', ')}'`)));
+cases += 1;
+console.log(`Passed ${cases - candidateCaseStart} focused authored candidate-pattern cases.`);
+
+const inputBinding = technicalUnit(executionSources.core, '## Inspect and bind one actual document', 'At each handoff bind one evidence envelope', false);
+const localInput = technicalUnit(executionSources.core, '## Inspect and bind one actual document', 'For local paths, validate the raw alias', false);
+for (const [owner, target, diagnostic] of [
+  [inputBinding, 'document kind', /physical input owner must verify/],
+  [inputBinding, 'recheck freshness before dependent effects', /physical input owner must verify/],
+  [inputBinding, 'versions conflict or identity/evidence is insufficient', /physical input owner must verify/],
+  [localInput, 'unapproved external paths', /physical input owner must reject/],
+  [localInput, 'lexical and resolved workspace containment', /physical input owner must reject/]
+]) {
+  const missing = replaceOnce(executionSources.core, owner, replaceOnce(owner, target, 'omitted safeguard'));
+  for (const [label, core, researchAgent] of [
+    ['missing', missing, executionSources.researchAgent],
+    ['history', `${missing}\n\n## Historical input example\n\n${owner}\n`, executionSources.researchAgent],
+    ['metadata', replaceOnce(missing, 'description: ', `description: ${target}; `), executionSources.researchAgent],
+    ['wrong owner', missing, `${executionSources.researchAgent}\n\n## Historical input example\n\n${owner}\n`]
+  ]) assertRejected(`physical input ${target} ${label}`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, core, researchAgent
+  }), executionError(diagnostic));
+}
+for (const [label, changed] of [
+  ['duplicate input section', `${executionSources.core}\n\n## Inspect and bind one actual document\n\n${inputBinding}\n`],
+  ['duplicate binding', replaceOnce(executionSources.core, inputBinding, `${inputBinding}\n\n${inputBinding}`)],
+  ['deleted binding with history', `${replaceOnce(executionSources.core, inputBinding, '')}\n\n## Historical input example\n\n${inputBinding}\n`]
+]) assertRejected(label, () => contracts.checkIncrementalRpirContract({ ...executionSources, core: changed }),
+  executionError(/physical input owner must verify/));
+for (const contradiction of ['Wrong-kind inputs may authorize.', 'Wrong-root records may proceed.',
+  'Stale predecessors may transition.', 'Conflicting inputs may approve.', 'Prefill constitutes approval.',
+  'Determine the executing role from the picker.']) {
+  assertRejected(`physical input additive ${contradiction}`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, core: replaceOnce(executionSources.core, inputBinding, `${inputBinding}\n\n${contradiction}`)
+  }), executionError(/contradictory physical input or role rule/));
+}
+assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
+  core: replaceOnce(executionSources.core, 'recheck freshness before dependent effects', 'recheck freshness before dependent effects for that record') }));
+assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
+  core: replaceOnce(executionSources.core, 'establish the actual executing role', 'verify the actual executing role') }));
+cases += 2;
+
+const setupOwners = [
+  ['researchAgent', 'research', '# Research coordinator', 'Inspect and reuse each safe selected documentation root',
+    ['identity, containment, absence/collision and permission', 'inspect each result before the next effect',
+      'report and stop the dependent effect', 'brief save and full readback', 'Never substitute terminal, Runner, implicit file-save parents or another location']],
+  ['core', 'core', '## Contain allocation and effects', 'For each missing selected documentation root',
+    ['identity, containment, absence including collisions and effective permission', 'inspect its result before considering the next effect',
+      'Report a missing operation, ambiguous identity, collision, conflict, failed or denied creation/save, or unverifiable result',
+      'read back its complete physical content and links', 'Do not substitute terminal commands, Script Runner directory authorship or implicit file-save parent creation, or bypass a real denial']],
+  ['researchSkill', 'method', '## Limits', 'When this method supports the Research coordinator',
+    ['each selected missing documentation root, direct `copilot/` parent and topic', 'inspecting each result before proceeding',
+      'Report unavailable operations, collisions, containment or permission uncertainty, denial and failed or unverifiable saves',
+      'Guard and save/read back the brief separately', 'do not substitute terminal, Script Runner or implicit-parent file creation']]
+];
+for (const [key, owner, heading, prefix, targets] of setupOwners) {
+  const owned = technicalUnit(executionSources[key], heading, prefix, false);
+  const diagnostic = executionError(new RegExp(`${owner}: missing or ambiguous guarded Research directory owner`));
+  for (const target of targets) {
+    const missing = replaceOnce(executionSources[key], owned, replaceOnce(owned, target, 'omitted safeguard'));
+    assertRejected(`${owner} setup loses ${target}`, () => contracts.checkIncrementalRpirContract({ ...executionSources, [key]: missing }), diagnostic);
+    assertRejected(`${owner} setup history decoy`, () => contracts.checkIncrementalRpirContract({
+      ...executionSources, [key]: `${missing}\n\n## Historical example\n\n${owned}\n`
+    }), diagnostic);
+  }
+  const missing = replaceOnce(executionSources[key], owned, 'Setup follows other guidance.');
+  for (const [label, changed, other] of [
+    ['deleted', missing, {}],
+    ['wrong owner', missing, { reviewAgent: `${executionSources.reviewAgent}\n\n## Historical setup\n\n${owned}\n` }],
+    ['duplicate unit', replaceOnce(executionSources[key], owned, `${owned}\n\n${owned}`), {}],
+    ['duplicate heading', `${executionSources[key]}\n\n${heading}\n\n${owned}\n`, {}]
+  ]) assertRejected(`${owner} setup ${label}`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, ...other, [key]: changed
+  }), diagnostic);
+  for (const contradiction of ['Script Runner may create directories.', 'Manual setup is an automation pass.',
+    'Use a terminal instead to create folders.', 'Implicit file-save parents may be created.',
+    'Ignore a collision.', 'Bypass containment.', 'Bypass a denial.',
+    'Do not bypass a denial; but bypass a denial.']) {
+    assertRejected(`${owner} setup additive ${contradiction}`, () => contracts.checkIncrementalRpirContract({
+      ...executionSources, [key]: replaceOnce(executionSources[key], owned, `${owned}\n\n${contradiction}`)
+    }), executionError(new RegExp(`${owner}: contradictory Research directory safeguard`)));
+  }
+  assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
+    [key]: replaceOnce(executionSources[key], owned, `${owned} This remains a separate guarded effect.`) }));
+  assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
+    [key]: `${executionSources[key]}\n\n## Historical example\n\nScript Runner may create directories.\n` }));
+  for (const statement of ['Do not bypass a denial.', 'Never bypass a denial.', 'Do not ignore a collision.',
+    'Never bypass containment.']) {
+    assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
+      [key]: replaceOnce(executionSources[key], owned, `${owned}\n\n${statement}`) }));
+    cases += 1;
+  }
+  cases += 2;
+}
+const coreSetup = technicalUnit(executionSources.core, '## Contain allocation and effects', 'For each missing selected documentation root', false);
+for (const target of ['documentation root', 'direct `copilot/` parent', 'numbered topic']) {
+  assertRejected(`core setup omits ${target}`, () => contracts.checkIncrementalRpirContract({ ...executionSources,
+    core: replaceOnce(executionSources.core, coreSetup, replaceOnce(coreSetup, target, 'omitted directory'))
+  }), executionError(/core: missing or ambiguous guarded Research directory owner/));
+}
+assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
+  core: replaceOnce(executionSources.core, coreSetup, replaceOnce(coreSetup, 'one selected directory at a time', 'one chosen directory at a time')) }));
+assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
+  core: replaceOnce(executionSources.core, coreSetup, replaceOnce(coreSetup,
+    'uses the existing dedicated create-directory operation, one selected directory at a time',
+    'uses one selected directory at a time through the existing dedicated create-directory operation')) }));
+cases += 2;
+
+const markerFixtures = [
+  ['implementAgent', '# Implement coordinator', 'The prominent execution loop is:', true, /Implement summary must preserve/],
+  ['implementationReport', '## Delivered outcome and progress', '- **Plan marker tracking:**', true, /Implementation report marker field must distinguish/],
+  ['reviewTemplate', '## Disposition and comparison', '- **Implementation range and checkpoint evidence:**', true, /Review template must assess available chronology/],
+  ['assurance', '## Stage-specific outcome', '- **Implement:**', true, /Stage assurance must distinguish observed timing/],
+  ['safe', '### Incremental Plan progress', '- Check the Work Item ', true, /Safe implementation must preserve Step, Task and Work Item completion gates/],
+  ['core', '### Approved Plan execution-marker exception', 'The Implement coordinator alone may update', false, /Lifecycle core must preserve the bounded marker-only effect/]
+];
+const safeLoop = technicalUnit(executionSources.safe, '### Incremental Plan progress', 'During the pass, use this primary loop', false);
+assertRejected('safe duplicate marker loop', () => contracts.checkIncrementalRpirContract({
+  ...executionSources, safe: replaceOnce(executionSources.safe, safeLoop, `${safeLoop}\n\n${safeLoop}`)
+}), executionError(/Safe implementation loop must persist progress/));
+for (const [key, heading, prefix, line, diagnostic] of markerFixtures) {
+  const owned = technicalUnit(executionSources[key], heading, prefix, line);
+  const missing = replaceOnce(executionSources[key], owned, 'Marker evidence is considered.');
+  for (const [label, changed] of [
+    ['deleted', missing], ['history', `${missing}\n\n## Historical example\n\n${owned}\n`],
+    ['duplicate unit', replaceOnce(executionSources[key], owned, line ? `${owned}\n${owned}` : `${owned}\n\n${owned}`)],
+    ['duplicate section', `${executionSources[key]}\n\n${heading}\n\n${owned}\n`]
+  ]) assertRejected(`${key} marker ${label}`, () => contracts.checkIncrementalRpirContract({ ...executionSources, [key]: changed }),
+    executionError(key === 'implementAgent' && label === 'duplicate section'
+      ? /Implement authority summary must bind covered commits/
+      : key === 'safe' && label === 'duplicate section' ? /Safe implementation loop must persist progress/ : diagnostic));
+}
+for (const [key, target, replacement] of [
+  ['safe', 'Merely attempting a check is not completion', 'Attempting a check is completion'],
+  ['safe', 'all required constituent work/checks are complete', 'some work is complete'],
+  ['safe', 'required failed, unavailable or not-run evidence leaves it unmet', 'failed evidence may be ignored'],
+  ['core', 'does not authorize edits to historical Plans or finalized reports', 'permits historical edits'],
+  ['core', 'postimage differs from the preimage only in the intended marker state(s)', 'postimage is accepted']
+]) assertRejected(`${key} marker loses ${target}`, () => contracts.checkIncrementalRpirContract({
+  ...executionSources, [key]: replaceOnce(executionSources[key], target, replacement)
+}), executionError(/marker-only effect|Step, Task and Work Item completion gates/));
+for (const [key, anchor] of [['safe', '### Incremental Plan progress'], ['core', '### Approved Plan execution-marker exception'],
+  ['implementAgent', 'The prominent execution loop is:']]) {
+  for (const contradiction of ['Workers may update Plan markers.', 'Tracking is optional for Implement.',
+    'Failed validation may pass the Work Item.', 'Rewrite historical Plans.', 'Implement coordinator may add new completion markers.']) {
+    assertRejected(`${key} marker additive ${contradiction}`, () => contracts.checkIncrementalRpirContract({
+      ...executionSources, [key]: key === 'implementAgent'
+        ? replaceOnce(executionSources[key], anchor, `${contradiction}\n\n${anchor}`)
+        : replaceOnce(executionSources[key], anchor, `${anchor}\n\n${contradiction}`)
+    }), executionError(/contradictory marker authority or completion gate/));
+  }
+  assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
+    [key]: `${executionSources[key]}\n\n## Historical marker example\n\nImplement coordinator may add new completion markers.\n` }));
+  assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
+    [key]: key === 'implementAgent'
+      ? replaceOnce(executionSources[key], anchor, `Do not assert the Implement coordinator may add new completion markers.\n\n${anchor}`)
+      : replaceOnce(executionSources[key], anchor, `${anchor}\n\nDo not assert the Implement coordinator may add new completion markers.`) }));
+  cases += 2;
+}
+console.log(`Passed ${cases - correctionOwnerStart} focused lifecycle owner correction cases.`);
+
+// The surviving native owners, not entry adapters or slash text, establish
+// checkpoint authority. Decoys do not restore a missing or ambiguous owner.
+const checkpointNativeStart = cases;
+const transitionOwner = technicalUnit(executionSources.core, '## Transitions and outcome authority',
+  'Prospectively, the engineer selects', false);
+const effectiveOwner = technicalUnit(executionSources.core, '## Transitions and outcome authority',
+  'This contract is prospective:', false);
+for (const [owned, target, diagnostic] of [
+  [transitionOwner, 'selects the intended receiving custom agent', /prospective receiving-role transition/],
+  [transitionOwner, 'actual physical predecessor', /prospective receiving-role transition/],
+  [transitionOwner, 'No fixed wording, slash command or entry skill is required', /prospective receiving-role transition/],
+  [effectiveOwner, 'policy actually effective in the session at invocation', /effective-policy transition and bootstrap/],
+  [effectiveOwner, 'including any earlier required entry route', /effective-policy transition and bootstrap/]
+]) {
+  const missing = replaceOnce(executionSources.core, owned, replaceOnce(owned, target, 'omitted safeguard'));
+  for (const core of [missing, `${missing}\n\n## Historical example\n\n${owned}\n`,
+    replaceOnce(missing, 'description: ', `description: ${target}; `)]) {
+    assertRejected(`native checkpoint transition loses ${target}`, () => contracts.checkIncrementalRpirContract({
+      ...executionSources, core
+    }), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' && diagnostic.test(error.message));
+  }
+}
+assertRejected('duplicate native transition owner', () => contracts.checkIncrementalRpirContract({
+  ...executionSources, core: replaceOnce(executionSources.core, transitionOwner, `${transitionOwner}\n\n${transitionOwner}`)
+}), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' && /prospective receiving-role transition/.test(error.message));
+for (const contradiction of ['A slash command is always required.', 'Role selection is approval.',
+  'Policy edits automatically self-upgrade the session.']) {
+  assertRejected(`additive native transition contradiction: ${contradiction}`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, core: replaceOnce(executionSources.core, transitionOwner, `${transitionOwner}\n\n${contradiction}`)
+  }), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' && /contradictory receiving-role transition/.test(error.message));
+}
+assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({
+  ...executionSources, core: `${executionSources.core}\n\n## Historical transition example\n\nA slash command is always required.\n`
+}));
+cases += 1;
+assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({
+  ...executionSources,
+  wikiCatalogue: replaceOnce(executionSources.wikiCatalogue,
+    'explicitly approved bounded Plan strategy authorizes only covered commits after a qualifying Implement transition under policy effective at invocation',
+    'explicitly approved bounded Plan strategy authorizes only covered commits after a qualifying Implement transition under policy effective at invocation and applicable permission')
+}));
+cases += 1;
+
+for (const [key, heading, diagnostic] of [
+  ['readme', '### Expected checkpoint planning; conditional execution', /README checkpoint section must explain/],
+  ['wikiRpir', '## Expected checkpoint planning; conditional execution', /RPIR Wiki must align/],
+  ['wikiEvidence', '### Expected checkpoint planning; conditional execution', /lifecycle evidence Wiki must align/]
+]) {
+  const owned = technicalUnit(executionSources[key], heading, 'Every prospective Plan', false);
+  for (const changed of [
+    replaceOnce(executionSources[key], heading, '### Unrelated checkpoint note'),
+    `${replaceOnce(executionSources[key], heading, '### Unrelated checkpoint note')}\n\n## Historical example\n\n${owned}`,
+    `${executionSources[key]}\n\n${heading}\n\n${owned}`
+  ]) assertRejected(`${key} missing, historical or ambiguous checkpoint owner`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, [key]: changed
+  }), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' && diagnostic.test(error.message));
+  assertRejected(`${key} additive checkpoint contradiction`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, [key]: replaceOnce(executionSources[key], owned, `${owned}\n\nCheckpoint planning is optional.`)
+  }), (error) => error.contractId === 'RPIR-CHECKPOINT-001' && /contradictory optional checkpoint planning/.test(error.message));
+}
+for (const [key, heading, prefix, target] of [
+  ['readme', '### Expected checkpoint planning; conditional execution', 'A prospective Plan', 'under the policy effective at invocation'],
+  ['wikiRpir', '## Expected checkpoint planning; conditional execution', 'Local commit execution remains conditional', 'qualifying Implement transition under the effective policy'],
+  ['wikiEvidence', '### Expected checkpoint planning; conditional execution', 'A local commit remains conditional', 'qualifying Implement transition under the effective policy']
+]) {
+  const owned = technicalUnit(executionSources[key], heading, prefix, false);
+  assertRejected(`${key} omits effective-policy checkpoint transition`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, [key]: replaceOnce(executionSources[key], owned, replaceOnce(owned, target, 'unconditionally'))
+  }), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001');
+}
+for (const [target, replacement] of [
+  ["tools: ['read', 'search', 'execute']", "tools: ['read', 'search', 'runInTerminal']"],
+  ["tools: ['read', 'search', 'execute']", "tools: ['read', 'search', 'execute', 'edit']"],
+  ['Only `read`, `search` and `execute` are declared', 'Only `read`, `search` and `runInTerminal` are declared']
+]) assertRejected(`Runner checkpoint tool boundary ${replacement}`, () => contracts.checkIncrementalRpirContract({
+  ...executionSources, runner: replaceOnce(executionSources.runner, target, replacement)
+}), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' && /native execute alias/.test(error.message));
+const checkpointPlanningOwner = technicalUnit(executionSources.checkpointSkill, '# Local Git checkpoints', 'Every prospective Plan', false);
+const noCheckpointOwner = replaceOnce(executionSources.checkpointSkill, checkpointPlanningOwner, 'Checkpoint planning is described elsewhere.');
+for (const [label, checkpointSkill, planAgent] of [
+  ['deleted', noCheckpointOwner, executionSources.planAgent],
+  ['history', `${noCheckpointOwner}\n\n## Historical checkpoint example\n\n${checkpointPlanningOwner}`, executionSources.planAgent],
+  ['metadata', replaceOnce(noCheckpointOwner, 'description: ', `description: ${checkpointPlanningOwner} `), executionSources.planAgent],
+  ['wrong owner', noCheckpointOwner, `${executionSources.planAgent}\n\n## Historical checkpoint example\n\n${checkpointPlanningOwner}`]
+]) assertRejected(`checkpoint skill ${label} owner decoy`, () => contracts.checkIncrementalRpirContract({
+  ...executionSources, checkpointSkill, planAgent
+}), (error) => error.contractId === 'RPIR-CHECKPOINT-001' && /checkpointSkill: require bounded prospective planning/.test(error.message));
+assertRejected('duplicate checkpoint skill planning owner', () => contracts.checkIncrementalRpirContract({
+  ...executionSources, checkpointSkill: replaceOnce(executionSources.checkpointSkill, checkpointPlanningOwner,
+    `${checkpointPlanningOwner}\n\n${checkpointPlanningOwner}`)
+}), (error) => error.contractId === 'RPIR-CHECKPOINT-001' && /checkpointSkill: require bounded prospective planning/.test(error.message));
+console.log(`Passed ${cases - checkpointNativeStart} focused native checkpoint owner cases.`);
 
 // The Research checkpoint sentence owns its safeguards independently of ADR
 // discovery prose, paragraph layout, metadata and historical examples.
@@ -1403,8 +2175,8 @@ assertRejected('unaffected completed work preservation reversed', () => contract
 
 for (const [key, target, diagnostic] of [
   ['repository', 'or an explicit bounded phase-record grant', /Repository command entry must preserve/],
-  ['checklist', 'do not demand an approved implementation Plan or `/implement` evidence for this route', /Checkpoint checklist must retain separately bounded/],
-  ['runner', 'without requiring an approved implementation Plan or `/implement` evidence', /Script Runner must retain separately bounded/],
+  ['checklist', 'do not demand an approved implementation Plan or Implement invocation evidence for this route', /Checkpoint checklist must retain separately bounded/],
+  ['runner', 'without requiring an approved implementation Plan or Implement invocation evidence', /Script Runner must retain separately bounded/],
   ['researchAgent', 'separately granted local Git index/history checkpoint', /Research must retain/],
   ['reviewAgent', 'or other valid bounded authorization applies, ', /Review must retain/]
 ]) {
@@ -1985,8 +2757,7 @@ for (const [key, boundary] of [
   ['assuranceSkill', 'Do not edit, run commands, delegate, persist records'], ['assurance', '## Stage-specific outcome'],
   ['readme', 'Plan, Implement and Review retain contextual material clarification'], ['wikiRpir', '## Canonical references'],
   ['wikiEvidence', '## Canonical references'], ['wikiCatalogue', '## Canonical references'],
-  ['wikiMaintenance', '## Canonical references'], ['planPrompt', '## Process'],
-  ['implementPrompt', '## Process'], ['reviewPrompt', '## Process'],
+  ['wikiMaintenance', '## Canonical references'],
   ['lifecycleInstruction', '## Validation boundaries']
 ]) {
   // Insert inside the relevant normative section, not before the next heading
@@ -2003,8 +2774,8 @@ for (const [key, boundary] of [
 const runnerPath = agentPath('Script Runner');
 const runner = agents.get(runnerPath);
 for (const [label, mutate] of [
-  ['Runner edit tool', (values) => { values.tools = "['read', 'search', 'runInTerminal', 'edit']"; }],
-  ['Runner agent tool', (values) => { values.tools = "['read', 'search', 'runInTerminal', 'agent']"; }],
+  ['Runner edit tool', (values) => { values.tools = "['read', 'search', 'execute', 'edit']"; }],
+  ['Runner agent tool', (values) => { values.tools = "['read', 'search', 'execute', 'agent']"; }],
   ['Runner user invocation', (values) => { values['user-invocable'] = 'true'; }],
   ['Runner nested delegation', (values) => { values.agents = "['Implement']"; }],
   ['Runner handoff declaration', (values) => { values.handoffs = ''; }]
@@ -2028,21 +2799,42 @@ assertRejected('coordinator delegation expansion', () => contracts.checkAgentMet
 ));
 
 const implementPath = agentPath('Implement');
-const implement = agents.get(implementPath);
-const handoffCases = [
-  ['automatic handoff', implement.blocks.handoffs.map((line) => line.replace('send: false', 'send: true'))],
-  ['wrong handoff target', implement.blocks.handoffs.map((line) => line.replace('agent: Review', 'agent: Plan'))],
-  ['incomplete handoff', implement.blocks.handoffs.filter((line) => !line.includes('prompt:'))]
-];
-for (const [label, handoffs] of handoffCases) {
-  assertRejected(label, () => contracts.parseHandoffs(implementPath, handoffs, ['Review'], agentNames));
+const implementText = readArtifact(implementPath);
+for (const [label, handoffs] of [
+  ['manual legacy handoff', ['  - label: Review', '    agent: Review', '    prompt: Review the report', '    send: false']],
+  ['automatic handoff', ['  - label: Review', '    agent: Review', '    prompt: Review the report', '    send: true']],
+  ['wrong handoff target', ['  - label: Review', '    agent: Plan', '    prompt: Review the report', '    send: false']],
+  ['incomplete handoff', ['  - label: Review', '    agent: Review', '    send: false']]
+]) {
+  assertRejected(label, () => nativeCheck(implementPath, replaceOnce(implementText,
+    'target: github-copilot', `target: github-copilot\nhandoffs:\n${handoffs.join('\n')}`)),
+  (error) => error.contractId === 'NATIVE-AGENT-001' && /Local delegation metadata/.test(error.message));
+  assertRejected(`${label} parser`, () => contracts.parseHandoffs(implementPath, handoffs, ['Review'], agentNames),
+    (error) => error.contractId === 'NATIVE-AGENT-001');
 }
-const wrongPromptRoute = { name: 'plan', agent: 'Plan' };
-assert.doesNotThrow(() => contracts.checkPromptMetadata('.github/prompts/plan.prompt.md', wrongPromptRoute, agentNames));
-wrongPromptRoute.agent = 'Implement';
-assertRejected('wrong prompt route', () => contracts.checkPromptMetadata(
-  '.github/prompts/plan.prompt.md', wrongPromptRoute, agentNames
-));
+for (const [label, target, replacement] of [
+  ['automatic transition', 'the suggestion does not invoke or accept it', 'automatically invoke Review'],
+  ['wrong next role', 'manual independent Review with the actual inspected physical implementation report', 'manual Plan with the actual inspected physical implementation report'],
+  ['missing physical predecessor', 'manual independent Review with the actual inspected physical implementation report', 'manual independent Review'],
+  ['prefill treated as authority', 'unsent prefill is not invocation or sign-off', 'unsent prefill is invocation or sign-off']
+]) assertRejected(`native ${label}`, () => nativeCheck(implementPath, replaceOnce(implementText, target, replacement)),
+  (error) => error.contractId === 'NATIVE-AGENT-001');
+for (const [name, agent] of [['plan', 'Plan'], ['implement', 'Implement'], ['review', 'Review'], ['remediate-review', 'Implement']]) {
+  for (const route of [agent, 'wrong role']) assertRejected(`legacy ${name} prompt route ${route}`,
+    () => contracts.checkPromptMetadata(`.github/prompts/${name}.prompt.md`, { name, agent: route }, agentNames),
+    (error) => error.contractId === 'STRUCT-PROMPT-001');
+}
+const ordinaryPrompt = '.github/prompts/explain-change.prompt.md';
+for (const values of [{ name: 'explain-change' }, { name: 'explain-change', agent: 'Implement' },
+  { name: 'explain-change', agent: 'Implement', tools: "['read', 'execute']" },
+  { name: 'explain-change', agent: 'Test Worker', tools: "['read', 'search']" }]) {
+  assert.doesNotThrow(() => contracts.checkPromptMetadata(ordinaryPrompt, values, agentNames));
+  cases += 1;
+}
+for (const values of [{ name: 'wrong-name', agent: 'Implement' }, { name: 'explain-change', agent: 'Missing Role' },
+  { name: 'explain-change', tools: "['read']" }, { name: 'explain-change', agent: 'Test Worker', tools: "['read', 'execute']" }]) {
+  assertRejected('invalid ordinary prompt metadata', () => contracts.checkPromptMetadata(ordinaryPrompt, values, agentNames));
+}
 
 // Isolate each defect to one manifest surface. Check the diagnostic so a
 // contribution failure cannot be masked by an earlier controlled-files failure.

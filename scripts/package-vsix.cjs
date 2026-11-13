@@ -79,7 +79,7 @@ function packageVsix({ repositoryRoot, manifest, runPackage = runVsce }) {
   const resolvedRoot = path.resolve(repositoryRoot);
   const rootStat = fs.lstatSync(resolvedRoot);
   if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) fail('Repository root must be a regular directory');
-  if (manifest.engines?.vscode !== '^1.130.0') fail('package.json VS Code engine constraint must remain ^1.130.0');
+  if (manifest.engines?.vscode !== '^1.146.0') fail('package.json VS Code engine constraint must remain ^1.146.0');
   const finalPath = expectedTarget(resolvedRoot, manifest);
   requireAbsent(finalPath, 'Version-derived VSIX target');
 

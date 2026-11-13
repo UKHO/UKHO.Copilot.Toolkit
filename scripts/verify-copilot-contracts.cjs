@@ -5,13 +5,12 @@ const path = require('node:path');
 const { classes, discover, inspectPath, normalize, root, skillPayloadRoots } = require('./discover-copilot-artifacts.cjs');
 
 const coordinatorTools = {
-  Research: ['read', 'search', 'web', 'edit', 'agent'],
+  Research: ['read', 'search', 'web', 'edit', 'edit/createDirectory', 'agent'],
   Plan: ['read', 'search', 'edit', 'agent'],
   Implement: ['read', 'search', 'edit', 'agent', 'runInTerminal'],
   Review: ['read', 'search', 'edit', 'agent']
 };
 const promptRoutes = { plan: 'Plan', implement: 'Implement', review: 'Review', 'remediate-review': 'Implement' };
-const handoffRoutes = { Research: ['Plan'], Plan: ['Implement'], Implement: ['Review'], Review: ['Implement', 'Plan'] };
 const delegateRoutes = {
   Research: ['Codebase Investigator', 'Domain Investigator', 'Feasibility Investigator', 'Stage Assurance', 'Script Runner'],
   Plan: ['Requirements Analyst', 'Architecture Analyst', 'Test Strategist', 'Domain Investigator', 'Feasibility Investigator', 'Stage Assurance', 'Script Runner'],
@@ -26,6 +25,33 @@ const workerTools = {
   'Security Reviewer': ['read', 'search'], 'Stage Assurance': ['read', 'search'],
   'Test Strategist': ['read', 'search'], 'Test Worker': ['read', 'search'],
   'Validation Worker': ['read', 'search']
+};
+// These projections describe authored boundaries, not runtime isolation.
+const nativeTools = {
+  ...coordinatorTools, ...workerTools,
+  Implement: ['read', 'search', 'edit', 'agent', 'execute'],
+  'Implementation Worker': ['read', 'search', 'edit', 'execute'],
+  'Script Runner': ['read', 'search', 'execute']
+};
+const nativeSkills = {
+  Research: ['agent-model-selection', 'codebase-research', 'rpir-lifecycle-core', 'agent-question-resolution', 'architecture-decision-records', 'local-git-checkpoints'],
+  Plan: ['agent-model-selection', 'architecture-planning', 'rpir-lifecycle-core', 'agent-question-resolution', 'architecture-decision-records', 'local-git-checkpoints'],
+  Implement: ['agent-model-selection', 'safe-implementation', 'rpir-lifecycle-core', 'agent-question-resolution', 'architecture-decision-records', 'local-git-checkpoints'],
+  Review: ['agent-model-selection', 'code-review', 'rpir-lifecycle-core', 'agent-question-resolution', 'architecture-decision-records', 'local-git-checkpoints', 'rpir-stage-assurance'],
+  'Architecture Analyst': ['agent-model-selection', 'architecture-planning'],
+  'Codebase Investigator': ['agent-model-selection', 'codebase-research'],
+  'Correctness Reviewer': ['agent-model-selection', 'code-review'],
+  'Domain Investigator': ['agent-model-selection', 'codebase-research'],
+  'Feasibility Investigator': ['agent-model-selection', 'codebase-research'],
+  'Implementation Worker': ['agent-model-selection', 'safe-implementation'],
+  'Maintainability Reviewer': ['agent-model-selection', 'code-review'],
+  'Requirements Analyst': ['agent-model-selection', 'architecture-planning'],
+  'Security Reviewer': ['agent-model-selection', 'code-review'],
+  'Stage Assurance': ['agent-model-selection', 'rpir-stage-assurance'],
+  'Test Strategist': ['agent-model-selection', 'test-design'],
+  'Test Worker': ['agent-model-selection', 'test-design'],
+  'Validation Worker': ['agent-model-selection', 'safe-implementation'],
+  'Script Runner': ['agent-model-selection', 'local-git-checkpoints']
 };
 const manualHandoffCoordinators = new Set(['Research', 'Plan', 'Implement', 'Review']);
 const templateLinkPlaceholders = new Map([
@@ -43,6 +69,12 @@ function fail(message, contractId = 'STRUCT-001') {
 
 function equal(actual, expected) {
   return JSON.stringify(actual) === JSON.stringify(expected);
+}
+
+// Recognize only immediate explicit negation, not arbitrary prose semantics.
+function hasAffirmativeMatch(text, pattern) {
+  return [...text.matchAll(pattern)].some((match) =>
+    !/\b(?:do not|never) (?:assert (?:that )?)?$/i.test(text.slice(Math.max(0, match.index - 40), match.index)));
 }
 
 function sourcePath(relative) {
@@ -125,6 +157,116 @@ function parseStringList(value, relative, field) {
   return entries;
 }
 
+function checkNativeAgentContract(relative, parsed, agentNames, skillNames, profile) {
+  const { values, text } = parsed;
+  const name = values.name;
+  const reject = (message) => fail(`${relative}: ${message}`, 'NATIVE-AGENT-001');
+  if (!Object.hasOwn(nativeTools, name) || !Object.hasOwn(nativeSkills, name)) reject('unrecognized role');
+  if (parseTextScalar((values.target || '').trim(), relative, 'target') !== 'github-copilot') reject('target must be github-copilot');
+  if (Object.hasOwn(values, 'agents') || Object.hasOwn(values, 'handoffs')) reject('Local delegation metadata is unsupported');
+  const tools = parseStringList(values.tools, relative, 'tools');
+  if (!tools.length || !equal(tools, nativeTools[name])) reject('tools differ from the nonempty role boundary');
+  const skills = parseStringList(values.skills, relative, 'skills');
+  if (!equal(skills, nativeSkills[name]) || skills.some((skill) => !skillNames.has(skill))) reject('required named skills must resolve');
+  if (!manualHandoffCoordinators.has(name) && values['user-invocable'] !== 'false') reject('worker must not be user-invocable');
+
+  const rows = section(profile, '# Authoritative role profiles').split('\n').filter((line) => line.startsWith('| `'));
+  const matches = rows.map((row) => row.match(/^\| `([a-z0-9-]+\.agent\.md)` \| `(gpt-6\.1-sol|gpt-6\.1-terra|gpt-6-luna)` \| `(high|xhigh)` \|$/));
+  if (matches.some((match) => !match)) reject('unsupported profile row');
+  const own = matches.filter((match) => match[1] === path.posix.basename(relative));
+  if (own.length !== 1) reject('profile must contain one role row');
+  const model = parseTextScalar((values.model || '').trim(), relative, 'model');
+  const effort = parseTextScalar((values['reasoning-effort'] || '').trim(), relative, 'reasoning-effort');
+  if (model !== own[0][2] || effort !== own[0][3]) reject('scalar model and effort must match the role profile');
+
+  if (manualHandoffCoordinators.has(name)) {
+    const body = section(text, '## Native entry and specialist dispatch');
+    const route = [...body.matchAll(/^Permitted specialists are exactly \*\*([^*]+)\*\*/gm)];
+    if (text.split('\n').filter((line) => line === '## Native entry and specialist dispatch').length !== 1 || route.length !== 1) reject('missing or ambiguous body route');
+    const actual = route[0][1].replace(/, and /g, ', ').split(', ');
+    if (!equal(actual, delegateRoutes[name]) || actual.some((role) => !agentNames.has(role))) reject('body route differs from permitted specialists');
+    if (!/discovered native custom-agent catalogue/i.test(body) || !/hardcoded generated ID or generic substitute/i.test(body) ||
+        !/reconcile (?:the )?returned evidence and effects/i.test(body) || !/behavioral controls, not a native per-parent filter/i.test(body)) reject('dispatch and reconciliation safeguards are missing');
+    // Check additive route claims throughout the loaded section, while allowing
+    // a second enumeration of roles already permitted for this coordinator.
+    if (/\b(?:any|all) (?:specialists|workers|agents) (?:may|can) be (?:used|delegated|invoked)|\bonly (?:a |the )?(?:subset|some|selected) (?:of )?(?:the )?(?:permitted )?(?:specialists|workers|agents) (?:may|can|should) be (?:used|invoked|delegated)/i.test(body) ||
+      hasAffirmativeMatch(body, /\b(?:use|choose|invoke|delegate to) (?:an? )?(?:generic|arbitrary) (?:worker|agent|specialist)(?: instead)?/gi) ||
+      hasAffirmativeMatch(body, /\b(?:use|choose|invoke|delegate to) (?:the |a )?hardcoded generated (?:agent )?ID\b/gi) ||
+      hasAffirmativeMatch(body, /\b(?:use|choose|invoke|delegate to) (?:the )?`(?:[a-z0-9-]*agent[a-z0-9-]*[-_][0-9a-f]{4,}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})`/gi)) reject('contradictory body route');
+    for (const match of body.matchAll(/\b(?:may|can|should) (?:invoke|delegate to|use) (?:the )?([^.!?\n]+)/gi)) {
+      const named = Object.values(delegateRoutes).flat().filter((role) =>
+        new RegExp(`\\b${role}\\b`, 'i').test(match[1]));
+      if (named.some((role) => !delegateRoutes[name].includes(role))) reject('contradictory body route');
+    }
+    for (const match of body.matchAll(/\bonly\s+([^.!?\n]+?)\s+(?:may|can|should) be (?:used|invoked|delegated(?: to)?)(?=\s*[.!?])/gi)) {
+      const named = [...new Set(Object.values(delegateRoutes).flat().filter((role) =>
+        new RegExp(`\\b${role}\\b`, 'i').test(match[1])))];
+      if (named.length && (named.length !== delegateRoutes[name].length || named.some((role) => !delegateRoutes[name].includes(role)))) reject('contradictory body route');
+    }
+    for (const match of body.matchAll(/\b(?:use|invoke|choose)\s+([^.!?\n]+?)\s+instead\b/gi)) {
+      if (Object.values(delegateRoutes).flat().some((role) => !delegateRoutes[name].includes(role) &&
+          new RegExp(`\\b${role}\\b`, 'i').test(match[1]))) reject('contradictory body route');
+    }
+    const entries = body.split(/\n\s*\n/).filter((part) => part.trimStart().startsWith('Prospectively,'));
+    const entry = entries.length === 1 ? entries[0] : '';
+    const entryRules = {
+      Research: [/selects Research and deliberately sends the new objective/i, /manual request to the selected Plan coordinator with the actual inspected physical Research brief and version/i, /unsent prefill does not invoke a phase/i],
+      Plan: [/select this role and deliberately send a stage request with the actual physical Research predecessor/i, /manual request to Implement with the inspected physical Plan/i, /unsent prefill is not invocation or approval/i],
+      Implement: [/receiving-role rule is already effective before invocation/i, /selects Implement and deliberately sends a request with the inspected physical approved Plan/i, /where policy effective at invocation requires explicit `\/implement`, use that route to bootstrap/i, /policy edit does not self-upgrade a session or make an earlier invocation retroactive/i, /manual independent Review with the (?:actual )?inspected physical implementation report/i, /suggestion does not invoke or accept it/i],
+      Review: [/selects Review and deliberately sends a stage request with the actual physical implementation report/i, /manual Implement request with the original approved physical Plan and linked Review/i, /manual Plan request with the physical Review/i, /Neither suggestion invokes the receiver/i]
+    };
+    if (entryRules[name].some((rule) => !rule.test(entry)) ||
+      (name !== 'Implement' && !/(?:current.policy bootstrap|current policy[^.\n]*bootstrap)/i.test(entry)) ||
+      !/self.upgrade/i.test(entry) || /(?:automatically|auto.submit)[^.!?\n]*(?:invoke|send|transition)|(?:picker|prefill) (?:is|constitutes) (?:an? )?(?:invocation|approval)/i.test(body) ||
+      (name === 'Implement' && /(?:policy edits? (?:automatically )?self-upgrades? (?:a |the )?(?:loaded )?session|(?:prior|earlier) invocations? (?:are|is) retroactive|explicit `\/implement` is always required)/i.test(body))) {
+      reject('native entry and manual next-stage safeguards are missing or contradictory');
+    }
+  } else {
+    const heading = name === 'Script Runner' ? '# Script Runner' :
+      name === 'Stage Assurance' ? '## Role and inputs' : '## Role and objective';
+    if (text.split('\n').filter((line) => line === heading).length !== 1) reject('missing or ambiguous worker owner');
+    const body = section(text, heading).split(/^## /m)[0];
+    const rules = body.split(/\n\s*\n/).filter((part) => part.trimStart().startsWith('Do not delegate or accept work beyond'));
+    if (rules.length !== 1 || !/Unexpected exposed tools grant no authority; disclose and do not use them/i.test(rules[0]) ||
+        !/Return evidence, effects, failed or unavailable checks and uncertainties for coordinator reconciliation/i.test(rules[0])) reject('worker nondelegation and return safeguards are missing');
+    if (/workers? (?:may|can|should) delegate|unexpected tools (?:grant|confer) authority/i.test(body)) reject('contradictory worker boundary');
+  }
+  return true;
+}
+
+function checkNativeSupportMetadata(manifest, lock) {
+  if (manifest?.engines?.vscode !== '^1.146.0' || lock?.packages?.['']?.engines?.vscode !== '^1.146.0') {
+    fail('Manifest and root lockfile must both target ^1.146.0', 'NATIVE-SUPPORT-001');
+  }
+  return true;
+}
+
+function checkNativeModelObservationContract(skill, profile) {
+  if (skill.split('\n').filter((line) => line === '## Procedure').length !== 1 ||
+      profile.split('\n').filter((line) => line === '## Selection, escalation and failure').length !== 1) {
+    fail('missing or ambiguous model observation owner', 'NATIVE-MODEL-001');
+  }
+  const owners = { procedure: section(skill, '## Procedure'), selection: section(profile, '## Selection, escalation and failure') };
+  for (const [owner, text] of Object.entries(owners)) {
+    if (!/assigned (?:versus|model from the) observed effective model/i.test(text) ||
+        !/actual override or fallback evidence/i.test(text) || !/effective model not observable/i.test(text) ||
+        !/fallback cause not exposed/i.test(text) || !/(?:do not infer fallback from missing telemetry|Missing telemetry alone neither proves fallback)/i.test(text) ||
+        !/known wrong default is not a (?:pass|successful default-routing observation)/i.test(text) ||
+        !/(?:unknown telemetry alone does not stop|Missing telemetry alone neither proves fallback nor stops) independent safe work/i.test(text)) {
+      fail(`${owner}: missing truthful model observation boundary`, 'NATIVE-MODEL-001');
+    }
+    const inventedCause = text.split(/(?<=[.!?])\s+|\n/).some((sentence) => {
+      const cause = hasAffirmativeMatch(sentence, /\bfallback (?:was |is )?caused by (?:an? )?unavailable model|\b(?:the |an? )?model (?:was|is) unavailable,? which caused (?:the )?fallback/gi);
+      const evidence = /(?:observed|recorded|captured) evidence (?:from|in) (?:the )?(?:runtime|diagnostics|logs?)[^.!?\n]*(?:shows|confirms|establishes)|(?:according to|based on) (?:the )?(?:observed|recorded|captured) (?:runtime |diagnostic )?(?:evidence|logs?|diagnostics)/i.test(sentence);
+      return cause && !evidence;
+    });
+    if (inventedCause || /unknown (?:effective )?(?:model|selection) (?:is|counts as) (?:a )?(?:success|pass)|(?:a )?(?:known )?(?:wrong default|mismatch) (?:is|counts as) (?:a )?(?:default )?(?:success|pass)/i.test(text)) {
+      fail(`${owner}: contradictory model observation boundary`, 'NATIVE-MODEL-001');
+    }
+  }
+  return true;
+}
+
 function checkLocalLinks(relative, text) {
   const pattern = /!?\[[^\]]*\]\(\s*(<[^>]+>|[^)\s]+)(?:\s+[^)]*)?\)/g;
   for (const match of text.matchAll(pattern)) {
@@ -187,51 +329,17 @@ function checkManifestParity(manifest, inventory) {
 }
 
 function parseHandoffs(relative, blockLines, expectedTargets, agentNames) {
-  const blocks = [];
-  let current;
-  let itemIndent;
-  const fields = ['label', 'agent', 'prompt', 'send'];
-  for (const line of blockLines) {
-    if (!line.trim()) continue;
-    const item = line.match(/^( +)- ([A-Za-z][A-Za-z0-9-]*): *(.*)$/);
-    let key;
-    let value;
-    if (item) {
-      if (itemIndent === undefined) itemIndent = item[1].length;
-      if (item[1].length !== itemIndent) fail(`${relative} has unsupported handoff sequence indentation`);
-      current = Object.create(null);
-      blocks.push(current);
-      [, , key, value] = item;
-    } else {
-      const field = line.match(/^( +)([A-Za-z][A-Za-z0-9-]*): *(.*)$/);
-      if (!field || !current || field[1].length !== itemIndent + 2) {
-        fail(`${relative} has unsupported handoff property indentation or nesting`);
-      }
-      [, , key, value] = field;
-    }
-    if (!fields.includes(key)) fail(`${relative} has unsupported handoff field: ${key}`);
-    if (Object.hasOwn(current, key)) fail(`${relative} has duplicate handoff field: ${key}`);
-    current[key] = key === 'send' ? value.trim() : parseTextScalar(value.trim(), relative, `handoff ${key}`);
-  }
-  if (blocks.length !== expectedTargets.length) fail(`${relative} must declare only its stage handoffs`);
-  const targets = blocks.map((block) => {
-    if (!fields.every((field) => typeof block[field] === 'string' && block[field].trim())) {
-      fail(`${relative} has an incomplete handoff declaration`);
-    }
-    if (block.send !== 'false') fail(`${relative} handoff to ${block.agent} must use send: false`);
-    if (!agentNames.has(block.agent)) fail(`${relative} handoff target is not a contributed agent: ${block.agent}`);
-    return block.agent;
-  });
-  if (!equal(targets, expectedTargets)) fail(`${relative} must declare stage handoffs to ${expectedTargets.join(' and ')}`);
+  fail(`${relative} must not use Local handoff metadata`, 'NATIVE-AGENT-001');
 }
 
 function checkPromptMetadata(relative, values, agentNames) {
   const name = path.basename(relative, '.prompt.md');
-  if (!agentNames.has(values.agent) || values.agent !== promptRoutes[name] || values.name !== name) {
-    fail(`${relative} must declare its valid name and RPIR stage route`, 'STRUCT-PROMPT-001');
+  if (Object.hasOwn(promptRoutes, name)) fail(`${relative} must not restore a legacy RPIR entry prompt`, 'STRUCT-PROMPT-001');
+  if (values.name !== name || (Object.hasOwn(values, 'agent') && !agentNames.has(values.agent))) {
+    fail(`${relative} must declare its valid name and, when specified, a known agent`, 'STRUCT-PROMPT-001');
   }
   if (Object.hasOwn(values, 'tools')) {
-    const allowed = coordinatorTools[values.agent];
+    const allowed = nativeTools[values.agent];
     if (!allowed || parseStringList(values.tools, relative, 'tools').some((tool) => !allowed.includes(tool))) {
       fail(`${relative} tools must not expand ${values.agent} capabilities`);
     }
@@ -240,31 +348,12 @@ function checkPromptMetadata(relative, values, agentNames) {
 
 function checkAgentMetadata(relative, values, blocks, agentNames) {
   const name = values.name;
-  if (!manualHandoffCoordinators.has(name) && name !== 'Script Runner' && !Object.hasOwn(workerTools, name)) {
+  if (!Object.hasOwn(nativeTools, name)) {
     fail(`${relative} has an unrecognized agent role: ${name}; declare its tool and invocation boundary in the checker`);
   }
-  if (!manualHandoffCoordinators.has(name) && (Object.hasOwn(values, 'agents') || Object.hasOwn(values, 'handoffs'))) {
-    fail(`${relative} non-coordinator must not declare delegation or handoffs`);
-  }
-  if (manualHandoffCoordinators.has(name)) {
-    if (!Object.hasOwn(values, 'tools') || !equal(parseStringList(values.tools, relative, 'tools'), coordinatorTools[name])) {
-      fail(`${relative} coordinator tools differ from its declared role boundary`);
-    }
-    const delegates = parseStringList(values.agents, relative, 'agents');
-    if (!equal(delegates, delegateRoutes[name]) || delegates.some((delegate) => !agentNames.has(delegate))) {
-      fail(`${relative} delegates differ from its declared role boundary`);
-    }
-    if (!Object.hasOwn(values, 'handoffs')) fail(`${relative} must declare manual stage handoffs`);
-    parseHandoffs(relative, blocks.handoffs, handoffRoutes[name], agentNames);
-  }
-  if (name === 'Script Runner' && (values['user-invocable'] !== 'false' || Object.hasOwn(values, 'agents') ||
-      !equal(parseStringList(values.tools, relative, 'tools'), ['read', 'search', 'runInTerminal']))) {
-    fail(`${relative} must remain non-invocable, non-delegating and non-file-authoring with its existing exact tools; bounded Git metadata effects are governed separately`);
-  }
-  if (Object.hasOwn(workerTools, name) && (values['user-invocable'] !== 'false' ||
-      !equal(parseStringList(values.tools, relative, 'tools'), workerTools[name]))) {
-    fail(`${relative} worker tools or invocation metadata differ from its declared role boundary`);
-  }
+  if (Object.hasOwn(values, 'agents') || Object.hasOwn(values, 'handoffs')) fail(`${relative} must not use Local delegation metadata`);
+  if (!equal(parseStringList(values.tools, relative, 'tools'), nativeTools[name])) fail(`${relative} tools differ from its declared role boundary`);
+  if (!manualHandoffCoordinators.has(name) && values['user-invocable'] !== 'false') fail(`${relative} worker must not be user-invocable`);
 }
 
 function skillMarkdownResources(inventory) {
@@ -298,7 +387,11 @@ function requireADRRule(text, patterns, diagnostic) {
 // Coordinator rules belong to the normative body, not metadata or appended
 // historical/example sections. This is a bounded selector, not a Markdown parser.
 function coordinatorBody(text, role) {
-  return (text.split(`\n# ${role} coordinator\n`)[1] || '').split(/^#{1,2} /m)[0];
+  const heading = `# ${role} coordinator`;
+  if (text.split('\n').filter((line) => line === heading).length !== 1 ||
+      text.split('\n').filter((line) => line === '## Native entry and specialist dispatch').length !== 1) return '';
+  const body = section(text, heading);
+  return body.split(/^## /m)[0] + '\n' + section(body, '## Native entry and specialist dispatch');
 }
 
 // Heading-bounded sections and anchored paragraphs/fields keep historical,
@@ -567,8 +660,7 @@ function checkDecisionReadinessContract(source) {
   const planAgent = paragraph(coordinatorBody(source.plan, 'Plan'), 'A completed Plan');
   const planningProcedure = section(source.planning, '## Procedure').split('\n').find((line) => line.startsWith('5. Inspect relevant')) || '';
   const planningGaps = section(source.planning, '### Resolve material planning gaps');
-  const planPrompt = section(source.planPrompt, '## Constraints');
-  for (const [owner, text] of Object.entries({ planAgent, planningProcedure, planningGaps, planPrompt })) {
+  for (const [owner, text] of Object.entries({ planAgent, planningProcedure, planningGaps })) {
     for (const [pattern, rule] of [
       [/completed Plan has no (?:unresolved architectural choice|unsettled architectural decision)/i,
         'completed Plan must have no unresolved architectural choice'],
@@ -652,7 +744,7 @@ function checkDecisionReadinessContract(source) {
   'plan', 'reuse evidenced existing ADR destinations and guard new directory/file effects separately');
   const agreement = field(section(source.planTemplate, '## Outcome and boundaries'), 'Architectural choice coverage and ADR binding');
   requireHandoff(agreement, [/ordinary (?:implementation|delivery) approval alone does not establish architectural agreement/i,
-    /qualifying explicit `\/implement` invocation/i, /rule already effective before invocation/i,
+    /qualifying deliberate engineer-sent Implement request with the inspected physical approved Plan/i, /rule already effective before invocation/i,
     /exact Proposed preimage visibly bound/i, /actual authority and satisfied conditions/i,
     /no prior invocation is retroactive/i, /Invocation is distinct from persisted Accepted metadata/i,
     /separate guarded coordinator save and full readback/i], 'planTemplate',
@@ -732,7 +824,7 @@ function checkResearchCompleteHandoffs(source) {
     const text = key === 'discovery' ? discoverySource(source) : source[key] || '';
     if (text.split('\n').filter((line) => line === heading).length !== 1) return '';
     const body = section(text, heading);
-    return heading.startsWith('# ') ? body.split(/^## /m)[0] : body;
+    return heading.startsWith('# ') ? coordinatorBody(text, heading.slice(2).replace(/ coordinator$/, '')) : body;
   }
   function unit(key, heading, prefix, line = false) {
     const body = scope(key, heading);
@@ -805,11 +897,9 @@ function checkResearchCompleteHandoffs(source) {
         /never automatically restart/i, /retroactive blame/i, /veto manual invocation/i]],
     ['planTemplateApproach', 'planTemplate', '## Outcome and boundaries', '- **Approach:**', true,
       [...conversion, /actual selections separately from recommendations/i]],
-    ['planPromptConversion', 'planPrompt', '## Constraints', "- Check the Research conclusion's freshness", true, conversion],
     ['planResidual', 'plan', '# Plan coordinator', 'A completed Plan', false, residual],
     ['planningResidual', 'planning', '## Procedure', '5. Inspect relevant', true, residual],
     ['planningGapResidual', 'planning', '### Resolve material planning gaps', 'For any remaining material factual unknown', false, residual],
-    ['planPromptResidual', 'planPrompt', '## Constraints', '- A completed Plan', true, residual],
     ['planTemplateResidual', 'planTemplate', '## Detailed work items', '**Residual factual unknown (include only when a material fact remains):**', true,
       [...residual, /current evidence/i, /bounded check\/observation/i, /expected interpretation and allowed in-scope response/i,
         /affected Work Items\/effects and acceptance/i, /engineer-escalation condition/i, /independent work that can continue/i,
@@ -825,7 +915,6 @@ function checkResearchCompleteHandoffs(source) {
         /not automatically restart Research for an ordinary failed test/i, ...residual]],
     ['validation', 'validation', '## Scope and recovery', '- [ ] Apply an evidence-supported essential mechanism', true,
       [...execution, /supported mechanism tested/i, /why it reasonably remains/i, /bounded route alone does not justify accessible essential research left undone/i, /zero unknowns/i]],
-    ['implementPrompt', 'implementPrompt', '## Constraints', '- Apply the supported essential mechanism', true, execution],
     ['planningScan', 'planning', '## Procedure', 'For execution alignment scans,', true, scan],
     ['templateScan', 'planTemplate', '## Execution guidance and validation', '- **Execution alignment scans:**', true, scan],
     ['safeScan', 'safe', '## Procedure', 'For an execution alignment scan,', false,
@@ -928,38 +1017,48 @@ function checkResearchCompleteHandoffs(source) {
 }
 
 function checkImplementSignoffContract(source) {
-  const transition = source.core.split('\n').find((line) => line.startsWith('| Plan -> Implement |')) || '';
+  const transitions = uniqueCheckpointSection(source.core, '## Transitions and outcome authority').split('\n')
+    .filter((line) => line.startsWith('| Plan -> Implement |'));
+  const transition = transitions.length === 1 ? transitions[0] : '';
   requireADRRule(transition, [
-    /when that rule is already effective before the invocation/i,
+    /deliberate engineer-sent Implement request with the inspected physical approved Plan/i,
+    /when that rule is already effective before the request/i,
+    /Plan handoff identifies the exact Proposed ADR snapshot/i,
     /signs off only those snapshots/i,
     /no separate routine approval/i,
-    /`\/plan`[\s\S]*`\/review` do not sign off/i
+    /Plan or Review requests, answers, reports, workers and unsent prefills do not sign off/i
   ], 'Lifecycle core Plan-to-Implement transition must bind sign-off to effective policy and exact snapshots');
 
-  const effect = section(source.core, '### Prospective exact-ADR sign-off recording effect');
-  for (const [pattern, rule] of [
-    [/effective before the qualifying explicit `\/implement` invocation/i, 'effective-before-invocation guard'],
-    [/not retroactive sign-off/i, 'no-retroactive-sign-off guard'],
-    [/exact bound ADR path\/ID, identifiable decision section, substantive preimage version\/snapshot/i, 'exact binding identity'],
-    [/current `Proposed` state/i, 'Proposed preimage state'],
-    [/actual agreement evidence\/conditions and affected Work Items/i, 'agreement, conditions and affected work'],
-    [/only the Implement coordinator may record/i, 'coordinator-only recording authority'],
-    [/only `Status: Accepted`, the actual decision date, and actual agreement evidence/i, 'metadata-only update fields'],
-    [/naming the invocation, inspected Plan version and exact ADR preimage/i, 'actual agreement-evidence binding'],
-    [/Preserve the decision text, all other metadata, and accepted\/superseded history/i, 'decision and history preservation'],
-    [/identity, containment, absence of conflicting edits and effective permission/i, 'identity, containment, conflict and permission guards'],
-    [/save without overwriting concurrent changes and read back the complete postimage/i, 'non-overwrite and postimage readback'],
-    [/Assess multiple bound ADRs independently/i, 'per-record handling'],
-    [/do not claim `Accepted`/i, 'failure is not Accepted'],
-    [/hold only effects dependent on the unrecorded sign-off while continuing independent approved work/i, 'dependent-only hold'],
-    [/(?:A successful record is not rolled back because another record failed|Keep a successfully recorded ADR if another independent record fails)/i,
+  const effectSection = uniqueCheckpointSection(source.core, '### Prospective exact-ADR sign-off recording effect');
+  const effect = [
+    uniqueCheckpointUnit(effectSection, 'This Toolkit rule applies only'),
+    uniqueCheckpointUnit(effectSection, 'Only the Implement coordinator may record'),
+    uniqueCheckpointUnit(effectSection, 'Assess ')
+  ];
+  if (effect.some((owner) => !owner)) fail('Lifecycle core sign-off effect: missing or ambiguous normative owner', 'ADR-CONTRACT-001');
+  for (const [index, pattern, rule] of [
+    [0, /effective before the qualifying deliberate engineer-sent Implement request with the inspected physical approved Plan/i, 'effective-before-invocation guard'],
+    [0, /not retroactive sign-off/i, 'no-retroactive-sign-off guard'],
+    [0, /exact bound ADR path\/ID, identifiable decision section, substantive preimage version\/snapshot/i, 'exact binding identity'],
+    [0, /current `Proposed` state/i, 'Proposed preimage state'],
+    [0, /actual agreement evidence\/conditions and affected Work Items/i, 'agreement, conditions and affected work'],
+    [1, /only the Implement coordinator may record/i, 'coordinator-only recording authority'],
+    [1, /only `Status: Accepted`, the actual decision date, and actual agreement evidence/i, 'metadata-only update fields'],
+    [1, /naming the invocation, inspected Plan version and exact ADR preimage/i, 'actual agreement-evidence binding'],
+    [1, /Preserve the decision text, all other metadata, and accepted\/superseded history/i, 'decision and history preservation'],
+    [1, /identity, containment, absence of conflicting edits and effective permission/i, 'identity, containment, conflict and permission guards'],
+    [1, /save without overwriting concurrent changes and read back the complete postimage/i, 'non-overwrite and postimage readback'],
+    [2, /Assess multiple bound ADRs independently/i, 'per-record handling'],
+    [2, /do not claim `Accepted`/i, 'failure is not Accepted'],
+    [2, /hold only effects dependent on the unrecorded sign-off while continuing independent approved work/i, 'dependent-only hold'],
+    [2, /(?:A successful record is not rolled back because another record failed|Keep a successfully recorded ADR if another independent record fails)/i,
       'partial-success preservation'],
-    [/not general ADR authorship/i, 'no general ADR authorship']
-  ]) requireADRRule(effect, [pattern], `Lifecycle core sign-off effect: ${rule}`);
+    [2, /not general ADR authorship/i, 'no general ADR authorship']
+  ]) requireADRRule(effect[index], [pattern], `Lifecycle core sign-off effect: ${rule}`);
 
   const adrPhase = section(source.skill, '## Phase operation');
   requireADRRule(adrPhase, [
-    /only when the prospective sign-off rule[^.!?\n]*effective before[^.!?\n]*explicit `\/implement` invocation/i,
+    /only when the prospective sign-off rule[^.!?\n]*effective before[^.!?\n]*deliberate Implement request with the inspected physical approved Plan/i,
     /signs off only the exact Proposed snapshot/i,
     /prior invocation is not retroactive/i,
     /does not grant general ADR authorship/i
@@ -971,46 +1070,29 @@ function checkImplementSignoffContract(source) {
     /already effective before the qualifying invocation/i
   ], 'ADR Skill must separate sign-off recording from general ADR authorship');
   requireADRRule(source.template, [
-    /does not follow from Research acknowledgment, `\/plan`, an answer, report, worker, Script Runner, `send: false` prefill, `\/review`, or delivery acceptance/i,
-    /only the engineer's explicit `\/implement` invocation with the inspected approved Plan can sign off an exact Proposed ADR snapshot/i,
+    /does not follow from Research acknowledgment, a Plan or Review request, an answer, report, worker, Script Runner, role selection, skill, unsent prefill, or delivery acceptance/i,
+    /only the engineer's deliberate sent Implement request with the inspected physical approved Plan can sign off an exact Proposed ADR snapshot/i,
     /only when that prospective rule is already effective before the invocation/i,
     /status recording is a separate, narrow Implement-coordinator effect/i,
     /A prior invocation is not retroactive/i
   ], 'ADR template must distinguish exact sign-off, status persistence and non-sign-off events');
 
-  const planHandoff = parseFrontmatterText(source.plan, '.github/agents/plan.agent.md').blocks.handoffs.join('\n');
-  for (const [pattern, rule] of [
-    [/(?:each|every) bound ADR's exact path\/ID, section, substantive version\/snapshot/i, 'exact ADR identity, section and version'],
-    [/Proposed state, actual agreement evidence\/conditions and affected Work Items/i, 'Proposed state, agreement and affected work'],
-    [/explicit invocation with this inspected Plan is both bounded delivery authorization and sign-off only for those exact ADR preimages/i, 'dual-purpose exact-snapshot invocation'],
-    [/only if the prospective rule is already effective before invocation/i, 'effective-before-invocation condition'],
-    [/(?:no separate|no additional) routine approval is requested/i, 'no duplicate approval'],
-    [/`\/plan`, answers, reports, workers, Script Runner and `\/review` do not sign off/i, 'non-sign-off events'],
-    [/handoff is a manual prefill, not approval or invocation/i, 'manual handoff is not approval or invocation'],
-    [/(?:prior invocation is not retroactive|Never treat a prior invocation as retroactive|no earlier invocation is retroactive)/i, 'no retroactive sign-off']
-  ]) requireADRRule(planHandoff, [pattern], `Plan handoff: ${rule}`);
-  const planOwner = paragraph(coordinatorBody(source.plan, 'Plan'), 'At the manual `/implement` handoff');
+  const planOwner = paragraph(coordinatorBody(source.plan, 'Plan'), 'At the manual Implement handback');
   for (const [pattern, rule] of [
     [/exact ADR path\/ID, identifiable decision section, substantive version\/snapshot/i, 'exact identity, section and version'],
     [/current Proposed state, actual agreement evidence\/conditions and affected Work Items/i, 'state, agreement and affected work'],
-    [/explicit `\/implement` invocation with this inspected approved Plan is both delivery authorization and sign-off only for those exact ADR preimages/i, 'dual-purpose exact-snapshot invocation'],
+    [/engineer's deliberate request to Implement with this inspected approved Plan authorizes bounded delivery and signs off only those exact preimages/i, 'dual-purpose exact-snapshot invocation'],
     [/rule is already effective before invocation/i, 'effective-before-invocation condition'],
-    [/(?:no separate|do not request a duplicate) routine approval/i, 'no duplicate approval'],
+    [/(?:no duplicate|no separate|do not request a duplicate) routine approval/i, 'no duplicate approval'],
+    [/`\/plan`, answer, report, worker, Script Runner, unsent prefill or `\/review` is not sign-off/i, 'non-sign-off events'],
     [/prior invocation is not retroactive/i, 'no retroactive sign-off']
   ]) requireADRRule(planOwner, [pattern], `Plan coordinator handoff: ${rule}`);
-  requireADRRule(section(source.planPrompt, '## Constraints'), [
-    /enumerate each exact ADR path\/ID, section, substantive version\/snapshot, Proposed state/i,
-    /explicit `\/implement` invocation with this inspected Plan is both bounded delivery authorization and sign-off only for those preimages/i,
-    /rule is already effective before invocation/i,
-    /Do not request a duplicate routine approval/i,
-    /no earlier invocation is retroactive/i
-  ], 'Plan prompt must require exact ADR handoff and conditional sign-off');
 
   const implementOwner = paragraph(coordinatorBody(source.implement, 'Implement'), 'If the approved Plan binds an ADR');
   requireADRRule(implementOwner, [
     /exact associated path\/ID, section, substantive preimage version\/snapshot, Proposed state/i,
-    /only if the exact-snapshot sign-off rule was already effective before this engineer's explicit `\/implement` invocation/i,
-    /signs off only the visibly bound preimage/i,
+    /only if the applicable exact-snapshot sign-off rule was already effective before the engineer's qualifying Implement invocation/i,
+    /sign off the visibly bound preimage/i,
     /Implement coordinator alone may then record a separate metadata-only update/i,
     /`Status: Accepted`, actual decision date and actual agreement evidence/i,
     /preserve all decision text\/history/i,
@@ -1020,26 +1102,27 @@ function checkImplementSignoffContract(source) {
     /Assess each bound ADR separately/i,
     /Workers, Script Runner, Review and helpers receive no ADR authorship\/status authority/i
   ], 'Implement coordinator must bind exact sign-off and narrow recording guards');
-  requireADRRule(section(source.implementPrompt, '## Constraints'), [
-    /exact path\/ID, section, substantive Proposed preimage/i,
-    /only when the prospective rule was effective before this explicit `\/implement` invocation/i,
-    /Implement coordinator alone may perform the separate, guarded metadata-only Accepted\/date\/agreement-evidence update/i,
-    /A prior invocation is not retroactive/i,
-    /failure\/denial\/unverifiable state is not Accepted/i,
-    /Workers\/Runner\/Review\/helpers gain no ADR authorship, status or sign-off authority/i
-  ], 'Implement prompt must preserve exact-snapshot, bootstrap and no-bypass boundaries');
 
-  requireADRRule(source.safe, [
-    /Apply the prospective `\/implement` sign-off only if that rule was already effective before the engineer's explicit invocation/i,
-    /the invocation signs off only that snapshot/i,
+  const safeSignoffSection = uniqueCheckpointSection(source.safe, '## Procedure');
+  const safeSignoff = uniqueCheckpointUnit(safeSignoffSection, 'Apply the prospective Implement-request sign-off');
+  requireADRRule(safeSignoff, [
+    /Apply the prospective Implement-request sign-off only if that rule was already effective before the engineer's deliberate sent request with the inspected physical approved Plan/i,
+    /The request signs off only that snapshot/i,
     /only `Status: Accepted`, the actual decision date and actual agreement evidence/i,
     /A prior invocation or policy edit is not retroactive or self-activating/i,
     /do not claim `Accepted`/i,
     /Multiple ADR outcomes are per-record/i
   ], 'Safe implementation Skill must sequence and report the narrow sign-off effect');
-  const validationADR = source.validation.split('\n').find((line) => line.startsWith('- [ ] Apply exact-snapshot `\/implement` sign-off')) || '';
+  for (const [owner, text] of [['Lifecycle core sign-off effect', effectSection], ['Safe implementation sign-off', safeSignoffSection],
+    ['Implement coordinator', coordinatorBody(source.implement, 'Implement')]]) {
+    if (/(?:workers?|Script Runner|Review|helpers?) (?:may|can|should) (?:sign off|(?:write|update|record|edit) (?:an? )?(?:ADR|status))|(?:prior|earlier) (?:invocations?|requests?) (?:are|is|apply) retroactive(?:ly)?|(?:a )?(?:prior|earlier)[- ]policy (?:invocation|request) (?:signs off|authorizes|accepts)|(?:policy edits?|invocation) (?:automatically )?(?:self-upgrades?|proves? (?:persistence|acceptance))/i.test(text) ||
+      hasAffirmativeMatch(text, /\b(?:the )?Implement coordinator (?:may|can|should) (?:rewrite|edit|revise|change) (?:the )?ADR decision text/gi)) {
+      fail(`${owner}: contradictory sign-off authority`, 'ADR-CONTRACT-001');
+    }
+  }
+  const validationADR = source.validation.split('\n').find((line) => line.startsWith('- [ ] Apply exact-snapshot sign-off')) || '';
   requireADRRule(validationADR, [
-    /only if the rule was effective before this explicit invocation/i,
+    /only if the rule was effective before the engineer's deliberate sent Implement request with the inspected physical approved Plan/i,
     /exact Proposed preimage/i,
     /(?:only the )?Implement coordinator alone|only the Implement coordinator/i,
     /complete readback/i,
@@ -1056,51 +1139,84 @@ function checkImplementSignoffContract(source) {
     /failed\/denied\/conflicting\/unverifiable write is not Accepted/i
   ], 'Implementation report must distinguish sign-off invocation from per-record persistence');
 
-  const readmeSignoffSummary = paragraph(source.readme, 'Under the prospective exact-snapshot rule');
+  // Select the actual unique normative section and owner, never a matching
+  // paragraph from history, metadata or a different documentation owner.
+  function summaryOwner(text, heading, prefix, line = false) {
+    if (text.split('\n').filter((item) => item === heading).length !== 1) return '';
+    const body = section(text, heading);
+    const matches = (line ? body.split('\n') : body.split(/\n\s*\n/))
+      .filter((part) => part.trimStart().startsWith(prefix));
+    return matches.length === 1 ? matches[0] : '';
+  }
+  const readmeSignoffSummary = summaryOwner(source.readme, '### Complete upfront architectural coverage', 'Under the prospective exact-snapshot rule');
   requireADRRule(readmeSignoffSummary, [
-    /explicit `\/implement` invocation signs off only the exact Proposed ADR preimage/i,
-    /only if the rule was already effective before that invocation/i,
+    /deliberate Implement request with the inspected approved Plan signs off only the exact Proposed ADR preimages? visibly identified in its handoff/i,
+    /only if the rule was already effective before that (?:request|invocation)/i,
     /invocation alone is not proof of persistence/i,
-    /`\/plan`, answers, reports, workers, Script Runner, prefills and `\/review` are not ADR sign-off/i,
+    /Implement coordinator[^.!?\n]*separately record[^.!?\n]*guarded metadata/i,
+    /failed\/denied\/unverified writes are not `Accepted`/i,
+    /no policy edit self-upgrades a session or applies retroactively/i,
+    /Planning, answers, reports, workers, Script Runner, prefills and Review are not ADR sign-off/i,
     /Review remains source-read-only and records delivery acceptance only/i,
-    /authored sources do not establish Local or Agent Host runtime behavior/i
+    /assurance is advisory/i,
+    /authored sources do not establish runtime behavior/i
   ], 'README summary must present prospective sign-off, guarded persistence, read-only Review and runtime limits');
-  const wikiRpirSummary = paragraph(source.wikiRpir, 'When the prospective exact-snapshot rule');
+  const wikiRpirSummary = summaryOwner(source.wikiRpir, '## Complete upfront architectural coverage', 'When the prospective exact-snapshot rule');
   requireADRRule(wikiRpirSummary, [
-    /only the Proposed ADR preimage visibly identified in the inspected Plan handoff/i,
+    /deliberate Implement request with the inspected approved Plan[^.!?\n]*signs off only the Proposed ADR preimages? visibly identified in its handoff/i,
     /rule is already effective before/i,
-    /A prior invocation is not retroactive/i,
+    /policy edits do not self-upgrade the session and no invocation is retroactive/i,
+    /Implement coordinator's metadata recording is a separate guarded effect/i,
+    /report and physical ADR postimage must establish whether it persisted/i,
+    /Planning, answers, reports, workers, Script Runner, prefills and Review do not sign off/i,
     /Review independently compares actual invocation\/persistence evidence but remains source-read-only/i,
+    /clean Review is delivery acceptance, not ADR sign-off/i,
     /Stage Assurance only advises and receives no status-write authority/i,
-    /do not prove installed Local or Agent Host behavior/i
+    /do not prove installed behavior/i
   ], 'RPIR Wiki summary must distinguish sign-off, delivery Review and assurance authority');
-  const wikiAuthoritySummary = paragraph(source.wikiEvidence, 'The prospective ADR sign-off rule');
+  const wikiAuthoritySummary = summaryOwner(source.wikiEvidence, '### Architecture decision records are supplementary', 'The prospective ADR sign-off rule');
   requireADRRule(wikiAuthoritySummary, [
-    /only an explicit `\/implement` invocation with the inspected approved Plan/i,
+    /only a deliberate (?:engineer-sent )?Implement request with the inspected approved Plan/i,
     /when the rule was already effective/i,
+    /signs off the Proposed preimages visibly named in the handoff/i,
+    /Implement coordinator records any `Accepted`/i,
     /status\/date\/agreement evidence separately/i,
+    /preimage, authority\/condition, identity, containment, conflict and permission checks, non-overwriting save and complete readback/i,
     /report distinguishes invocation from each record's actual persistence outcome/i,
+    /failure or denial is not `Accepted`/i,
     /no prior invocation is retroactive/i,
+    /Plan or Review requests, answers, reports, workers, Script Runner and prefills are not sign-off/i,
     /Review is read-only and assesses delivery/i,
     /assurance remains advisory/i,
     /does not activate itself or prove installed runtime behavior/i
   ], 'Lifecycle evidence Wiki summary must state exact sign-off timing and evidence authority');
-  const catalogueSignoffSummary = source.wikiCatalogue.split('\n').find((line) =>
-    line.startsWith('| Prospective exact-snapshot ADR sign-off recording |')) || '';
+  const catalogueSignoffSummary = summaryOwner(source.wikiCatalogue, '### Skills', '| Apply lifecycle input, provenance, phase boundaries and exact-snapshot ADR recording |', true);
   requireADRRule(catalogueSignoffSummary, [
-    /only an explicit `\/implement` invocation with the inspected Plan signs off the exact visible Proposed preimage/i,
-    /when policy was effective beforehand/i,
-    /Implement coordinator records only guarded metadata/i,
-    /Review is source-read-only/i,
-    /assurance is advisory/i,
-    /No prior invocation is retroactive/i,
-    /does not self-activate or prove runtime behavior/i
+    /(?:(?:explicit `\/implement`|deliberate (?:engineer-sent )?Implement request) with the inspected Plan and exact visible Proposed preimage, effective before invocation|prospective rule was effective before invocation[^\n]*deliberate Implement request with the inspected approved Plan signs off only exact Proposed preimages visibly enumerated in its handoff)/i,
+    /(?:Implement coordinator records guarded metadata separately|Implement coordinator separately verifies each record's preimage, conditions, containment, conflict absence and permission before recording permitted metadata and reading back the complete postimage)/i,
+    /Review assesses invocation and persistence(?:, assurance advises)?/i,
+    /no prior invocation is retroactive/i
   ], 'Artifact catalogue must summarize the prospective sign-off capability accurately');
+  requireADRRule(summaryOwner(source.wikiCatalogue, '### Skills', '| Assess RPIR draft-stage assurance readiness', true), [
+    /without granting approval or vetoing invocation/i
+  ], 'Artifact catalogue must preserve advisory assurance');
+  const catalogueEntry = summaryOwner(source.wikiCatalogue, '### Prompt files', 'No prompt files are contributed.');
+  requireADRRule(catalogueEntry, [
+    /prospective native route selects the intended receiving agent and deliberately sends a request with the inspected physical predecessor/i,
+    /no fixed wording or slash dependency/i,
+    /prefilled suggestion is not a sign-off or automatic submission/i,
+    /(?:current lifecycle policy governs bootstrap|policy effective at invocation governs any earlier required bootstrap route)/i
+  ], 'Artifact catalogue must describe the prospective natural-language entry and bootstrap');
+  for (const [owner, text] of Object.entries({ readmeSignoffSummary, wikiRpirSummary, wikiAuthoritySummary, catalogueSignoffSummary, catalogueEntry })) {
+    if (/(?:any|every) (?:Implement |implementation )?(?:request|invocation) (?:signs off|accepts) (?:all |every )?(?:ADRs?|preimages?)|(?:Review|workers?|Script Runner|assurance) (?:may|can) (?:sign off|write ADR status)|(?:invocation|request) alone (?:proves|establishes) (?:persistence|Accepted)|(?<!no )\b(?:prior|earlier) invocations? (?:are|is|apply) retroactive(?:ly)?|(?:a )?(?:slash command|fixed wording) is (?:always )?required/i.test(text)) {
+      fail(`${owner}: contradictory documentation sign-off rule`, 'ADR-CONTRACT-001');
+    }
+  }
 
   for (const [owner, text] of [
     ['repository policy', source.repository], ['lifecycle instruction', source.lifecycleInstruction]
   ]) for (const [pattern, rule] of [
-    [/explicit `\/implement` invocation/i, 'explicit invocation event'],
+    [/deliberate (?:engineer-sent )?Implement request/i, 'explicit invocation event'],
     [/exact Proposed ADR/i, 'exact Proposed binding'],
     [/already effective before/i, 'effective-before-invocation condition'],
     [/(?:only the )?Implement coordinator(?: alone)?/i, 'single coordinator recording authority'],
@@ -1139,8 +1255,7 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
     assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
     readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md',
     wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md',
-    wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', planPrompt: '.github/skills/plan/SKILL.md',
-    implementPrompt: '.github/skills/implement/SKILL.md'
+    wikiCatalogue: 'docs/Wiki/artifact-catalogue.md'
   };
   const source = Object.fromEntries(Object.entries(paths).map(([key, relative]) => [key,
     key === 'discovery' ? discoverySource(sources) : sources[key] ?? readText(relative)]));
@@ -1358,7 +1473,7 @@ function rejectDuplicateGrant(text, owner) {
 }
 
 function requireOrderedLoop(text, start, markerRule, diagnostic) {
-  const loop = text.split('\n').find((line) => line.startsWith(start))?.split('. ')[0] || '';
+  const loop = uniqueCheckpointUnit(text, start, true).split('. ')[0] || '';
   requireExecutionRule(loop, [new RegExp([
     'inspect[^→]+→', '(?:make|perform)[^→]+→', 'determine newly supported Step/Task outcomes[^→]+→',
     'inspect the actual Plan preimage[^→]*→', markerRule, '→ handle checkpoint disposition → select the next unit'
@@ -1373,14 +1488,145 @@ function requireCheckpointRule(text, patterns, owner, rule) {
   }
 }
 
+// Fail closed on duplicate normative headings or units; history and metadata
+// cannot replace the actual checkpoint owner.
+function uniqueCheckpointSection(text, heading) {
+  return text.split('\n').filter((line) => line === heading).length === 1 ? section(text, heading) : '';
+}
+
+function uniqueCheckpointUnit(text, prefix, line = false) {
+  const matches = (line ? text.split('\n') : text.split(/\n\s*\n/))
+    .filter((part) => part.trimStart().startsWith(prefix));
+  return matches.length === 1 ? matches[0] : '';
+}
+
+// Exact authored candidate shapes, not a VS Code glob/attachment evaluator.
+function checkLifecycleCandidatePatterns(instruction) {
+  const values = parseFrontmatterText(instruction, 'lifecycle-records.instructions.md').values;
+  const suffixes = ['research-brief', 'implementation-plan', 'implementation-report', 'review-report'];
+  const record = '[0-9][0-9][0-9]-';
+  const expected = suffixes.flatMap((suffix) => [
+    `docs/planning/**/${record}${suffix}.md`,
+    `docs/delivery/**/${record}${suffix}.md`,
+    `**/copilot/${record}[a-z0-9]*/${record}${suffix}.md`
+  ]);
+  const actual = typeof values.applyTo === 'string' ? values.applyTo.split(',').map((item) => item.trim()) : [];
+  if (actual.length !== expected.length || new Set(actual).size !== expected.length ||
+      actual.some((pattern) => !expected.includes(pattern))) {
+    fail('Lifecycle instruction must declare exactly the twelve authored candidate patterns', 'RPIR-RECORD-001');
+  }
+  return true;
+}
+
+// Assert the unique general record owner, separately from Research setup and
+// ADR allocation. This is a bounded authored-text check, not an allocator.
+function checkPhysicalRecordContract(core) {
+  const allocation = uniqueCheckpointSection(core, '## Contain allocation and effects');
+  const record = uniqueCheckpointUnit(allocation, 'For each numbered record,');
+  requireExecutionRule(record, [
+    /inspect existing files of its exact artifact suffix in the verified topic/i,
+    /choose `001` when none exists or one greater than the (?:highest|maximum) valid three-digit prefix/i,
+    /save only an absent exact candidate with actual containment and effective permission/i,
+    /On a collision, re-read the inventory and select an absent next number in that same verified topic if identity and ownership remain clear; otherwise resolve ambiguity/i,
+    /Read back the saved physical file to verify identity, intended content and direct same-folder links/i,
+    /unsuccessful save or unreadable\/mismatched result is not persisted evidence/i,
+    /real platform denial is a stop, not an invitation to use another route/i,
+    /Do not require double inventories[^.!?\n]*standalone terminal\/reparse or ACL probes/i,
+    /inconclusive actual containment still refuses the affected write/i
+  ], 'Lifecycle core numbered record allocation owner must preserve allocation, collision, lineage and effect safeguards');
+  const lineage = uniqueCheckpointUnit(uniqueCheckpointSection(core, '## Preserve physical lineage and historical evidence'),
+    'Every canonical phase predecessor and output');
+  requireExecutionRule(lineage, [
+    /real, contained, numbered physical Markdown record in the verified Research lifecycle folder/i,
+    /accessible direct same-folder links to the expected-kind predecessor/i,
+    /Verify the Research -> Plan -> implementation report -> Review chain as applicable/i
+  ], 'Lifecycle core physical record lineage owner must preserve contained direct predecessor links');
+  const contradictions = /\b(?:overwrite|replace) (?:an? |the )?(?:existing|colliding) (?:record|file|candidate)|\b(?:reuse|overwrite) (?:the |a )?colliding (?:record|file|candidate)|\b(?:switch|relocate) (?:to )?(?:another|a different) (?:topic|folder) (?:after|on) (?:a )?collision|\b(?:skip|omit) (?:the )?(?:collision )?(?:inventory|readback|containment|permission|lineage)(?: check)?|\b(?:treat|claim) (?:a )?(?:failed|denied|unreadable|mismatched) (?:save|record|result) as persisted|\b(?:bypass|evade) (?:a |the )?(?:real )?(?:platform )?denial|\b(?:use|try) another route (?:after|upon) (?:a |the )?(?:platform )?denial|\b(?:require|mandate) (?:a )?(?:standalone terminal|double inventor(?:y|ies)|ACL probe)/gi;
+  const affirmative = [...allocation.matchAll(contradictions)].some((match) => {
+    const before = allocation.slice(0, match.index);
+    return !/\b(?:do not|never)\s*$/i.test(before) &&
+      !/\bdo not substitute[^.!?\n]* or\s*$/i.test(before);
+  });
+  if (affirmative) {
+    fail('Lifecycle core has a contradictory numbered record safeguard', 'RPIR-EXECUTION-CONTRACT-001');
+  }
+  return true;
+}
+
+// These checks assert bounded authored passages, not runtime input validation
+// or evidence that a directory operation is actually available.
+function checkNativeLifecycleInputsAndSetup(source) {
+  const input = uniqueCheckpointSection(source.core, '## Inspect and bind one actual document');
+  const binding = uniqueCheckpointUnit(input, 'At each handoff bind one evidence envelope');
+  const local = uniqueCheckpointUnit(input, 'For local paths, validate the raw alias');
+  const transition = uniqueCheckpointSection(source.core, '## Transitions and outcome authority');
+  const entry = uniqueCheckpointUnit(transition, 'Prospectively, the engineer selects');
+  requireExecutionRule(binding, [/document kind/i, /subject\/lifecycle identity/i, /actual inspected substantive version/i,
+    /direct source lineage/i, /recheck freshness before dependent effects/i,
+    /Verify kind, subject, version, direct ancestry, freshness, and relationships/i,
+    /versions conflict or identity\/evidence is insufficient[^.!?\n]*clarify identity before any transition or dependent effect/i],
+  'Lifecycle core physical input owner must verify kind, identity, version, freshness and conflict');
+  requireExecutionRule(local, [/workspace-contained absolute paths/i, /unapproved external paths/i,
+    /lexical and resolved workspace containment/i, /contained non-numbered local document[^.!?\n]*not an eligible canonical phase predecessor/i],
+  'Lifecycle core physical input owner must reject wrong-root and noncanonical inputs');
+  requireExecutionRule(entry, [/(?:establish|verify) the actual executing role/i, /receiving coordinator independently inspects/i,
+    /Picker selection[^.!?\n]*unsent prefill alone is not a request or approval/i,
+    /do not infer the executing role from a picker or prefill/i, /Clarify ambiguous role, intent or input/i],
+  'Lifecycle core must inspect actual role and reject picker or prefill approval');
+  if (/(?:wrong[- ]kind|wrong[- ]root|stale|conflicting) (?:input|predecessor|record)s? (?:may|can|does|do) (?:approve|authorize|transition|proceed)|(?:picker|prefill) (?:is|constitutes|approves) (?:an? )?(?:request|approval|transition)|(?:infer|determine) (?:the )?executing role from (?:the )?(?:picker|prefill)/i.test(`${input}\n${transition}`)) {
+    fail('Lifecycle core has a contradictory physical input or role rule', 'RPIR-EXECUTION-CONTRACT-001');
+  }
+
+  const researchBody = uniqueCheckpointSection(source.researchAgent, '# Research coordinator');
+  const dispatch = uniqueCheckpointSection(researchBody, '## Native entry and specialist dispatch');
+  const setup = {
+    research: uniqueCheckpointUnit(dispatch, 'Inspect and reuse each safe selected documentation root'),
+    core: uniqueCheckpointUnit(uniqueCheckpointSection(source.core, '## Contain allocation and effects'), 'For each missing selected documentation root'),
+    method: uniqueCheckpointUnit(uniqueCheckpointSection(source.researchSkill, '## Limits'), 'When this method supports the Research coordinator')
+  };
+  const common = [/reuse[^.!?\n]*safe[^.!?\n]*(?:director|root)/i,
+    /(?:each|every)[^.!?\n]*(?:selected )?(?:missing )?(?:documentation )?root[^.!?\n]*direct `copilot\/?` parent[^.!?\n]*(?:numbered )?topic/i,
+    /(?:(?:separately|one (?:selected|chosen) directory at a time)[^.!?\n]*(?:dedicated directory operation|dedicated create-directory operation|directory operation)|(?:dedicated directory operation|dedicated create-directory operation)[^.!?\n]*one (?:selected|chosen) directory at a time)/i,
+    /inspect(?:ing)? (?:each |its )?result/i, /(?:brief[^.!?\n]*(?:save|readback)|save\/read back the brief)/i,
+    /(?:terminal)[^.!?\n]*(?:Runner|Script Runner)[^.!?\n]*implicit/i,
+    /manual setup is recovery, not an automat(?:ic-setup|ion) pass/i];
+  for (const [owner, text] of Object.entries(setup)) {
+    requireExecutionRule(text, [...common, /(?:unavailable|missing operation)/i, /deni(?:al|ed)/i],
+      `${owner}: missing or ambiguous guarded Research directory owner`);
+    if (owner !== 'method') requireExecutionRule(text, [/identity/i, /containment/i, /absence[^.!?\n]*collision/i, /permission/i],
+      `${owner}: missing or ambiguous guarded Research directory owner`);
+    if (owner === 'method') requireExecutionRule(text, [/collisions/i, /containment or permission uncertainty/i, /failed or unverifiable saves/i],
+      `${owner}: missing or ambiguous guarded Research directory owner`);
+  }
+  for (const [owner, patterns] of Object.entries({
+    research: [/after checking identity, containment, absence\/collision and permission[^.!?\n]*inspect each result/i,
+      /operation is unavailable or denied[^.!?\n]*report and stop the dependent effect/i, /brief save and full readback/i,
+      /Never substitute terminal, Runner, implicit file-save parents or another location/i],
+    core: [/independently establish identity, containment, absence including collisions and effective permission[^.!?\n]*attempt that directory operation[^.!?\n]*inspect its result/i,
+      /brief's identity, containment, absence\/collision and permission[^.!?\n]*read back its complete physical content and links/i,
+      /Report a missing operation, ambiguous identity, collision, conflict, failed or denied creation\/save, or unverifiable result/i,
+      /Do not substitute terminal commands, Script Runner directory authorship or implicit file-save parent creation, or bypass a real denial/i,
+      /Recursive operation capability is not authority to create implicit or unselected parents/i],
+    method: [/Report unavailable operations, collisions, containment or permission uncertainty, denial and failed or unverifiable saves/i,
+      /do not substitute terminal, Script Runner or implicit-parent file creation/i]
+  })) requireExecutionRule(setup[owner], patterns, `${owner}: missing or ambiguous guarded Research directory owner`);
+  for (const [owner, text] of Object.entries({ research: dispatch, core: uniqueCheckpointSection(source.core, '## Contain allocation and effects'),
+    method: uniqueCheckpointSection(source.researchSkill, '## Limits') })) {
+    if (/(?:Research|Script Runner|Runner) (?:may|can|should) (?:create|author|write) (?:directories|folders|parents)|(?:use|substitute) (?:a )?(?:terminal|shell|Runner|implicit[- ]parent)[^.!?\n]*(?:instead|to create|for (?:directory|folder|setup))|implicit (?:file-save )?parents? (?:may|can|should) be created|(?:manual setup|manual recovery) (?:is|counts as) (?:an? )?(?:automatic|automation) (?:setup )?pass/i.test(text) ||
+      hasAffirmativeMatch(text, /\b(?:ignore|bypass) (?:a |the )?(?:collision|containment|denial)\b/gi)) {
+      fail(`${owner}: contradictory Research directory safeguard`, 'RPIR-EXECUTION-CONTRACT-001');
+    }
+  }
+}
+
 function checkExpectedCheckpointPlanning(source) {
   const planningOwners = {
-    repository: paragraph(section(source.repository, '## Lifecycle authority and transitions'), '- **Expected checkpoint planning, conditional execution:**'),
-    core: paragraph(section(source.core, '## Conditional local Git checkpoints'), 'Every prospective Plan'),
-    planAgent: paragraph(coordinatorBody(source.planAgent, 'Plan'), 'Plan the deliverable'),
-    planning: paragraph(section(source.planning, '## Procedure'), 'Specify the approved outcome'),
-    checkpointSkill: paragraph(source.checkpointSkill, 'Every prospective Plan'),
-    checklist: section(source.checklist, '## Prospective Plan coverage')
+    repository: uniqueCheckpointUnit(uniqueCheckpointSection(source.repository, '## Lifecycle authority and transitions'), '- **Expected checkpoint planning, conditional execution:**'),
+    core: uniqueCheckpointUnit(uniqueCheckpointSection(source.core, '## Conditional local Git checkpoints'), 'Every prospective Plan'),
+    planAgent: uniqueCheckpointUnit(coordinatorBody(source.planAgent, 'Plan'), 'Plan the deliverable'),
+    planning: uniqueCheckpointUnit(uniqueCheckpointSection(source.planning, '### Resolve material planning gaps'), 'Specify the approved outcome'),
+    checkpointSkill: uniqueCheckpointUnit(uniqueCheckpointSection(source.checkpointSkill, '# Local Git checkpoints').split(/^## /m)[0], 'Every prospective Plan'),
+    checklist: uniqueCheckpointSection(source.checklist, '## Prospective Plan coverage')
   };
   const exceptionFields = [
     /actual constraint\/reason/i, /affected IDs/i, /validation\/dependency consequence/i,
@@ -1398,18 +1644,18 @@ function checkExpectedCheckpointPlanning(source) {
     ], owner, 'require bounded prospective planning and meaningful per-item exceptions without granting Git authority');
   }
 
-  const templateStrategy = field(section(source.planTemplate, '## Outcome and boundaries'), 'Local Git checkpoint strategy');
+  const templateStrategy = uniqueCheckpointUnit(uniqueCheckpointSection(source.planTemplate, '## Outcome and boundaries'), '- **Local Git checkpoint strategy:**', true);
   requireCheckpointRule(templateStrategy, [
     /Every prospective Plan must state one explicit bounded/i,
     /stable reference/i, /Each detailed item needs the commit-plan entry/i
   ], 'planTemplate', 'require one strategy and an entry for every detailed item');
-  const details = section(source.planTemplate, '## Detailed work items');
+  const details = uniqueCheckpointSection(source.planTemplate, '## Detailed work items');
   const items = details.split(/^### Work Item /m).slice(1);
   requireCheckpointRule(details, [/Add a matching `### Work Item N` section for each register row/],
     'planTemplate', 'keep register and detailed item identities aligned');
   if (!items.length) fail('planTemplate: missing detailed checkpoint entry', 'RPIR-CHECKPOINT-001');
   for (const item of items) {
-    const entry = item.split('\n').find((line) => line.startsWith('**Commit plan:**')) || '';
+    const entry = uniqueCheckpointUnit(item, '**Commit plan:**', true);
     requireCheckpointRule(entry, [
       /strategy reference/i, /normal post-validation checkpoint boundary/i,
       /coherent content(?: and |\/)purpose/i, /specific justified combination\/deferral\/no-commit exception/i,
@@ -1418,20 +1664,18 @@ function checkExpectedCheckpointPlanning(source) {
   }
 
   const accountingOwners = {
-    core: paragraph(section(source.core, '## Conditional local Git checkpoints'), 'Every prospective Plan'),
-    checkpointSkill: paragraph(source.checkpointSkill, 'Coordinators propose'),
-    checklist: paragraph(section(source.checklist, '## 6. Report evidence without lifecycle claims'), 'At every expected boundary'),
-    implementAgent: paragraph(coordinatorBody(source.implementAgent, 'Implement'), 'Reconcile the inspected Plan'),
-    safe: section(source.safe, '## Execution, validation and record evidence'),
-    validationChecklist: section(source.validationChecklist, '## Evidence, records and independent review').split('\n')
-      .find((line) => line.startsWith('- [ ] Reconcile planned versus actual')) || '',
-    implementationReport: field(section(source.implementationReport, '## Execution and review evidence'), 'Planned-versus-actual checkpoint accounting'),
-    reviewAgent: paragraph(coordinatorBody(source.reviewAgent, 'Review'), 'Assess checkpoint planning'),
-    codeReview: section(source.codeReview, '### Checkpoint planning and boundary assessment'),
-    reviewTemplate: field(section(source.reviewTemplate, '## Disposition and comparison'), 'Planned-versus-actual boundary assessment'),
-    assuranceSkill: section(source.assuranceSkill, '### Checkpoint coverage and accounting'),
-    assurance: section(source.assurance, '## Delivery and material boundaries').split('\n')
-      .find((line) => line.startsWith('- [ ] Implement/Review compare')) || ''
+    core: uniqueCheckpointUnit(uniqueCheckpointSection(source.core, '## Conditional local Git checkpoints'), 'Every prospective Plan'),
+    checkpointSkill: uniqueCheckpointUnit(uniqueCheckpointSection(source.checkpointSkill, '# Local Git checkpoints').split(/^## /m)[0], 'Coordinators propose'),
+    checklist: uniqueCheckpointUnit(uniqueCheckpointSection(source.checklist, '## 6. Report evidence without lifecycle claims'), 'At every expected boundary'),
+    implementAgent: uniqueCheckpointUnit(coordinatorBody(source.implementAgent, 'Implement'), 'Reconcile the inspected Plan'),
+    safe: uniqueCheckpointSection(source.safe, '## Execution, validation and record evidence'),
+    validationChecklist: uniqueCheckpointUnit(uniqueCheckpointSection(source.validationChecklist, '## Evidence, records and independent review'), '- [ ] Reconcile planned versus actual', true),
+    implementationReport: uniqueCheckpointUnit(uniqueCheckpointSection(source.implementationReport, '## Execution and review evidence'), '- **Planned-versus-actual checkpoint accounting:**', true),
+    reviewAgent: uniqueCheckpointUnit(coordinatorBody(source.reviewAgent, 'Review'), 'Assess checkpoint planning'),
+    codeReview: uniqueCheckpointSection(source.codeReview, '### Checkpoint planning and boundary assessment'),
+    reviewTemplate: uniqueCheckpointUnit(uniqueCheckpointSection(source.reviewTemplate, '## Disposition and comparison'), '- **Planned-versus-actual boundary assessment:**', true),
+    assuranceSkill: uniqueCheckpointSection(source.assuranceSkill, '### Checkpoint coverage and accounting'),
+    assurance: uniqueCheckpointUnit(uniqueCheckpointSection(source.assurance, '## Delivery and material boundaries'), '- [ ] Implement/Review compare', true)
   };
   for (const [owner, text] of Object.entries(accountingOwners)) {
     requireCheckpointRule(text, [
@@ -1450,12 +1694,12 @@ function checkExpectedCheckpointPlanning(source) {
   }
 
   const runtimeOwners = {
-    preflight: paragraph(section(source.checklist, '## Prospective Plan coverage'), 'Before every Git command,'),
-    applicability: section(source.checklist, '## 1. Decide whether a checkpoint applies'),
-    authorization: section(source.checklist, '## 3. Bind authorization to the approved Plan'),
-    candidate: section(source.checklist, '## 4. Inspect and preserve the candidate'),
-    reconciliation: section(source.checklist, '## 5. Append and reconcile; never assume success'),
-    evidence: section(source.checklist, '## 6. Report evidence without lifecycle claims')
+    preflight: uniqueCheckpointUnit(uniqueCheckpointSection(source.checklist, '## Prospective Plan coverage'), 'Before every Git command,'),
+    applicability: uniqueCheckpointSection(source.checklist, '## 1. Decide whether a checkpoint applies'),
+    authorization: uniqueCheckpointSection(source.checklist, '## 3. Bind authorization to the approved Plan'),
+    candidate: uniqueCheckpointSection(source.checklist, '## 4. Inspect and preserve the candidate'),
+    reconciliation: uniqueCheckpointSection(source.checklist, '## 5. Append and reconcile; never assume success'),
+    evidence: uniqueCheckpointSection(source.checklist, '## 6. Report evidence without lifecycle claims')
   };
   for (const [owner, patterns] of Object.entries({
     preflight: [/incidental index refresh\/cache writes/i, /Unknown, changed or incompatible consequential effects stop that command before execution/i],
@@ -1479,12 +1723,12 @@ function checkExpectedCheckpointPlanning(source) {
   })) requireCheckpointRule(runtimeOwners[owner], patterns, `checklist ${owner}`, 'preserve effect-specific runtime safeguards and honest dispositions');
 
   const userOwners = {
-    readme: section(source.readme, '### Expected checkpoint planning; conditional execution'),
-    wikiRpir: section(source.wikiRpir, '## Expected checkpoint planning; conditional execution'),
-    wikiEvidence: section(source.wikiEvidence, '### Expected checkpoint planning; conditional execution'),
-    wikiCatalogue: section(source.wikiCatalogue, '### Skills').split('\n')
-      .find((line) => line.includes('](../../.github/skills/local-git-checkpoints/SKILL.md)')) || '',
-    wikiMaintenance: section(source.wikiMaintenance, '### Diagnose and validate without packaging')
+    readme: uniqueCheckpointSection(source.readme, '### Expected checkpoint planning; conditional execution'),
+    wikiRpir: uniqueCheckpointSection(source.wikiRpir, '## Expected checkpoint planning; conditional execution'),
+    wikiEvidence: uniqueCheckpointSection(source.wikiEvidence, '### Expected checkpoint planning; conditional execution'),
+    wikiCatalogue: uniqueCheckpointUnit(uniqueCheckpointSection(source.wikiCatalogue, '### Skills'),
+      '| Every prospective Plan requires one explicit bounded strategy;', true),
+    wikiMaintenance: uniqueCheckpointSection(source.wikiMaintenance, '### Diagnose and validate without packaging')
   };
   for (const [owner, text] of Object.entries(userOwners)) {
     requireCheckpointRule(text, [
@@ -1496,14 +1740,12 @@ function checkExpectedCheckpointPlanning(source) {
       /static[^.!?\n]*(?:not|cannot|do not)[^.!?\n]*(?:runtime|semantic)/i
     ], owner, 'align required planning, conditional accounting and static/runtime limits');
   }
+  requireCheckpointRule(userOwners.wikiCatalogue, [/\]\(\.\.\/\.\.\/\.github\/skills\/local-git-checkpoints\/SKILL\.md\)/i],
+    'wikiCatalogue', 'checkpoint catalogue row must identify the actual capability');
   const summaries = {
-    planPrompt: section(source.planPrompt, '## Constraints'),
-    implementPrompt: section(source.implementPrompt, '## Constraints'),
-    remediatePrompt: section(source.remediatePrompt, '## Constraints'),
-    reviewPrompt: section(source.reviewPrompt, '## Constraints'),
-    lifecycleInstruction: section(source.lifecycleInstruction, '## Stage schemas')
+    lifecycleInstruction: uniqueCheckpointSection(source.lifecycleInstruction, '## Stage schemas')
   };
-  for (const owner of ['planPrompt', 'lifecycleInstruction']) {
+  for (const owner of ['lifecycleInstruction']) {
     requireCheckpointRule(summaries[owner], [
       /every prospective Plan[^.!?\n]*explicit bounded/i,
       /(?:each|every) detailed Work Item[^.!?\n]*strategy(?:-referenced| reference)/i,
@@ -1511,7 +1753,7 @@ function checkExpectedCheckpointPlanning(source) {
       /historical/i, /no Git authority/i
     ], owner, 'summarize required strategy, per-item exceptions and prohibition compatibility');
   }
-  for (const owner of ['implementPrompt', 'remediatePrompt', 'reviewPrompt', 'lifecycleInstruction']) {
+  for (const owner of ['lifecycleInstruction']) {
     requireCheckpointRule(summaries[owner], [
       /planned(?: versus |-|‑)actual|planned-versus-actual|every planned boundary/i,
       /every expected (?:correction )?boundary|every planned boundary/i,
@@ -1534,10 +1776,10 @@ function checkExpectedCheckpointPlanning(source) {
     implementationReport: section(source.implementationReport, '## Execution and review evidence'),
     reviewTemplate: section(source.reviewTemplate, '## Disposition and comparison'),
     assurance: section(source.assurance, '## Delivery and material boundaries'),
-    wikiCatalogue: section(source.wikiCatalogue, '### Skills'),
+    wikiCatalogue: uniqueCheckpointSection(source.wikiCatalogue, '### Skills'),
     repository: section(source.repository, '## Lifecycle authority and transitions'),
     core: section(source.core, '## Conditional local Git checkpoints'),
-    checkpointSkill: source.checkpointSkill.split('\n# Local Git checkpoints\n')[1] || ''
+    checkpointSkill: uniqueCheckpointSection(source.checkpointSkill, '# Local Git checkpoints').split(/^## /m)[0]
   };
   for (const [owner, text] of Object.entries(scopes)) {
     if (/(?:checkpoint|commit|Git) (?:planning|strategy|plans?) (?:is|are|remains?) optional|(?:only when|if) (?:local )?commits are intended|(?:Work Items? may|may) omit (?:the |a )?(?:commit|checkpoint)[^.!?\n]*entry|generic (?:blanket )?(?:exception|prohibition) (?:is sufficient|satisfies)|(?:historical )?prohibitions? (?:may be ignored|grants? Git authority)/i.test(text)) {
@@ -1560,36 +1802,57 @@ function checkIncrementalRpirContract(sources = {}) {
     implementationReport: '.github/skills/safe-implementation/implementation-report-template.md',
     reviewTemplate: '.github/skills/code-review/review-report-template.md',
     assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
+    researchSkill: '.github/skills/codebase-research/SKILL.md',
     planAgent: '.github/agents/plan.agent.md', checkpointSkill: '.github/skills/local-git-checkpoints/SKILL.md',
     codeReview: '.github/skills/code-review/SKILL.md', assuranceSkill: '.github/skills/rpir-stage-assurance/SKILL.md',
-    planPrompt: '.github/skills/plan/SKILL.md', implementPrompt: '.github/skills/implement/SKILL.md',
-    remediatePrompt: '.github/skills/remediate-review/SKILL.md', reviewPrompt: '.github/skills/review/SKILL.md',
     lifecycleInstruction: '.github/instructions/lifecycle-records.instructions.md',
     readme: 'README.md', wikiRpir: 'docs/Wiki/rpir.md', wikiEvidence: 'docs/Wiki/lifecycle-evidence-and-authority.md',
     wikiCatalogue: 'docs/Wiki/artifact-catalogue.md', wikiMaintenance: 'docs/Wiki/maintain-the-toolkit.md'
   };
   const source = Object.fromEntries(Object.entries(paths).map(([key, relative]) => [key, sources[key] ?? readText(relative)]));
 
-  const commandEntry = source.repository.match(/^- \*\*Goal-directed Script Runner:\*\*[^\n]*/m)?.[0] || '';
+  const transitions = uniqueCheckpointSection(source.core, '## Transitions and outcome authority');
+  const nativeTransition = uniqueCheckpointUnit(transitions, 'Prospectively, the engineer selects');
+  requireExecutionRule(nativeTransition, [
+    /selects the intended receiving custom agent/i, /deliberately sends a request for that stage with the actual physical predecessor/i,
+    /receiving coordinator independently inspects/i, /No fixed wording, slash command or entry skill is required/i,
+    /(?:Picker selection|picker)[^.!?\n]*not a request or approval/i
+  ], 'Lifecycle core must retain the prospective receiving-role transition');
+  requireExecutionRule(uniqueCheckpointUnit(transitions, 'This contract is prospective:'), [
+    /policy actually effective in the session at invocation/i, /earlier required entry route/i,
+    /does not self-upgrade a session or make an earlier request retroactive/i
+  ], 'Lifecycle core must retain the effective-policy transition and bootstrap');
+  requireExecutionRule(uniqueCheckpointUnit(transitions, '| Plan -> Implement |', true), [
+    /deliberate engineer-sent Implement request with the inspected physical approved Plan authorizes its bounded outcome/i
+  ], 'Lifecycle core must bind implementation authority to the inspected Plan and receiving request');
+  if (/(?:^|[.!?]\s+)(?:a )?(?:(?:slash command|fixed wording|entry skill) is (?:always )?required|(?:picker|role|skill) selection (?:is|constitutes) (?:a )?(?:request|approval|invocation)|policy edits? (?:automatically )?self-upgrades? (?:a |the )?(?:loaded )?session)/i.test(transitions)) {
+    fail('Lifecycle core has a contradictory receiving-role transition', 'RPIR-EXECUTION-CONTRACT-001');
+  }
+
+  checkNativeLifecycleInputsAndSetup(source);
+  checkPhysicalRecordContract(source.core);
+  checkLifecycleCandidatePatterns(source.lifecycleInstruction);
+
+  const commandEntry = uniqueCheckpointUnit(uniqueCheckpointSection(source.repository, '## Command execution entry'), '- **Goal-directed Script Runner:**', true);
   requireExecutionRule(commandEntry, [/or an explicit bounded phase-record grant/i,
     /not duplicate approval for unchanged Plan-covered effects/i, /same runtime safeguards/i],
   'Repository command entry must preserve separately bounded phase-record checkpoints');
 
-  const policyCheckpoint = source.repository.match(/^- \*\*Conditional local Git checkpoints:\*\*[^\n]*/m)?.[0] || '';
+  const policyCheckpoint = uniqueCheckpointUnit(uniqueCheckpointSection(source.repository, '## Lifecycle authority and transitions'), '- **Conditional local Git checkpoints:**', true);
   requireExecutionRule(policyCheckpoint, [
     /explicit approval of an inspected Plan/i, /bounded local staging\/append-only commit strategy/i,
-    /after `\/implement`/i, /No separate grant exchange is required/i,
+    /after the qualifying Implement transition/i, /No separate grant exchange is required/i,
     /current loaded session cannot self-upgrade/i, /effective permission/i
   ], 'Repository policy must bind covered Git authority to Plan approval, phase transition and current-session limits');
 
-  const coreCheckpoint = between(source.core, '## Conditional local Git checkpoints', '\n## Preserve physical lineage');
+  const coreCheckpoint = uniqueCheckpointSection(source.core, '## Conditional local Git checkpoints');
   requireExecutionRule(coreCheckpoint, [
     /explicit approval of an inspected Plan/i, /no separate grant exchange is required/i,
-    /after `\/implement`/i, /silent, prohibiting or unapproved-option Plan/i,
+    /after the qualifying Implement transition/i, /silent, prohibiting or unapproved-option Plan/i,
     /editing these rules does not self-upgrade/i, /staged-snapshot validation/i, /effective permission/i
   ], 'Lifecycle core checkpoint authority lacks Plan binding, phase, negative or runtime safeguards');
 
-  const checklistAuthorization = between(source.checklist, '## 3. Bind authorization to the approved Plan', '\n## 4. Inspect and preserve the candidate');
+  const checklistAuthorization = uniqueCheckpointSection(source.checklist, '## 3. Bind authorization to the approved Plan');
   requireExecutionRule(checklistAuthorization, [
     /explicitly approved the inspected Plan\/version/i, /explicitly includes a bounded local staging\/append-only commit strategy/i,
     /no (?:separate grant exchange|additional grant step) is required/i, /(?:before|precede) a concrete candidate/i,
@@ -1602,13 +1865,13 @@ function checkIncrementalRpirContract(sources = {}) {
   const phaseRecordAuthorization = checklistAuthorization.match(/^For a separately authorized phase-record checkpoint[^\n]*/m)?.[0] || '';
   requireExecutionRule(phaseRecordAuthorization, [
     /explicit bounded grant for that phase and saved\/read-back record/i,
-    /do not demand an approved implementation Plan or `\/implement` evidence/i,
+    /do not demand an approved implementation Plan or Implement invocation evidence/i,
     /same repository\/worktree\/branch, content\/exclusions, Runner ownership, validation, local-policy\/helper\/permission, validity and revocation safeguards/i,
     /not a duplicate grant for unchanged Plan-covered effects/i,
     /both routes retain the same literal-candidate and runtime checks/i
   ], 'Checkpoint checklist must retain separately bounded phase-record authority with the same safeguards');
 
-  const checklistCadence = between(source.checklist, '## 2. Apply local policy and determine eligible content', '\n## 3. Bind authorization');
+  const checklistCadence = uniqueCheckpointSection(source.checklist, '## 2. Apply local policy and determine eligible content');
   requireExecutionRule(checklistCadence, [
     /after each completed Work Item before unrelated items/i, /earlier coherent, validated Task boundaries/i,
     /explain justified combinations, deferrals, or no-commit outcomes/i,
@@ -1616,36 +1879,44 @@ function checkIncrementalRpirContract(sources = {}) {
     /invent a numerical threshold/i
   ], 'Checkpoint checklist must state normal Work Item cadence and bounded earlier Task consideration');
 
-  const planGuidance = between(source.planning, 'Specify the approved outcome', '\n## Limits');
+  const planningGaps = uniqueCheckpointSection(source.planning, '### Resolve material planning gaps');
+  const planGuidance = [uniqueCheckpointUnit(planningGaps, 'Specify the approved outcome'),
+    uniqueCheckpointUnit(planningGaps, 'Approval of that inspected Plan')].join('\n\n');
   requireExecutionRule(planGuidance, [
     /bounded local staging\/append-only commit strategy/i,
-    /Approval of that inspected Plan includes only its covered commits after `\/implement`/i,
+    /Approval of that inspected Plan includes only its covered commits after the qualifying Implement transition/i,
     /without a separate grant exchange/i,
     /Normal cadence is a checkpoint after each completed eligible coherent(?: validated)? Work Item/i,
     /proactive consideration of earlier coherent validated Task boundaries/i,
     /Silent, prohibited or unapproved-option Plans do not authorize Git/i
   ], 'Planning guidance must require explicit bounded strategy and normal cadence without duplicate approval');
 
-  requireExecutionRule(source.planTemplate, [
+  requireExecutionRule(uniqueCheckpointUnit(uniqueCheckpointSection(source.planTemplate, '## Outcome and boundaries'), '- **Local Git checkpoint strategy:**', true), [
     /\*\*Local Git checkpoint strategy:\*\*/i, /repository\/worktree\/branch selection rule/i,
-    /Script Runner ownership/i, /Explicit approval of this inspected Plan authorizes only its covered commits after `\/implement`/i,
+    /Script Runner ownership/i, /Explicit approval of this inspected Plan authorizes only its covered commits after the qualifying Implement transition/i,
     /no separate grant exchange is needed/i, /after each completed Work Item/i,
     /earlier coherent validated Tasks/i, /Plan publication cannot authorize its own checkpoint or earlier Research effects/i
   ], 'Plan template must capture bounded authorization fields, cadence and phase limits');
 
   // Only the normative opening body, never frontmatter or a historical section.
-  const runner = (source.runner.split('\n# Script Runner\n')[1] || '').split(/^## /m)[0];
-  const runnerAuthority = runner.split('\n\n').filter((paragraph) => paragraph.trim()).slice(0, 2).join('\n\n');
+  const runner = uniqueCheckpointSection(source.runner, '# Script Runner').split(/^## /m)[0];
+  const runnerAuthority = [paragraph(runner, 'Accept a self-contained'), paragraph(runner, 'Only `read`')].join('\n\n');
   requireExecutionRule(runnerAuthority, [
-    /inspected approved Plan\/version/i, /explicit bounded commit strategy with approval and `\/implement` evidence/i,
+    /inspected approved Plan\/version/i, /explicit bounded commit strategy with approval and qualifying Implement invocation evidence/i,
     /literal candidate/i, /no duplicate grant is required/i, /silent\/prohibiting Plan/i,
     /source\/configuration\/customization-read-only/i, /source-mutating hook or helper/i
   ], 'Script Runner summary must consume Plan authority without expanding tools or effects');
   requireExecutionRule(runnerAuthority, [
     /explicit bounded phase-record grant/i,
-    /without requiring an approved implementation Plan or `\/implement` evidence/i,
+    /without requiring an approved implementation Plan or Implement invocation evidence/i,
     /both routes retain identical candidate, ownership, validation, helper and permission safeguards/i
   ], 'Script Runner must retain separately bounded phase-record authority with the same safeguards');
+  const runnerMetadata = parseFrontmatterText(source.runner, '.github/agents/script-runner.agent.md').values;
+  requireExecutionRule(runnerAuthority, [/Only `read`, `search` and `execute` are declared/i],
+    'Script Runner must declare the native execute alias without expanding its tool boundary');
+  if (!equal(parseStringList(runnerMetadata.tools, '.github/agents/script-runner.agent.md', 'tools'), nativeTools['Script Runner'])) {
+    fail('Script Runner must declare the native execute alias without expanding its tool boundary', 'RPIR-EXECUTION-CONTRACT-001');
+  }
   rejectDuplicateGrant(runner, 'Script Runner authority');
   const researchCheckpoint = coordinatorBody(source.researchAgent, 'Research')
     .match(/(?:^|[.!?]\s+)(Script Runner\b[^\n]*?\.(?=\s|$))/i)?.[1] || '';
@@ -1654,16 +1925,16 @@ function checkIncrementalRpirContract(sources = {}) {
     /eligible Research brief (?:after|following) physical save\/readback/i
   ], 'Research must retain its separately authorized saved-brief checkpoint route');
 
-  const implement = source.implementAgent.match(/^Own the permitted direct edit[^\n]*/m)?.[0] || '';
+  const implement = uniqueCheckpointUnit(coordinatorBody(source.implementAgent, 'Implement'), 'Own the permitted direct edit', true);
   requireExecutionRule(implement, [
     /inspected approved Plan explicitly includes a bounded strategy/i,
-    /approval supplies authority for covered commits after `\/implement` without a second grant/i,
+    /approval supplies authority for covered commits after the qualifying Implement transition under policy effective at invocation without a second grant/i,
     /literal candidate/i, /candidate-relevant validation/i,
     /Silent\/prohibiting Plans, unapproved options, revocation, or material drift do not authorize effects/i,
     /effective permission/i
   ], 'Implement authority summary must bind covered commits and retain runtime candidate checks');
 
-  const reviewAgentCheckpoint = source.reviewAgent.match(/^Review and its Correctness[^\n]*/m)?.[0] || '';
+  const reviewAgentCheckpoint = uniqueCheckpointUnit(coordinatorBody(source.reviewAgent, 'Review'), 'Review and its Correctness', true);
   requireExecutionRule(reviewAgentCheckpoint, [
     /applicable approved Plan explicitly covers that record and phase/i,
     /after physical save\/readback/i,
@@ -1673,7 +1944,7 @@ function checkIncrementalRpirContract(sources = {}) {
   requireExecutionRule(reviewAgentCheckpoint, [/other valid bounded authorization applies/i],
     'Review must retain its separately bounded record-checkpoint route');
 
-  const progress = between(source.safe, '### Incremental Plan progress', '\n## Limits');
+  const progress = uniqueCheckpointSection(source.safe, '### Incremental Plan progress');
   requireExecutionRule(progress, [
     /primary loop before moving to an unrelated unit/i, /determine newly supported Step\/Task outcomes/i,
     /inspect the actual Plan preimage/i, /update eligible existing markers only, save and read back\/verify preservation/i,
@@ -1686,7 +1957,28 @@ function checkIncrementalRpirContract(sources = {}) {
   requireOrderedLoop(progress, 'During the pass, use this primary loop',
     'update eligible existing markers only, save and read back/verify preservation\\s*',
     'Safe implementation loop must persist progress in order and disclose honest recovery');
-  const selectiveRecovery = progress.match(/^- On resume,[^\n]*/m)?.[0] || '';
+  const markerCore = uniqueCheckpointSection(source.core, '### Approved Plan execution-marker exception');
+  requireExecutionRule(uniqueCheckpointUnit(markerCore, 'The Implement coordinator alone may update'), [
+    /only already-existing Step, Task and Work Item completion markers/i, /active inspected approved Plan/i,
+    /does not change[^.!?\n]*substantive approved snapshot[^.!?\n]*scope[^.!?\n]*acceptance criteria[^.!?\n]*hierarchy[^.!?\n]*IDs[^.!?\n]*lineage[^.!?\n]*approval identity/i,
+    /does not authorize edits to historical Plans or finalized reports/i, /actual preimage/i,
+    /read back and verify[^.!?\n]*only in the intended marker state/i,
+    /denied, failed or unverifiable marker save[^.!?\n]*unsaved tracking/i
+  ], 'Lifecycle core must preserve the bounded marker-only effect and readback');
+  for (const [prefix, patterns] of [
+    ['- Check a Step ', [/intended outcome is achieved/i, /required check[^.!?\n]*successful result/i, /Merely attempting a check is not completion/i]],
+    ['- Check a Task ', [/intended outcome and all required constituent work\/checks are complete/i, /completed child remains checked/i]],
+    ['- Check the Work Item ', [/explicit approved exit gate passes/i, /acceptance is met/i, /every required validation[^.!?\n]*successful result/i, /failed, unavailable or not-run evidence leaves it unmet/i]]
+  ]) requireExecutionRule(uniqueCheckpointUnit(progress, prefix, true), patterns,
+    'Safe implementation must preserve Step, Task and Work Item completion gates');
+  for (const [owner, text] of [['Lifecycle core', markerCore], ['Safe implementation', progress],
+    ['Implement coordinator', coordinatorBody(source.implementAgent, 'Implement')]]) {
+    if (/(?:workers?|Script Runner|Review) (?:may|can|should) (?:update|edit|write) (?:Plan )?markers|(?:markers|tracking) (?:are|is) optional for Implement|(?:failed|unavailable|not-run) (?:checks?|validation) (?:may|can) (?:pass|complete) (?:the )?(?:Work Item|gate)|(?<!not )(?:edit|rewrite) (?:historical Plans|finalized reports|approved Plan scope)/i.test(text) ||
+      hasAffirmativeMatch(text, /\b(?:the )?Implement coordinator (?:may|can|should) add new completion markers/gi)) {
+      fail(`${owner}: contradictory marker authority or completion gate`, 'RPIR-EXECUTION-CONTRACT-001');
+    }
+  }
+  const selectiveRecovery = uniqueCheckpointUnit(progress, '- On resume,', true);
   requireExecutionRule(selectiveRecovery, [
     /reopen only (?:the invalidated|disproved) markers and dependent parent markers whose completion is no longer supported/i,
     /preserve unaffected completed work/i, /record the evidence\/reason/i
@@ -1701,7 +1993,7 @@ function checkIncrementalRpirContract(sources = {}) {
   ], 'Implementation checklist must use Plan-covered authority while retaining candidate and executor safeguards');
   rejectDuplicateGrant(implementationCapabilities, 'Implementation checklist capabilities');
 
-  const implementLoop = source.implementAgent.match(/^The prominent execution loop is:[^\n]*/m)?.[0] || '';
+  const implementLoop = uniqueCheckpointUnit(coordinatorBody(source.implementAgent, 'Implement'), 'The prominent execution loop is:', true);
   requireExecutionRule(implementLoop, [
     /determine newly supported Step\/Task outcomes/i, /inspect the actual Plan preimage/i,
     /save eligible existing markers only and read back\/verify preservation/i,
@@ -1712,18 +2004,18 @@ function checkIncrementalRpirContract(sources = {}) {
     'save eligible existing markers only and read back/verify preservation\\s*',
     'Implement summary must preserve the ordered completion/save/checkpoint loop');
 
-  const markerReportField = source.implementationReport.match(/^- \*\*Plan marker tracking:\*\*[^\n]*/m)?.[0] || '';
+  const markerReportField = uniqueCheckpointUnit(uniqueCheckpointSection(source.implementationReport, '## Delivered outcome and progress'), '- **Plan marker tracking:**', true);
   requireExecutionRule(markerReportField, [
     /completion-to-save\/readback before unrelated later work/i, /observed late reconciliation/i,
     /unverified timing/i, /denied\/failed\/conflicting\/unverified saves as unsaved tracking/i,
   ], 'Implementation report marker field must distinguish completion timing and unsaved tracking');
-  const implementationCheckpointField = field(section(source.implementationReport, '## Execution and review evidence'), 'Planned-versus-actual checkpoint accounting');
+  const implementationCheckpointField = uniqueCheckpointUnit(uniqueCheckpointSection(source.implementationReport, '## Execution and review evidence'), '- **Planned-versus-actual checkpoint accounting:**', true);
   requireExecutionRule(implementationCheckpointField, [
     /earlier coherent validated Task opportunities/i, /even with no commits/i,
     /No commit-count technical acceptance gate/i
   ], 'Implementation report checkpoint field must assess opportunities and no-commit paths');
 
-  const reviewCheckpointField = source.reviewTemplate.match(/^- \*\*Implementation range and checkpoint evidence:\*\*[^\n]*/m)?.[0] || '';
+  const reviewCheckpointField = uniqueCheckpointUnit(uniqueCheckpointSection(source.reviewTemplate, '## Disposition and comparison'), '- **Implementation range and checkpoint evidence:**', true);
   requireExecutionRule(reviewCheckpointField, [
     /inspected Plan strategy\/approval reference/i,
     /expected completed-Work-Item and earlier coherent-Task opportunities/i,
@@ -1733,16 +2025,16 @@ function checkIncrementalRpirContract(sources = {}) {
     /missing commit alone is not defective code/i
   ], 'Review template must assess available chronology and no-commit paths without overclaim');
 
-  const assuranceImplement = source.assurance.match(/^- \*\*Implement:\*\*[^\n]*/m)?.[0] || '';
+  const assuranceImplement = uniqueCheckpointUnit(uniqueCheckpointSection(source.assurance, '## Stage-specific outcome'), '- **Implement:**', true);
   requireExecutionRule(assuranceImplement, [
     /completion-to-save\/readback before unrelated later work/i, /observed timely action/i,
     /observed late\/omitted backfill/i, /unverified timing/i,
     /expected checkpoint opportunities/i, /no silence-based pass or commit-count gate/i
   ], 'Stage assurance must distinguish observed timing, unknown evidence and checkpoint exceptions');
 
-  const readmeCheckpointSection = section(source.readme, '### Expected checkpoint planning; conditional execution');
+  const readmeCheckpointSection = uniqueCheckpointSection(source.readme, '### Expected checkpoint planning; conditional execution');
   requireExecutionRule(readmeCheckpointSection, [
-    /approving that inspected Plan approves its covered commits after `\/implement`/i,
+    /approving that inspected Plan approves its covered commits after the qualifying Implement transition under the policy effective at invocation/i,
     /no separate grant exchange is needed/i, /after each completed Work Item/i,
     /earlier coherent validated Task boundaries/i
   ], 'README checkpoint section must explain Plan-approved authority and normal cadence');
@@ -1752,12 +2044,13 @@ function checkIncrementalRpirContract(sources = {}) {
     /a final checked state is not proof of when it was saved/i
   ], 'README progress guidance must explain timely persistence and honest recovery');
 
-  const wikiRpirCheckpoint = section(source.wikiRpir, '## Expected checkpoint planning; conditional execution');
-  const wikiEvidenceCheckpoint = section(source.wikiEvidence, '### Expected checkpoint planning; conditional execution');
+  const wikiRpirCheckpoint = uniqueCheckpointSection(source.wikiRpir, '## Expected checkpoint planning; conditional execution');
+  const wikiEvidenceCheckpoint = uniqueCheckpointSection(source.wikiEvidence, '### Expected checkpoint planning; conditional execution');
   for (const [label, text] of [['RPIR Wiki', wikiRpirCheckpoint], ['lifecycle evidence Wiki', wikiEvidenceCheckpoint]]) {
     requireExecutionRule(text, [
       /after each completed Work Item/i, /earlier coherent validated Task/i,
       /When a Plan includes local commits|(?:explicitly includes a bounded|Plan that states a bounded) local staging\/append-only(?: commit)? strategy/i,
+      /qualifying Implement transition under the effective policy/i,
       /no (?:duplicate grant|separate grant exchange)/i, /literal candidate/i, /effective permission/i
     ], `${label} must align user guidance with the canonical checkpoint strategy and cadence`);
   }
@@ -1786,10 +2079,10 @@ function checkModelAuthoringContract(sources = {}) {
     maintenance: '## Procedure', checklist: '## Interfaces and loading boundaries'
   };
   const requirements = {
-    agent: [/capability\/consequence classification/i, /authoritative profile/i, /supported automatic Local model configuration/i, /disclose unresolved evidence/i],
-    agentTemplate: [/capability\/consequence classification/i, /authoritative profile/i, /supported automatic Local configuration/i, /do not activate an invented `model` field/i],
-    prompt: [/omit prompt-level model overrides unless deliberately justified/i, /actual Local path/i, /accidental shadowing/i, /do not assume picker or prompt precedence/i],
-    promptTemplate: [/omit prompt-level model overrides unless deliberately justified/i, /actual Local path/i, /shadowing/i, /without assuming picker precedence/i],
+    agent: [/capability\/consequence classification/i, /authoritative profile/i, /supported runtime ID as a preferred model/i, /disclose unresolved evidence/i],
+    agentTemplate: [/capability\/consequence classification/i, /authoritative profile/i, /supported Copilot runtime ID and preference path/i, /do not activate an invented `model` field/i],
+    prompt: [/omit prompt-level model overrides unless deliberately justified/i, /actual Copilot path/i, /accidental shadowing/i, /do not assume picker or prompt precedence/i],
+    promptTemplate: [/omit prompt-level model overrides unless deliberately justified/i, /actual Copilot path/i, /shadowing/i, /without assuming picker precedence/i],
     maintenance: [/shared profile/i, /configuration projections/i, /override\/fallback boundaries/i, /harness evidence/i],
     checklist: [/shared model profile/i, /configuration projections/i, /supported overrides and fallback rules/i, /harness\/evidence limits/i]
   };
@@ -1807,9 +2100,9 @@ function checkModelAuthoringContract(sources = {}) {
       /(?:each role's|its) own canonical profile effort(?: declaration)? as `reasoning-effort` beside its model/i,
       /(?:without requiring runtime support proof before declaration|without runtime support proof as a prerequisite to declaration)/i,
       /do not default all roles to `high` or inherit another role's effort/i,
-      /recommended effort, declared intent, supported model configuration and separately observed effective effort/i,
-      /runtime consumption, compatibility and harmless ignoring are (?:unestablished|not established)/i,
-      /disclose unknown support/i,
+      /(?:recommended effort, declared intent, supported model configuration and separately observed effective effort|(?:assigned model and declared effort intent|assigned model and effort intent|assigned model and declared intent)[^\n]*observed effective)/i,
+      /runtime consumption(?:, compatibility and harmless ignoring (?:are|remain) (?:unestablished|not established|unverified)| and compatibility (?:remain|are) unverified)/i,
+      /(?:disclose unknown support|unobservable effective model[^\n]*not observable)/i,
       /do not assume root effort reaches a child/i,
       /(?:escalation grants no authority|neither escalation nor model choice grants authority|effort declarations grant no authority)/i
     ];
@@ -1834,11 +2127,11 @@ function checkModelProfileCoverage(profile, agentPaths) {
       line !== '| --- | --- | --- |');
   const profiles = new Map();
   for (const row of rows) {
-    const match = row.match(/^\| `([a-z0-9-]+\.agent\.md)` \| (GPT-6\.1 Sol|GPT-6\.1 Terra|GPT-6 Luna) \| `(high|xhigh)` \|$/);
+    const match = row.match(/^\| `([a-z0-9-]+\.agent\.md)` \| `(gpt-6\.1-sol|gpt-6\.1-terra|gpt-6-luna)` \| `(high|xhigh)` \|$/);
     if (!match) fail(`Unsupported model profile row: ${row}`, 'MODEL-PROFILE-001');
     const [, name, model, effort] = match;
     if (profiles.has(name)) fail(`Duplicate model profile: ${name}`, 'MODEL-PROFILE-001');
-    if ((model === 'GPT-6.1 Sol' || model === 'GPT-6 Luna') && effort !== 'high') {
+    if ((model === 'gpt-6.1-sol' || model === 'gpt-6-luna') && effort !== 'high') {
       fail(`Unsupported model and effort pairing: ${name}`, 'MODEL-PROFILE-001');
     }
     profiles.set(name, { model, effort });
@@ -1887,8 +2180,8 @@ function checkModelEffortContract(sources = {}) {
   };
   const requirements = {
     procedure: [
-      /recommendation[^\n]*declared effort intent[^\n]*separately observed effective/i,
-      /Before model configuration[^\n]*supported Local path[^\n]*compatibility and permission/i,
+      /assigned model[^\n]*declared effort intent[^\n]*separately observed effective/i,
+      /Before model configuration[^\n]*supported Copilot path[^\n]*compatibility and permission/i,
       /Declare each role's recommended effort as `reasoning-effort` beside its model/i,
       /(?:without requiring runtime support proof before declaration|without runtime support proof as a prerequisite to declaration)/i,
       /declaration expresses intent, not observed effective effort/i,
@@ -1897,7 +2190,7 @@ function checkModelEffortContract(sources = {}) {
     ],
     output: [
       /target effort, declared effort intent, separately evidenced model configuration and observed settings/i,
-      /Do not claim automatic routing, effort enforcement, installed loading, or compatibility/i,
+      /Do not claim effective routing, effort enforcement, installed loading, or compatibility/i,
       /effort declaration or escalation never grants tools, edits, commands, delegation, lifecycle ownership, approval, acceptance/i
     ],
     introduction: [/target effort is declared as `reasoning-effort` intent, not an observed effective setting/i],
@@ -1905,7 +2198,7 @@ function checkModelEffortContract(sources = {}) {
       /recommended target efforts[^\n]*`reasoning-effort` intent (?:without requiring runtime support proof before declaration|without runtime support proof as a prerequisite to declaration)/i,
       /does not establish runtime consumption, compatibility, harmless ignoring or effective effort/i,
       /report separately observed effective effort/i,
-      /Local child effort is not assumed to follow the parent/i,
+      /Child effort is not assumed to follow the parent/i,
       /effort declaration or escalation never expands authority[^\n]*delegation boundaries[^\n]*independent Review[^\n]*advisory assurance/i
     ]
   };
@@ -2038,6 +2331,15 @@ function checkCustomizationContracts(inventory) {
   }
 
   const agentPaths = inventory.chatAgents;
+  const nativeProfile = readText('.github/skills/agent-model-selection/references/role-profiles.md');
+  const nativeModelSkill = readText('.github/skills/agent-model-selection/SKILL.md');
+  const skillNames = new Set(inventory.chatSkills.map((relative) => parsedByPath.get(relative).values.name));
+  const nativeAgentNames = new Set(agentPaths.map((relative) => parsedByPath.get(relative).values.name));
+  checkNativeSupportMetadata(readManifest(), JSON.parse(readText('package-lock.json')));
+  checkNativeModelObservationContract(nativeModelSkill, nativeProfile);
+  for (const relative of agentPaths) {
+    checkNativeAgentContract(relative, parsedByPath.get(relative), nativeAgentNames, skillNames, nativeProfile);
+  }
   const profiles = checkModelProfileCoverage(readText('.github/skills/agent-model-selection/references/role-profiles.md'), agentPaths);
   const agentNames = new Set(agentPaths.map((relative) => parsedByPath.get(relative).values.name));
   const promptPaths = inventory.chatPromptFiles;
@@ -2123,7 +2425,9 @@ if (require.main === module) {
 
 module.exports = {
   checkAgentMetadata, checkLocalLinks, checkManifestParity, checkPromptMetadata,
-  checkDecisionReadinessContract,
+  checkNativeAgentContract, checkNativeSupportMetadata, checkNativeModelObservationContract,
+  checkPhysicalRecordContract, checkLifecycleCandidatePatterns,
+  checkDecisionReadinessContract, checkImplementSignoffContract,
   checkConciseRpirContract,
   checkCustomizationContracts, checkArchitectureDecisionRecordContract, checkIncrementalRpirContract, checkModelAuthoringContract, checkModelEffortContract, checkModelProfileCoverage, checkModelProjection,
   parseFrontmatterText, parseHandoffs, parseStringList

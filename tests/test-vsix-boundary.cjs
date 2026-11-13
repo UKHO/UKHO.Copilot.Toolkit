@@ -4,8 +4,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const {
-  captureBuildEvidence, expectedPackagedReadme, expectedVsixPath, verifyArchive,
+  captureBuildEvidence, expectedPackagedReadme, expectedVsixPath, readManifest, verifyArchive,
   verifyArchiveContents, verifyCandidate, verifySelectedCandidate
 } = require('../scripts/verify-vsix-boundary.cjs');
 const { expectedTarget: expectedPackageTarget, packageVsix, validateArguments } = require('../scripts/package-vsix.cjs');
@@ -33,7 +34,7 @@ const skillFiles = [
 ];
 const manifest = {
   name: 'ukho-copilot-toolkit', publisher: 'ukho', version: '1.0.0',
-  engines: { vscode: '^1.130.0' },
+  engines: { vscode: '^1.146.0' },
   vsce: { baseContentUrl },
   files: ['package.json', 'README.md', 'CHANGELOG.md', 'LICENSE', 'resources/ukho-icon.png', '.github/skills/sample-skill'],
   contributes: { chatInstructions: [], chatAgents: [], chatPromptFiles: [], chatSkills: [{ path: skillFiles[0] }] }
@@ -123,8 +124,8 @@ function verify(entries = validEntries(), sourceChangelog = changelog, files = s
   verifyArchiveContents(zip(entries), boundary, manifest, sourceChangelog, files);
 }
 
-function preparedFixture(version) {
-  const preparedManifest = { ...manifest, version };
+function preparedFixture(version, engine = manifest.engines.vscode) {
+  const preparedManifest = { ...manifest, version, engines: { vscode: engine } };
   const preparedChangelog = changelog.replaceAll('1.0.0', version);
   const preparedFiles = new Map([...sourceFiles].map(([name, bytes]) => [name, Buffer.from(bytes)]));
   preparedFiles.set('package.json', Buffer.from(`${JSON.stringify(preparedManifest, null, 2)}\n`));
@@ -142,6 +143,9 @@ function preparedFixture(version) {
 }
 
 assert.doesNotThrow(() => verify(), 'valid archive must pass');
+assert.equal(manifest.engines.vscode, require('../package.json').engines.vscode, 'fixtures track the actual support baseline');
+assert.equal(manifest.engines.vscode, require('../package-lock.json').packages[''].engines.vscode, 'lockfile tracks the actual support baseline');
+assert.equal(readManifest().manifest.engines.vscode, manifest.engines.vscode, 'current checkout passes verifier preflight');
 cases += 1;
 
 const prepared = preparedFixture('2.4.7');
@@ -153,6 +157,46 @@ assert.equal(verifyCandidate({ archiveBytes: prepared.archiveBytes, evidence, mo
 assert.equal(verifyCandidate({ archiveBytes: prepared.archiveBytes, evidence, mode: 'historical' }).claim,
   'historical-artifact-evidence-consistency-only');
 cases += 3;
+
+// Reconstruct retained pre-baseline evidence without asking the current-only
+// capture path to create a new historical candidate.
+function historicalEvidence(currentEvidence, historical) {
+  const retained = structuredClone(currentEvidence);
+  retained.captured.manifest = historical.buildInputs.manifest;
+  const packageBytes = historical.buildInputs.sourceFiles.get('package.json');
+  const digest = crypto.createHash('sha256').update(packageBytes).digest('hex');
+  for (const [inventory, name] of [
+    [retained.captured.sourceMembers, 'package.json'],
+    [retained.captured.expectedMembers, 'extension/package.json']
+  ]) {
+    Object.assign(inventory.find((item) => item.name === name), { sha256: digest, length: packageBytes.length });
+  }
+  const { integrity, ...core } = retained;
+  const stable = (value) => Array.isArray(value) ? `[${value.map(stable).join(',')}]`
+    : value && typeof value === 'object' ? `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stable(value[key])}`).join(',')}}`
+      : JSON.stringify(value);
+  retained.integrity.digest = crypto.createHash('sha256').update(stable(core)).digest('hex');
+  return retained;
+}
+
+const historical = preparedFixture('2.4.7', '^1.130.0');
+const retainedEvidence = historicalEvidence(evidence, historical);
+assert.equal(verifyCandidate({ archiveBytes: historical.archiveBytes, evidence: retainedEvidence, mode: 'historical' }).claim,
+  'historical-artifact-evidence-consistency-only');
+assertRejected('historical inputs cannot be used for fresh verification', () => verifyCandidate({
+  archiveBytes: historical.archiveBytes, evidence: retainedEvidence, mode: 'fresh', buildInputs: historical.buildInputs
+}), /VS Code engine \^1\.146\.0/);
+assertRejected('historical inputs cannot create new build evidence', () => captureBuildEvidence({
+  archiveBytes: historical.archiveBytes, buildInputs: historical.buildInputs
+}), /VS Code engine \^1\.146\.0/);
+assertRejected('historical evidence cannot validate a different engine archive', () => verifyCandidate({
+  archiveBytes: prepared.archiveBytes, evidence: retainedEvidence, mode: 'historical'
+}), /Historical VSIX member does not match retained evidence: extension\/package\.json/);
+const unsupportedHistorical = preparedFixture('2.4.7', '^1.129.0');
+assertRejected('unsupported historical engine is rejected', () => verifyCandidate({
+  archiveBytes: unsupportedHistorical.archiveBytes, evidence: historicalEvidence(evidence, unsupportedHistorical), mode: 'historical'
+}), /Evidence manifest identity.*VS Code engine/);
+cases += 1;
 
 const changedCheckout = {
   ...prepared.buildInputs,
@@ -307,6 +351,20 @@ try {
   assertRejected('selected candidate does not fall back to another file', () => verifySelectedCandidate({
     candidatePath: path.join(fixtureRoot, 'missing candidate.vsix'), evidence, mode: 'historical'
   }), /Explicit selected candidate is unavailable/);
+  const historicalDirectory = path.join(fixtureRoot, '2026-10-22', '120000Z-historical');
+  fs.mkdirSync(historicalDirectory, { recursive: true });
+  const historicalFileName = `${historical.buildInputs.manifest.name}-${historical.buildInputs.manifest.version}.vsix`;
+  const artifact = { fileName: historicalFileName, sha256: crypto.createHash('sha256').update(historical.archiveBytes).digest('hex'), sizeBytes: historical.archiveBytes.length };
+  fs.writeFileSync(path.join(historicalDirectory, historicalFileName), historical.archiveBytes);
+  fs.writeFileSync(path.join(historicalDirectory, 'verification-evidence.json'), JSON.stringify(retainedEvidence));
+  fs.writeFileSync(path.join(historicalDirectory, 'candidate.json'), JSON.stringify({
+    schema: 'ukho.vsix-candidate', schemaVersion: 1, candidateId: '2026-10-22/120000Z-historical',
+    packagedIdentity: retainedEvidence.captured.identity,
+    preparation: { outcome: 'prepared and verified', verified: true }, artifact
+  }));
+  const historicalInspection = inspectCandidate({ candidateDirectory: historicalDirectory });
+  assert.equal(historicalInspection.verified, true);
+  assert.equal(historicalInspection.verification.claim, 'historical-artifact-evidence-consistency-only');
   cases += 5;
 } finally {
   fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -323,7 +381,7 @@ function packagingFixture() {
 
 const packageManifest = {
   name: 'ukho-copilot-toolkit', version: '1.0.0',
-  engines: { vscode: '^1.130.0' },
+  engines: { vscode: '^1.146.0' },
   devDependencies: { '@vscode/vsce': '3.9.2' }
 };
 assert.doesNotThrow(() => validateArguments([]));
@@ -338,6 +396,10 @@ const packageRoot = packagingFixture();
 try {
   const output = Buffer.from('owned candidate bytes');
   let invocation;
+  assertRejected('package rejects the former engine before invoking its builder', () => packageVsix({
+    repositoryRoot: packageRoot, manifest: { ...packageManifest, engines: { vscode: '^1.130.0' } },
+    runPackage: () => { throw new Error('builder must not run'); }
+  }), /VS Code engine constraint must remain \^1\.146\.0/);
   const result = packageVsix({ repositoryRoot: packageRoot, manifest: packageManifest, runPackage: (request) => {
     invocation = request;
     fs.writeFileSync(request.outputPath, output, { flag: 'wx' });
@@ -432,7 +494,7 @@ function preparationFixture(version = '2.4.7') {
     lockfileVersion: 3,
     requires: true,
     packages: {
-      '': { name: preparedManifest.name, version, devDependencies: { '@vscode/vsce': '3.9.2' } },
+      '': { name: preparedManifest.name, version, engines: { ...preparedManifest.engines }, devDependencies: { '@vscode/vsce': '3.9.2' } },
       'node_modules/@vscode/vsce': { version: '3.9.2' }
     }
   };
@@ -461,6 +523,78 @@ function archiveForBuildInputs(inputs) {
 function fakeBuilder(request) {
   fs.writeFileSync(request.outputPath, archiveForBuildInputs(request.buildInputs), { flag: 'wx' });
   return { status: 0 };
+}
+
+const oldEngineFixture = preparationFixture();
+try {
+  const oldManifest = { ...oldEngineFixture.preparedManifest, engines: { vscode: '^1.130.0' } };
+  fs.writeFileSync(path.join(oldEngineFixture.repositoryRoot, 'package.json'), JSON.stringify(oldManifest));
+  let builderCalled = false;
+  const rejected = prepareCandidate({
+    repositoryRoot: oldEngineFixture.repositoryRoot,
+    loadBuildInputs: () => oldEngineFixture.inputs,
+    runBuilder: () => { builderCalled = true; return { status: 0 }; },
+    temporaryRoot: oldEngineFixture.repositoryRoot
+  });
+  assert.equal(rejected.outcome, 'failed-preflight');
+  assert.match(rejected.error, /Manifest identity, engine/);
+  assert.equal(rejected.candidateId, null);
+  assert.equal(builderCalled, false);
+  cases += 1;
+} finally {
+  fs.rmSync(oldEngineFixture.repositoryRoot, { recursive: true, force: true });
+}
+
+for (const [label, mutate] of [
+  ['stale root engine', (root) => { root.engines.vscode = '^1.130.0'; }],
+  ['different root engine', (root) => { root.engines.vscode = '^1.147.0'; }],
+  ['missing root engines', (root) => { delete root.engines; }],
+  ['missing root vscode engine', (root) => { delete root.engines.vscode; }],
+  ['null root vscode engine', (root) => { root.engines.vscode = null; }],
+  ['non-string root vscode engine', (root) => { root.engines.vscode = 146; }]
+]) {
+  const fixture = preparationFixture();
+  try {
+    const lockPath = path.join(fixture.repositoryRoot, 'package-lock.json');
+    const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+    mutate(lock.packages['']);
+    fs.writeFileSync(lockPath, JSON.stringify(lock));
+    let builderCalled = false;
+    const rejected = prepareCandidate({
+      repositoryRoot: fixture.repositoryRoot,
+      loadBuildInputs: () => fixture.inputs,
+      runBuilder: () => { builderCalled = true; return { status: 0 }; },
+      temporaryRoot: fixture.repositoryRoot
+    });
+    assert.equal(rejected.outcome, 'failed-preflight', label);
+    assert.match(rejected.error, /package-lock\.json root engines\.vscode differs from package\.json/, label);
+    assert.equal(rejected.candidateId, null, label);
+    assert.equal(builderCalled, false, label);
+    assert.deepEqual(fs.readdirSync(path.join(fixture.repositoryRoot, 'Releases')), ['legacy-preserve.txt'], label);
+    cases += 1;
+  } finally {
+    fs.rmSync(fixture.repositoryRoot, { recursive: true, force: true });
+  }
+}
+
+const additionalEngineFixture = preparationFixture();
+try {
+  const lockPath = path.join(additionalEngineFixture.repositoryRoot, 'package-lock.json');
+  const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+  lock.packages[''].engines.node = '>=18';
+  fs.writeFileSync(lockPath, JSON.stringify(lock));
+  const matched = prepareCandidate({
+    repositoryRoot: additionalEngineFixture.repositoryRoot,
+    loadBuildInputs: () => additionalEngineFixture.inputs,
+    runBuilder: fakeBuilder,
+    clock: () => new Date('2026-10-22T23:59:59Z'),
+    idFactory: () => 'additional-engine',
+    temporaryRoot: additionalEngineFixture.repositoryRoot
+  });
+  assert.equal(matched.outcome, 'prepared-verified', 'matching vscode engine permits unrelated lock engine metadata');
+  cases += 1;
+} finally {
+  fs.rmSync(additionalEngineFixture.repositoryRoot, { recursive: true, force: true });
 }
 
 const preparationRoot = preparationFixture();
@@ -729,6 +863,30 @@ try {
   cases += 4;
 } finally {
   fs.rmSync(driftFixture.repositoryRoot, { recursive: true, force: true });
+}
+
+const engineDriftFixture = preparationFixture();
+try {
+  const lockPath = path.join(engineDriftFixture.repositoryRoot, 'package-lock.json');
+  const drift = prepareCandidate({
+    repositoryRoot: engineDriftFixture.repositoryRoot,
+    loadBuildInputs: () => engineDriftFixture.inputs,
+    runBuilder: fakeBuilder,
+    clock: () => new Date('2026-10-22T12:15:00Z'),
+    idFactory: () => 'engine-drift',
+    temporaryRoot: engineDriftFixture.repositoryRoot,
+    hooks: { afterBuild: () => {
+      const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+      lock.packages[''].engines.vscode = '^1.130.0';
+      fs.writeFileSync(lockPath, JSON.stringify(lock));
+    } }
+  });
+  assert.equal(drift.outcome, 'failed-retained-attempt');
+  assert.match(drift.error, /package-lock\.json root engines\.vscode differs from package\.json/);
+  assert.equal(fs.existsSync(drift.vsixPath), false, 'engine drift prevents candidate copy');
+  cases += 1;
+} finally {
+  fs.rmSync(engineDriftFixture.repositoryRoot, { recursive: true, force: true });
 }
 
 for (const drift of [

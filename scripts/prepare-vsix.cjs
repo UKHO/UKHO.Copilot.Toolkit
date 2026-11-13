@@ -12,7 +12,7 @@ const {
 
 const EXTENSION_NAME = 'ukho-copilot-toolkit';
 const PUBLISHER = 'ukho';
-const ENGINE = '^1.130.0';
+const ENGINE = '^1.146.0';
 const VSCE_VERSION = '3.9.2';
 const CANDIDATE_SCHEMA = 'ukho.vsix-candidate';
 const CANDIDATE_SCHEMA_VERSION = 1;
@@ -250,6 +250,9 @@ function validateLockfile(repositoryRoot, manifest) {
       lock.packages?.['']?.name !== manifest.name || lock.packages?.['']?.version !== manifest.version ||
       lock.packages?.['']?.devDependencies?.['@vscode/vsce'] !== VSCE_VERSION) {
     fail('package-lock.json root identity/version or pinned @vscode/vsce metadata differs from package.json');
+  }
+  if (lock.packages?.['']?.engines?.vscode !== manifest.engines.vscode) {
+    fail('package-lock.json root engines.vscode differs from package.json');
   }
   return lock;
 }

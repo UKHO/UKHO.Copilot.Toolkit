@@ -22,9 +22,9 @@ Create a manually invoked prompt for one focused local request with predictable 
 
 - A prompt MUST remain a deliberate shortcut for one focused job; it MUST NOT take ownership of a sustained role or phase workflow that belongs to an agent.
 - A prompt MUST omit the `tools` field by default. It MUST NOT use prompt-level tool overrides to broaden an agent's intended boundary; add an override only when independently justified, minimal, and compatible with the selected agent's boundary.
-- Preserve the selected agent's [model profile](../agent-model-selection/SKILL.md): omit prompt-level model overrides unless deliberately justified and supported by evidence for the actual Local path. Check for accidental shadowing; do not assume picker or prompt precedence, invent a reference, or claim effective selection without observation.
+- Preserve the selected agent's [model profile](../agent-model-selection/SKILL.md): omit prompt-level model overrides unless deliberately justified and supported by evidence for the actual Copilot path. Check for accidental shadowing; do not assume picker or prompt precedence, invent a reference, or claim effective selection without observation.
 - If a required input is missing, the selected agent is missing or unavailable, or a proposed side effect is unsafe or unclear, the prompt MUST stop and request the missing information or a safe, explicit decision. It MUST NOT guess or proceed with the affected action.
-- A prompt created here is a VS Code Local convenience. Authors MUST NOT claim Agent Host portability or equivalent prompt-selection and tool behavior without separate evidence.
+- Prompt availability, selection and tool behavior depend on the actual Copilot surface and require separate evidence. A prompt is not a required native RPIR phase selector or transition authority.
 
 ## Expected output
 
@@ -48,4 +48,4 @@ Use the original one-job starter at [templates/prompt.md](./templates/prompt.md)
 
 ## Boundaries
 
-Do not create Skills, instructions, agents, hooks, scripts, or unrelated prompts as follow-up work. Prompts are VS Code local conveniences and are not a substitute for portable Agent Skills or Agent Host workflows. Do not embed credentials or unsafe commands.
+Do not create Skills, instructions, agents, hooks, scripts, or unrelated prompts as follow-up work. Prompts are deliberate shortcuts, not substitutes for portable Agent Skills or receiving-role workflow boundaries. Do not embed credentials or unsafe commands.

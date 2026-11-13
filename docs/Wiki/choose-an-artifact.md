@@ -22,14 +22,14 @@ Choose by the job the artifact performs:
 | --- | --- | --- |
 | Stable repository facts or conventions applied automatically | **Instruction** | Always-on, matched, or manually attached; for example `.github/copilot-instructions.md` or `.github/instructions/*.instructions.md`. |
 | A repeatable, portable capability with references or templates | **Skill** | Model-selected when relevant or user-invoked; `.github/skills/<skill-name>/SKILL.md` plus optional resources. |
-| A deliberate saved shortcut for one Local task | **Prompt file** | User-invoked where prompt files are supported; `.github/prompts/<name>.prompt.md`. Agent Host does not load prompt files. |
+| A deliberate saved shortcut for one task | **Prompt file** | User-invoked where supported; `.github/prompts/<name>.prompt.md`. Availability and behavior depend on the Copilot surface. The Toolkit currently contributes no prompts. |
 | A sustained role with explicit tools, model preferences, or orchestration | **Custom agent** | User-selected or delegated; `.github/agents/<name>.agent.md`. |
 | Isolated research, review, or parallel work launched by a parent | **Subagent invocation** | Runtime delegation, not a separate file type; it may use a custom agent as its configuration. |
 | A visible, user-controlled transition between stages | **Handoff** | A user-selected transition declared by an agent; it is not background delegation. |
 
 Start with instructions for repeated repository context. Add a skill for a resource-backed workflow, a prompt for a deliberate local shortcut, and an agent only when a durable role or meaningful capability boundary is needed. Use subagents when isolation or independent work provides a concrete benefit.
 
-These artifacts guide Copilot; they do not provide deterministic security or approval. Keep tools, worker allow-lists, scope, inputs, outputs, exclusions, and side effects explicit. In RPIR, invoking the supported next prompt with the inspected document version supplies the routine phase sign-off; platform permissions and effect-specific approvals still apply. A built-in Agent Host `/plan` must not be assumed to follow the Local RPIR prompt route.
+These artifacts guide Copilot; they do not provide deterministic security or approval. Keep tools, permitted workers, scope, inputs, outputs, exclusions, and side effects explicit. The prospective native RPIR route is a deliberate request to the intended receiving agent with the inspected physical predecessor, not a prompt or slash dependency. Current lifecycle owners govern bootstrap until migrated; selection or an unsent suggestion is not approval. Platform permissions and effect-specific approvals still apply. The four contributed entry skills await guarded retirement, not assumed runtime success; see [RPIR](rpir.md).
 
 ## Canonical references
 

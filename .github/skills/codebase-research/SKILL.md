@@ -34,6 +34,8 @@ Use this Skill for read-only investigation that turns an ambiguous request into 
 
 ## Limits
 
+When this method supports the Research coordinator, the [lifecycle core](../rpir-lifecycle-core/SKILL.md#contain-allocation-and-effects) owns automatic setup: reuse safe existing directories, or separately guard and attempt the dedicated create-directory operation for each selected missing documentation root, direct `copilot/` parent and topic, inspecting each result before proceeding. Guard and save/read back the brief separately. Report unavailable operations, collisions, containment or permission uncertainty, denial and failed or unverifiable saves; do not substitute terminal, Script Runner or implicit-parent file creation. Manual setup is recovery, not an automation pass. This does not change discovery acknowledgment or deferral. These coordinator effects are not delegated investigator authority.
+
 This delegated evidence report is input to the Research coordinator; it is not a research brief and must not allocate, select, create, persist, revise, or authorize any lifecycle artifact, handoff, command, cleanup, scope, hierarchy, or approval. Only the coordinator may synthesize and persist a lifecycle record.
 
 Do not edit files, invent commands or dependencies, or report an inference as a repository fact.

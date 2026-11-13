@@ -8,7 +8,7 @@ Use prospectively; do not rewrite historical reports. Follow the [shared reader-
 
 ## Delivered outcome and progress
 
-- **Approved outcome:** `<link inspected original Plan identity/version and explicit /implement invocation; assess its criteria/boundaries without repeating them; for correction link inspected Review context>`.
+- **Approved outcome:** `<link inspected original physical Plan identity/version and deliberate engineer-sent Implement request; assess its criteria/boundaries without repeating them; for correction link inspected Review context>`.
 - **Actual files and behavior:** `<changed files, completed IDs/outcomes and delivered principal artifact with existence/content evidence; if absent explain why>`.
 - **Remaining Plan work:** `<remaining IDs/outcomes and reasons; for each hold distinguish decision, evidence, ADR content/agreement/persistence, capability and permission limits; affected effect, supporting evidence, next permitted route and independently authorized work with its authority, or why none exists. Independent investigation is not source-edit authority; an unavailable route or recorded refusal is not an observed platform denial>`. A partial report is a checkpoint, not completion.
 - **Plan marker tracking:** `<checked Steps/Tasks and Work Items with supporting outcomes/gate evidence; where ordered evidence exists, distinguish completion-to-save/readback before unrelated later work, observed late reconciliation, and unverified timing; record remaining/reopened markers and reasons; disclose affected IDs with denied/failed/conflicting/unverified saves as unsaved tracking, distinct from delivered work>`.
@@ -40,6 +40,6 @@ Include material limits/risks, refused effects and unresolved next actions here 
 - **This report:** `<kind, subject/pass, inspected version and actual numbered physical location if saved>`.
 - **Plan and predecessors:** `<inspected Plan identity/version and direct same-folder link to the real physical Plan; its Research lineage; for original-criteria correction link the inspected Review/report context, for material Review-origin Plan name its Review, prior report, previous Plan and Research>`.
 - **Physical outcome and provenance:** `<original channel/locator or inspected predecessor provenance link; never manufacture a local path/link from a remote label. Verify actual containment/permission, non-overwriting selection/collision resolution and full readback of content/links; briefly state saved and checked, or disclose unfinished/failed persistence and affected work>`. Preserve finalized records; optional status mirrors do not determine acceptance. Assess preservation of original criteria and unrelated work alongside actual changed files, not a repeated procedural diary.
-- **Next action:** `<manual /review with this inspected report version for independent assessment, or named material decision/unfinished delivery; never imply publication admits Review>`.
+- **Next action:** `<a deliberate engineer-sent request to the Review coordinator with this inspected physical report version for independent assessment, or named material decision/unfinished delivery; never imply publication admits Review>`.
 
 Include genuine open questions when they remain, with affected effects and evidence; do not manufacture a ceremonial question section.

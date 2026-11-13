@@ -41,15 +41,18 @@ const VERIFICATION_POLICY = 'ukho-vsix-package-boundary';
 const VERIFICATION_POLICY_VERSION = 1;
 const README_TRANSFORMATION = 'vsce-relative-markdown-links-v1';
 const PINNED_TOOL_IDENTITY = Object.freeze({ name: '@vscode/vsce', version: '3.9.2' });
+const CURRENT_ENGINE = '^1.146.0';
+const HISTORICAL_ENGINE = '^1.130.0';
 
 function fail(message) {
   throw new Error(message);
 }
 
-function assertPackageIdentity(manifest, context = 'package.json') {
+function assertPackageIdentity(manifest, context = 'package.json', allowHistoricalEngine = false) {
+  const engine = manifest?.engines?.vscode;
   if (!manifest || manifest.name !== 'ukho-copilot-toolkit' || manifest.publisher !== 'ukho' ||
-      !isSupportedVersion(manifest.version) || manifest.engines?.vscode !== '^1.130.0') {
-    fail(`${context} identity must remain ukho.ukho-copilot-toolkit with a numeric prepared version and VS Code engine ^1.130.0`);
+      !isSupportedVersion(manifest.version) || (engine !== CURRENT_ENGINE && !(allowHistoricalEngine && engine === HISTORICAL_ENGINE))) {
+    fail(`${context} identity must remain ukho.ukho-copilot-toolkit with a numeric prepared version and VS Code engine ${CURRENT_ENGINE}${allowHistoricalEngine ? ` or historical ${HISTORICAL_ENGINE}` : ''}`);
   }
 }
 
@@ -596,7 +599,9 @@ function validateEvidence(evidence) {
       !Array.isArray(captured.expectedMembers) || !captured.manifest || typeof captured.readmeTransformation !== 'object') {
     fail('VSIX verification evidence is incomplete');
   }
-  assertPackageIdentity(captured.manifest, 'Evidence manifest');
+  // Retained evidence is checked against its own captured package identity, not
+  // the current checkout's engine. Fresh build inputs remain current-only.
+  assertPackageIdentity(captured.manifest, 'Evidence manifest', true);
   const identity = { name: captured.manifest.name, publisher: captured.manifest.publisher, version: captured.manifest.version };
   if (!isDeepStrictEqual(captured.identity, identity)) fail('Evidence identity does not match its captured manifest');
   if (!isDeepStrictEqual(captured.readmeTransformation, {

@@ -1,6 +1,6 @@
 ---
 name: agent-model-selection
-description: Select and maintain role-based model and effort recommendations for Toolkit agents, with capability classification, supported overrides, and Local evidence limits.
+description: Select and maintain role-based Copilot model and effort preferences for Toolkit agents, with capability classification, supported overrides, and observation limits.
 user-invocable: false
 ---
 
@@ -8,18 +8,18 @@ user-invocable: false
 
 ## Purpose and inputs
 
-Use this internal capability when selecting, creating, or maintaining a Toolkit agent's role profile. Inspect the role's responsibilities, consequence of failure, authority and invocation paths, the applicable approved scope, and the [authoritative role profiles](references/role-profiles.md). This delivery targets the VS Code Local harness only; Copilot is a separate follow-on, not an implied compatibility claim.
+Use this internal capability when selecting, creating, or maintaining a Toolkit agent's role profile. Inspect the role's responsibilities, consequence of failure, authority and invocation paths, the applicable approved scope, and the [authoritative role profiles](references/role-profiles.md). Forward delivery targets the Copilot harness on VS Code 1.146.0+ within 1.x; this is not evidence of the active client or runtime.
 
 ## Procedure
 
 1. For a current role, use its single model and target effort from the profile. For a new or changed role, apply the profile's capability/consequence rubric and justify one recommendation; do not silently default an unknown role or assume a fixed inventory ceiling.
-2. Keep the recommendation, configured model preference, declared effort intent, and separately observed effective model and effort distinct. Current agents use the profile's display names as single native preferences; VS Code 1.137.0's inspected matcher supports exact names for its built-in Copilot vendor. Actual availability, other providers and each invocation path remain unverified. Do not infer entitlement or tool arguments from those names.
-3. Before model configuration, inspect evidence for the exact reference, supported Local path, compatibility and permission. Native automatic model selection is the required delivery outcome, but a Markdown link does not configure or enforce it. A new suite role is not profile-compliant without a profile entry and supported automatic Local configuration; disclose unresolved evidence rather than claiming success.
+2. Keep the assigned model, configured preference, declared effort intent, and separately observed effective model and effort distinct. Each agent projects one profile runtime ID as a scalar native preference. Configuration does not establish entitlement, availability or effective dispatch.
+3. Before model configuration, inspect evidence for the exact reference, supported Copilot path, compatibility and permission. A new suite role needs a profile entry and supported native preference; a Markdown link does not configure or enforce selection. Prefer native defaults without routine task-call model or effort overrides or parent inheritance.
 4. Declare each role's recommended effort as `reasoning-effort` beside its model, without requiring runtime support proof before declaration. The declaration expresses intent, not observed effective effort; runtime consumption, compatibility and harmless ignoring are not established. Do not assume a root effort propagates to a child or report unobserved effort as effective. Record actual observed settings separately when an authorized check exposes them.
-5. Apply only evidenced, supported engineer overrides and the profile's escalation and unavailable-model rules. If the assigned model or effective selection cannot be verified, report the gap; an override is an exception, not evidence that default routing worked. Hold affected acceptance for engineer direction if required automatic selection cannot be established.
+5. Apply only evidenced, supported engineer overrides and the profile's escalation and unavailable-model rules. Report assigned versus observed effective model and actual override or fallback evidence. Say “effective model not observable” when unknown and “fallback cause not exposed” when fallback is observed without its cause; do not infer fallback from missing telemetry. A known wrong default is not a pass; unknown telemetry alone does not stop independent safe work.
 
 ## Output and boundary
 
-Report role and classification rationale, recommended model and target effort, declared effort intent, separately evidenced model configuration and observed settings, supported override path if any, and unresolved limitations. Do not claim automatic routing, effort enforcement, installed loading, or compatibility from this Skill or static checks alone. Required Local routing observations and activation require separate authorization.
+Report role and classification rationale, assigned model and target effort, declared effort intent, separately evidenced model configuration and observed settings, supported override path if any, and unresolved limitations. Do not claim effective routing, effort enforcement, installed loading, or compatibility from this Skill or static checks alone. Runtime observations and activation require separate authorization.
 
 Model choice, effort declaration or escalation never grants tools, edits, commands, delegation, lifecycle ownership, approval, acceptance, or permission to bypass a denial. Preserve the role's existing boundaries and manual transitions. Do not add a router, fallback array, account setting, per-agent context cap, token limit, temperature, or other unsupported effort control.

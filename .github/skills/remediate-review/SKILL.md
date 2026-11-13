@@ -6,9 +6,11 @@ argument-hint: Original approved Plan and linked issue-bearing Review report
 ---
 ## Purpose
 
-This VS Code Local shortcut **changes semantics**: it was a deprecated Plan alias; it now enters Implement for supported corrections to the original approved outcome. It is not backward-compatible with the former Plan route and does not approve material expansion.
+This retained adapter describes supported corrections to the original approved outcome; it does not select or invoke Implement or approve material expansion. The engineer selects Implement and deliberately sends the request with the physical original Plan and linked Review. Apply the policy effective at invocation; no policy edit self-upgrades a session.
 
 ## Inputs
+
+The placeholders below are optional adapter text, not required expansions or role selectors; the actual physical inputs must be supplied and inspected.
 
 Original Plan: ${input:implementationPlanDocument:Actual original approved Plan and inspected version, supplied by attachment, accessible HTTPS URL, paste or contained local path}
 
@@ -19,8 +21,8 @@ If either input or the correction classification is missing, conflicting or unve
 ## Constraints
 
 - Apply [RPIR lifecycle core](../rpir-lifecycle-core/SKILL.md): independently inspect the contained numbered physical original Plan, Review report, reviewed implementation report and direct same-folder Research lineage. Locators alone are not canonical records.
-- The engineer's explicit invocation of Implement with the inspected original Plan and linked Review context approves only its original outcome and supported in-boundary correction. Review findings are evidence, not scope or edit authority. Preserve original acceptance criteria, user work, and unresolved findings; produce fresh implementation evidence and request fresh independent Review manually (`send: false`). A partial report is a checkpoint, not completed delivery.
-- New requirements, material public behavior, consequential dependencies, security or compatibility commitments or additional external effects require an engineer decision and a Plan-owned amendment/new Plan via `/plan`; do not implement that portion through this shortcut. Actual denial is not a fallback opportunity. Prompt references do not guarantee attachment in Agent Host.
+- The engineer's deliberate sent Implement request with the inspected physical original Plan and linked Review context approves only its original outcome and supported in-boundary correction. Review findings are evidence, not scope or edit authority. Preserve original acceptance criteria, user work, and unresolved findings; produce fresh implementation evidence and offer manual independent Review with the physical report; an unsent prefill does not invoke it. A partial report is a checkpoint, not completed delivery.
+- New requirements, material public behavior, consequential dependencies, security or compatibility commitments or additional external effects require an engineer decision and a Plan-owned amendment/new Plan through a deliberate engineer-sent Plan request with the physical Review; do not implement that portion through this adapter. Actual denial is not a fallback opportunity. References do not guarantee attachment.
 - Apply the [safe implementation skill](../safe-implementation/SKILL.md) to assess missing/partial architectural coverage even with valid bindings. Unexpected uncovered or changed architecture needs engineer-directed Plan resolution before dependent effects; continue independent approved correction. Routine coding needs no ADR reference; this shortcut grants no ADR authorship.
 - Apply that skill's planned-versus-actual checkpoint accounting at every expected correction boundary before unrelated work, retaining earlier coherent validated Task consideration and specific actual disposition/exception evidence. Do not backfill substantive exceptions into the original approved Plan, override historical prohibitions or infer Git authority from findings. Only Script Runner executes covered effects under the [checkpoint capability](../local-git-checkpoints/SKILL.md); unchanged Plan-covered effects need no duplicate grant and commit count is not technical acceptance.
 

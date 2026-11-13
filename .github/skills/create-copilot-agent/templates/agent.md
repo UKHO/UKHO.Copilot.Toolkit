@@ -4,7 +4,7 @@ description: "<role, task, outcome, and useful discovery terms>"
 # Add only when justified for this specific role:
 # user-invocable: false
 # tools: ["<minimum-required-tool>"]
-# agents: ["<explicit-existing-agent-name>"]
+# skills: ["<role-appropriate-existing-skill>"]
 ---
 
 # <Agent role>
@@ -33,21 +33,21 @@ State the sustained responsibility this agent owns and the outcome it is expecte
 
 ## Model profile (authoring guidance)
 
-For a Toolkit suite role, use [agent model selection](../../agent-model-selection/SKILL.md) to record the capability/consequence classification and one profile recommendation. Add the role to the authoritative profile and verify the exact supported automatic Local configuration before calling it profile-compliant. If evidence is unresolved, disclose the gap; do not activate an invented `model` field.
+For a Toolkit suite role, use [agent model selection](../../agent-model-selection/SKILL.md) to record the capability/consequence classification and one profile recommendation. Add the role to the authoritative profile and verify the supported Copilot runtime ID and preference path. If evidence is unresolved, disclose the gap; do not activate an invented `model` field or claim observed routing.
 
 For the classified role, declare its own canonical profile effort as `reasoning-effort` beside its model, without requiring runtime support proof before declaration; do not default all roles to `high` or inherit another role's effort. This starter has no active model or effort placeholder; add actual fields only when adapting it to a classified role.
 
-Distinguish recommended effort, declared intent, supported model configuration and separately observed effective effort. Runtime consumption, compatibility and harmless ignoring are unestablished; disclose unknown support. Do not assume root effort reaches a child. Supported overrides require evidence; neither escalation nor model choice grants authority.
+Distinguish assigned model and effort intent from separately observed effective settings. An unobservable effective model is "not observable"; an observed fallback with an unavailable reason is "cause not exposed". Do not infer fallback from missing telemetry or report a known wrong default as a pass. Runtime consumption and compatibility are unverified; do not assume root effort reaches a child. Supported overrides require evidence; neither escalation nor model choice grants authority.
 
 ## Least-privilege tools and delegation
 
-List only tools required for the stated role, and omit unnecessary capabilities. Keep any capability-bearing frontmatter inactive in this starter until its need and effective permission have been checked. Observational workers receive no edit or terminal access by default; record-writing exceptions for coordinators remain limited to their explicitly assigned lifecycle records and do not grant source edits.
+List only tools required for the stated role, and omit unnecessary capabilities. A live Copilot-targeted role needs a justified nonempty supported list: empty or missing can mean all tools on the inspected conversion path. Keep capability-bearing frontmatter inactive in this starter until its need and effective permission have been checked. Observational workers receive no edit or terminal access by default. Research and Review coordinators remain source-read-only; Plan remains source/configuration-read-only except that only its coordinator, during active planning, may create or revise a directly associated Proposed ADR under the identity, containment, collision, permission and readback guards in the [lifecycle core](../../rpir-lifecycle-core/SKILL.md#planning-stage-adr-authorship-exception). This is not general ADR authorship and grants no authority to workers or other phases. Coordinator lifecycle-record and guarded status writes remain limited to their explicit phase scope. Load essential role-appropriate named skills explicitly; links or parent inheritance do not prove loading.
 
-If delegation is necessary, enable it only for the appropriate coordinator and list each allowed existing agent by exact name. Do not use a wildcard allow-list or enable nested worker delegation by default. A worker role does not inherit coordinator authority.
+If delegation is necessary, enable it only for the appropriate coordinator and state each permitted existing worker in its loaded body. Resolve actual discovered role identity; do not hardcode opaque IDs or substitute a generic worker. Do not use a wildcard route or enable nested worker delegation. These behavioral rules are not a native per-parent filter; unexpected exposed tools and worker roles do not confer authority.
 
 ## Handoff (conditional)
 
-Omit this section when no handoff is needed. If a logically sequenced handoff is justified, identify the existing target by exact name and require a manual handoff using `send: false` whenever the developer must inspect or approve the next step. If the target, sequencing, or approval requirement is unknown, stop and resolve it; do not configure or imply an automatic approval.
+Omit this section when no handoff is needed. For a justified transition, identify the receiving role and physical input and require a deliberate engineer-sent request when inspection or approval is needed. The prospective native route has no fixed wording or slash dependency; policy effective at invocation governs bootstrap. Policy edits do not self-upgrade a session or make an earlier invocation retroactive. A selection or unsent suggestion is not approval. If target, sequencing or approval is unknown, stop and resolve it.
 
 ## Output
 
@@ -57,7 +57,7 @@ Describe the expected deliverable, its required structure, and how to distinguis
 
 - [ ] Frontmatter is valid and the name is unique and appropriate for the agent.
 - [ ] Role, inputs, responsibilities, exclusions, and output contract are specific and consistent.
-- [ ] Every tool is justified by the role; any delegation allow-list names only intended existing agents.
+- [ ] Every tool is justified by the role; any coordinator's body names only intended permitted workers.
 - [ ] Any handoff is logically sequenced, targets an existing agent, and remains manual where approval matters.
 - [ ] A representative request fits the role and produces the declared output without unauthorized effects.
 - [ ] Check VS Code Chat References and Diagnostics if loading or delegation is uncertain; report runtime checks not performed as unverified.

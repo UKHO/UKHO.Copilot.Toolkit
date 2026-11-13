@@ -17,25 +17,24 @@ Choose an agent only when role ownership, context isolation, distinct tools, del
 - Default to repository scope under `.github/agents/`. Inspect existing customizations, `AGENTS.md`, `CLAUDE.md`, workflow documentation, and repository validation conventions before drafting.
 - State the role, phase objective, responsibilities, explicit exclusions, required inputs, expected output, any justified handoff target, approval requirements, and required tools. Ask for unknown validation commands before considering terminal access; do not invent a command.
 - Keep coordinator instructions focused on orchestration rather than copying repository standards owned elsewhere.
-- For Toolkit suite roles, apply [agent model selection](../agent-model-selection/SKILL.md): justify a capability/consequence classification and one model/target-effort recommendation, and add the role to the authoritative profile. A new suite role is not profile-compliant without supported automatic Local model configuration; establish the exact reference and path evidence before configuring it, and disclose unresolved evidence instead of silently inheriting or inventing a literal. Do not default every role to one model.
+- For Toolkit suite roles, apply [agent model selection](../agent-model-selection/SKILL.md): justify a capability/consequence classification and one model/target-effort recommendation, and add the role to the authoritative profile. The approved Copilot-native target uses one supported runtime ID as a preferred model per role; establish the exact reference and path evidence before configuring it, and disclose unresolved evidence instead of silently inheriting or inventing a literal. Do not default every role to one model or use a fallback array or routine task-call override.
 - Declare each role's own canonical profile effort as `reasoning-effort` beside its model, without requiring runtime support proof before declaration; do not default all roles to `high` or inherit another role's effort.
-- Distinguish recommended effort, declared intent, supported model configuration and separately observed effective effort. Runtime consumption, compatibility and harmless ignoring are unestablished; disclose unknown support. Do not assume root effort reaches a child or promise picker precedence. Overrides require an evidenced supported route, and escalation grants no authority.
+- Distinguish the assigned model and declared effort intent from observed effective model and effort. Report an unobservable effective model as "not observable" and an observed fallback with unavailable reason as "cause not exposed"; do not infer fallback from missing telemetry or call a known wrong default a pass. Runtime consumption and compatibility remain unverified. Do not assume root effort reaches a child or promise picker precedence. Overrides require an evidenced supported route, and escalation grants no authority.
 
 ## Least-privilege capabilities and delegation
 
 - **The author**, before granting a capability, must tie each requested tool to the agent's stated role and task. Grant only the smallest viable tool list supported by that need; if the need or permission is unknown, do not grant the capability until it is resolved.
 - **Observational research, planning, review, assurance, and validation workers** receive no `edit` or terminal access by default. They do not gain lifecycle-record, status, approval, acceptance, or handoff authority from their role description.
-- **Bounded Research, Plan, and Review coordinators** may need `edit` solely for their assigned local lifecycle drafts/reports and explicitly guarded status writes. That record-specific exception does not authorize source edits or grant authority to workers.
+- **Bounded Research, Plan, and Review coordinators** may need `edit` for their assigned local lifecycle drafts/reports and explicitly guarded status writes. Research and Review remain source-read-only; Plan remains source/configuration-read-only except for its narrow directly associated Proposed ADR exception. Only the Plan coordinator during active planning may create or revise such an ADR, subject to the identity, containment, collision, permission and readback guards in the [lifecycle core](../rpir-lifecycle-core/SKILL.md#planning-stage-adr-authorship-exception). This is not general ADR authorship and grants no authority to workers or other phases.
 - **Implement** receives only the scope of its separately approved pass; a role description or tool declaration does not expand that scope.
-- **Delegating coordinators** receive `agent` only when delegation is needed and use an explicit `agents` allow-list naming the intended agents. Never use `agents: '*'`. Workers are not granted nested delegation by default.
+- **Delegating coordinators** receive a supported delegation tool only when needed and state their exact permitted workers in the loaded body. Resolve the intended role against discovered agents; do not hardcode opaque IDs or substitute a generic worker. Workers must not delegate further. These are behavioral controls, not a native per-parent filter or proof of isolation; unexpected exposed tools grant no authority.
+- Use a justified nonempty supported tool list for each live role: on the inspected Copilot conversion path an empty or missing list can mean all tools. Explicitly load essential role-appropriate named skills; a link or presumed parent inheritance is not proof of loading.
 - **Internal workers** use `user-invocable: false`. This visibility setting is not a substitute for least-privilege tools or an authority boundary.
 
 ## Handoffs and approval stops
 
-- Define a handoff only when the phases are logically sequenced; identify an existing target by its exact agent name and verify the target and its role before configuring it.
-- Where a developer must inspect or approve the next step—especially before edits or commands—configure a manual handoff with `send: false`. Do not configure an automatic send for such a transition.
-- If the target, sequencing, or required approval is unknown, do not configure the handoff or imply that it is approved. Stop that configuration and resolve the uncertainty first.
-- A handoff declaration is not itself approval, permission, or authority for the receiving agent's effects.
+- Define a next action only when phases are logically sequenced; identify and verify the existing receiving role and required physical input. The prospective native route is a deliberate engineer-sent request to that role, without fixed wording or slash dependency. Policy effective at invocation governs bootstrap; no policy edit self-upgrades a session or makes an earlier invocation retroactive.
+- Where inspection or approval is needed, keep the transition manual. Selection, a suggestion or unsent prefill is not approval, permission or authority. If target, sequencing or approval is unknown, stop the affected transition and resolve it.
 
 ## Expected output
 
@@ -50,10 +49,10 @@ Use the [agent starter template](templates/agent.md) as an inert structure, adap
 - File is under `.github/agents/` with valid YAML frontmatter and a distinct lowercase kebab-case filename ending in `.agent.md`.
 - Description states the role, task, expected outcome, and useful discovery vocabulary.
 - Responsibilities and exclusions do not duplicate another agent.
-- Tools are minimal: observational workers have no `edit` or terminal capability by default, while any coordinator write grant is limited to its explicit record/status role and does not grant source edits.
-- Delegating agents include `agent` and an explicit `agents` allow-list.
-- Workers are non-user-invocable and do not delegate further unless explicitly justified.
-- Every handoff names an existing agent, is logically sequenced, and requires manual send where approval matters.
+- Tools are minimal: observational workers have no `edit` or terminal capability by default; coordinator writes stay within their explicit phase scope, including only the guarded Plan-only Proposed ADR exception described above.
+- Delegating coordinators have a justified supported tool and exact permitted-worker rules in their loaded bodies; no wildcard route is authorized.
+- Workers are non-user-invocable and do not delegate further.
+- Each next action identifies an existing receiving role and required input and remains manual where approval matters.
 - A representative request produces the declared output without unauthorized edits or commands.
 - Check VS Code Chat References and Diagnostics if loading or delegation is uncertain.
 
