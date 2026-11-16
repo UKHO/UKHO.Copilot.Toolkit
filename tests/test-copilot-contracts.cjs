@@ -1647,6 +1647,210 @@ cases += 1;
 
 const correctionOwnerStart = cases;
 const executionError = (pattern) => (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' && pattern.test(error.message);
+
+// Optional lifecycle status mirrors are distinct from required active-Plan
+// progress. Neither history nor another role can replace either core owner.
+const preservationStart = cases;
+const statusOwner = technicalUnit(executionSources.core, '## Status, questions and validation',
+  'Status mirrors and completion markers', false);
+const statusDistinction = technicalUnit(executionSources.core, '### Approved Plan execution-marker exception', 'For clarity,', false);
+const mirrorError = executionError(/Lifecycle core status-mirror owner must retain/);
+const distinctionError = executionError(/Lifecycle core must distinguish optional status mirrors/);
+for (const [owner, diagnostic, targets] of [
+  [statusOwner, mirrorError, ['optional bookkeeping, not scope, transition or acceptance authority',
+    'inspect the current physical content', 'change only the intended bookkeeping field', 'verify the saved result',
+    're-read and reconcile without overwriting substantive edits',
+    'failed mirror must be disclosed but cannot invalidate otherwise verified delivery or a clean Review']],
+  [statusDistinction, distinctionError, ["does not make Implement's active approved-Plan execution tracking optional",
+    'only lifecycle status mirrors remain optional', 'Implement must maintain the existing progress markers',
+    'not standalone validation proof, approval, transition or acceptance']]
+]) {
+  for (const target of targets) {
+    const missing = replaceOnce(executionSources.core, owner, replaceOnce(owner, target, 'omitted safeguard'));
+    for (const [label, core, implementAgent] of [
+      ['missing', missing, executionSources.implementAgent],
+      ['history', `${missing}\n\n## Historical example\n\n${owner}\n`, executionSources.implementAgent],
+      ['metadata', replaceOnce(missing, 'description: ', `description: ${target}; `), executionSources.implementAgent],
+      ['wrong section', replaceOnce(missing, '## Contain allocation and effects', `## Contain allocation and effects\n\n${owner}`), executionSources.implementAgent],
+      ['wrong owner', missing, `${executionSources.implementAgent}\n\n${owner}\n`]
+    ]) assertRejected(`status preservation ${label}: ${target}`, () => contracts.checkIncrementalRpirContract({
+      ...executionSources, core, implementAgent
+    }), diagnostic);
+  }
+  for (const core of [replaceOnce(executionSources.core, owner, 'Bookkeeping is considered.'),
+    replaceOnce(executionSources.core, owner, `${owner}\n\n${owner}`)]) {
+    assertRejected('missing or ambiguous status owner', () => contracts.checkIncrementalRpirContract({
+      ...executionSources, core
+    }), diagnostic);
+  }
+}
+for (const [anchor, statement] of [
+  [statusOwner, 'Status mirrors are acceptance.'],
+  [statusOwner, 'Status mirrors authorize transition.'],
+  [statusOwner, 'Failed mirrors invalidate verified delivery.'],
+  [statusDistinction, 'Active-Plan progress markers are optional.']
+]) assertRejected(`status additive contradiction: ${statement}`, () => contracts.checkIncrementalRpirContract({
+  ...executionSources, core: replaceOnce(executionSources.core, anchor, `${anchor}\n\n${statement}`)
+}), executionError(/Lifecycle core status: contradictory preservation rule/));
+for (const replacement of ['do not inspect the current physical content', 'never inspect the current physical content',
+  'must not inspect the current physical content']) {
+  assertRejected(`status negated inspection: ${replacement}`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, core: replaceOnce(executionSources.core, statusOwner,
+      replaceOnce(statusOwner, 'inspect the current physical content', replacement))
+  }), executionError(/Lifecycle core status/));
+}
+for (const negation of ['do not', 'never', 'must not', 'should not', 'need not']) {
+  const phrase = `${negation} change only the intended bookkeeping field`;
+  for (const [label, core] of [
+    ['replaced safeguard', replaceOnce(executionSources.core, statusOwner,
+      replaceOnce(statusOwner, 'change only the intended bookkeeping field', phrase))],
+    ['additive contradiction', replaceOnce(executionSources.core, statusOwner, `${statusOwner}\n\n${phrase}.`)]
+  ]) assertRejected(`status ${label}: ${phrase}`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, core
+  }), executionError(/Lifecycle core status/));
+}
+for (const statement of ['Status mirrors are mandatory.', 'Status mirrors are required.',
+  'Require status mirrors.', 'Do not require status mirrors; but require status mirrors.',
+  'Must not require status mirrors; but require status mirrors.',
+  'Do not inspect the current physical content.']) {
+  assertRejected(`status additive reversal: ${statement}`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, core: replaceOnce(executionSources.core, statusOwner, `${statusOwner}\n\n${statement}`)
+  }), executionError(/Lifecycle core status: contradictory preservation rule/));
+}
+for (const statement of ['Do not require status mirrors.', 'Never require status mirrors.',
+  'Must not require status mirrors.', 'Should not require status mirrors.', 'Need not require status mirrors.',
+  'Must not mandate status mirrors.',
+  'Status mirrors are not mandatory.', 'Inspect the current physical content before a status update.',
+  'Do not change unrelated fields.']) {
+  assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
+    core: replaceOnce(executionSources.core, statusOwner, `${statusOwner}\n\n${statement}`) }));
+  cases += 1;
+}
+assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
+  core: `${executionSources.core}\n\n## Historical example\n\nStatus mirrors are mandatory. Do not inspect the current physical content.\n`,
+  implementAgent: `${executionSources.implementAgent}\n\n## Historical example\n\nStatus mirrors are required.\n` }));
+cases += 1;
+for (const [target, replacement] of [
+  ['optional bookkeeping, not scope, transition or acceptance authority', 'bookkeeping, not scope, transition or acceptance authority; status mirrors are optional'],
+  ['elects an eligible status update', 'chooses an eligible status update'],
+  ["does not make Implement's active approved-Plan execution tracking optional", "never makes Implement's active approved-Plan execution tracking optional"],
+  ['not standalone validation proof, approval, transition or acceptance', 'neither validation proof nor approval, transition or acceptance']
+]) {
+  assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({
+    ...executionSources, core: replaceOnce(executionSources.core, target, replacement)
+  }));
+  cases += 1;
+}
+
+// Implement must itself inspect the Review chain and manually receive the
+// original-criteria correction; Review-side rules are not a substitute.
+const planIntakeOwner = technicalUnit(executionSources.implementAgent, '# Implement coordinator',
+  'Apply the inspected, explicitly approved Plan outcome', false);
+const planIntakeError = executionError(/Implement coordinator must independently inspect the original physical approved Plan and lineage/);
+for (const target of ['inspected, explicitly approved Plan outcome',
+  'Independently inspect the actual contained numbered physical Plan/version and direct Research lineage']) {
+  const missing = replaceOnce(executionSources.implementAgent, planIntakeOwner, replaceOnce(planIntakeOwner, target, 'omitted safeguard'));
+  for (const [label, implementAgent, reviewAgent] of [
+    ['missing', missing, executionSources.reviewAgent],
+    ['history', `${missing}\n\n## Historical correction\n\n${planIntakeOwner}\n`, executionSources.reviewAgent],
+    ['metadata', replaceOnce(missing, 'description: ', `description: ${target}; `), executionSources.reviewAgent],
+    ['wrong owner', missing, `${executionSources.reviewAgent}\n\n${planIntakeOwner}\n`]
+  ]) assertRejected(`Implement physical Plan ${label}: ${target}`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, implementAgent, reviewAgent
+  }), planIntakeError);
+}
+const intakeOwner = technicalUnit(executionSources.implementAgent, '# Implement coordinator',
+  'For supported in-boundary Review findings,', false);
+const intakeError = executionError(/Implement coordinator correction intake must retain/);
+for (const target of ['engineer may manually resume Implement', 'original approved Plan',
+  'linked inspected physical Review context', 'Verify the Review, its reviewed report and the original Plan/Research lineage',
+  'Findings are evidence, not a new scope or automatic approval', 'Preserve original acceptance criteria',
+  'produce fresh implementation evidence', 'seek fresh independent Review', 'do not rewrite finalized reports',
+  'engineer decision and Plan-owned amendment/new Plan']) {
+  const missing = replaceOnce(executionSources.implementAgent, intakeOwner, replaceOnce(intakeOwner, target, 'omitted safeguard'));
+  for (const [label, implementAgent, reviewAgent] of [
+    ['missing', missing, executionSources.reviewAgent],
+    ['history', `${missing}\n\n## Historical correction\n\n${intakeOwner}\n`, executionSources.reviewAgent],
+    ['metadata', replaceOnce(missing, 'description: ', `description: ${target}; `), executionSources.reviewAgent],
+    ['wrong section', `${missing}\n\n## Other instructions\n\n${intakeOwner}\n`, executionSources.reviewAgent],
+    ['wrong owner', missing, `${executionSources.reviewAgent}\n\n${intakeOwner}\n`]
+  ]) assertRejected(`Implement correction ${label}: ${target}`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, implementAgent, reviewAgent
+  }), intakeError);
+}
+for (const implementAgent of [replaceOnce(executionSources.implementAgent, intakeOwner, 'Correction is handled elsewhere.'),
+  replaceOnce(executionSources.implementAgent, intakeOwner, `${intakeOwner}\n\n${intakeOwner}`)]) {
+  assertRejected('missing or ambiguous Implement correction owner', () => contracts.checkIncrementalRpirContract({
+    ...executionSources, implementAgent
+  }), intakeError);
+}
+for (const statement of ['Automatically resume Implement.', 'Findings grant new scope.',
+  'Skip the linked Review.', 'Omit fresh implementation evidence.',
+  'Must not omit fresh implementation evidence; but omit fresh implementation evidence.', 'Rewrite finalized reports.']) {
+  assertRejected(`Implement correction additive contradiction: ${statement}`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, implementAgent: replaceOnce(executionSources.implementAgent, intakeOwner, `${intakeOwner}\n\n${statement}`)
+  }), executionError(statement === 'Rewrite finalized reports.'
+    ? /Implement coordinator: contradictory marker authority or completion gate/
+    : /Implement correction intake: contradictory preservation rule/));
+}
+for (const negation of ['do not', 'never', 'must not', 'should not', 'need not']) {
+  const phrase = `${negation} produce fresh implementation evidence`;
+  for (const [label, implementAgent] of [
+    ['replaced safeguard', replaceOnce(executionSources.implementAgent, intakeOwner,
+      replaceOnce(intakeOwner, 'produce fresh implementation evidence', phrase))],
+    ['additive contradiction', replaceOnce(executionSources.implementAgent, intakeOwner, `${intakeOwner}\n\n${phrase}.`)]
+  ]) assertRejected(`Implement correction ${label}: ${phrase}`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, implementAgent
+  }), executionError(/Implement correction intake: contradictory preservation rule/));
+}
+for (const replacement of [
+  'without the original approved Plan or linked inspected physical Review context',
+  'without the original approved Plan and linked inspected physical Review context',
+  'without the original approved Plan',
+  'without linked inspected physical Review context'
+]) {
+  assertRejected(`Implement correction negated inputs: ${replacement}`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, implementAgent: replaceOnce(executionSources.implementAgent, intakeOwner,
+      replaceOnce(intakeOwner, 'with the *original approved Plan* and linked inspected physical Review context', replacement))
+  }), intakeError);
+}
+for (const statement of ['Resume Implement without the original approved Plan or linked inspected physical Review context.',
+  'Proceed without the original approved Plan.', 'Resume Implement without the linked inspected physical Review context.',
+  'Do not resume Implement without the original approved Plan; but resume Implement without the original approved Plan.']) {
+  assertRejected(`Implement correction additive reversal: ${statement}`, () => contracts.checkIncrementalRpirContract({
+    ...executionSources, implementAgent: replaceOnce(executionSources.implementAgent, intakeOwner, `${intakeOwner}\n\n${statement}`)
+  }), executionError(/Implement correction intake: contradictory preservation rule/));
+}
+for (const statement of ['Do not resume Implement without the original approved Plan.',
+  'Never proceed without the linked inspected physical Review context.',
+  'Do not require a duplicate issue Plan.', 'Do not omit fresh implementation evidence.',
+  'Never skip fresh implementation evidence.', 'Must not omit fresh implementation evidence.']) {
+  assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
+    implementAgent: replaceOnce(executionSources.implementAgent, intakeOwner, `${intakeOwner}\n\n${statement}`) }));
+  cases += 1;
+}
+assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
+  implementAgent: `${executionSources.implementAgent}\n\n## Historical correction\n\nResume Implement without the original approved Plan or linked inspected physical Review context.\n`,
+  reviewAgent: `${executionSources.reviewAgent}\n\n## Historical correction\n\nProceed without the original approved Plan.\n` }));
+cases += 1;
+for (const [target, replacement] of [
+  ['engineer may manually resume Implement', 'engineer may resume Implement manually'],
+  ['linked inspected physical Review context', 'linked physical Review context that has been inspected'],
+  ['Verify the Review, its reviewed report and the original Plan/Research lineage', 'Inspect the Review, its reviewed report and the original Plan and Research lineage'],
+  ['seek fresh independent Review', 'obtain fresh independent re-review'],
+  ['Findings are evidence, not a new scope or automatic approval', 'Findings are evidence, not new scope or automatic approval']
+]) {
+  assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({
+    ...executionSources, implementAgent: replaceOnce(executionSources.implementAgent, intakeOwner,
+      replaceOnce(intakeOwner, target, replacement))
+  }));
+  cases += 1;
+}
+assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
+  implementAgent: `${executionSources.implementAgent}\n\n## Historical correction\n\nAutomatically resume Implement.\n` }));
+cases += 1;
+console.log(`Passed ${cases - preservationStart} focused status-mirror and Implement correction preservation cases.`);
+
 // General numbered records have their own owner, independent of the Research
 // directory/brief setup and the separate ADR or marker effects.
 const recordCaseStart = cases;

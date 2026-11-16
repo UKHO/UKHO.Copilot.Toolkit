@@ -72,9 +72,9 @@ function equal(actual, expected) {
 }
 
 // Recognize only immediate explicit negation, not arbitrary prose semantics.
-function hasAffirmativeMatch(text, pattern) {
+function hasAffirmativeMatch(text, pattern, negation = /\b(?:do not|never) (?:assert (?:that )?)?$/i) {
   return [...text.matchAll(pattern)].some((match) =>
-    !/\b(?:do not|never) (?:assert (?:that )?)?$/i.test(text.slice(Math.max(0, match.index - 40), match.index)));
+    !negation.test(text.slice(Math.max(0, match.index - 40), match.index)));
 }
 
 function sourcePath(relative) {
@@ -2059,6 +2059,61 @@ function checkIncrementalRpirContract(sources = {}) {
     /before moving to unrelated work/i, /persists only eligible existing markers/i,
     /disclose affected IDs(?: promptly)? as unsaved tracking/i, /parent-only failure or pause retains supported children/i
   ], 'RPIR Wiki progress summary must preserve completion-boundary tracking and recovery');
+
+  // Status mirrors are optional, but the adjacent active-Plan exception is
+  // mandatory. Neither passage can be supplied by another owner or history.
+  const statusSection = uniqueCheckpointSection(source.core, '## Status, questions and validation');
+  const statusMirror = uniqueCheckpointUnit(statusSection, 'Status mirrors and completion markers');
+  const markerSection = uniqueCheckpointSection(source.core, '### Approved Plan execution-marker exception');
+  const markerDistinction = uniqueCheckpointUnit(markerSection, 'For clarity,');
+  requireExecutionRule(statusMirror, [
+    /Status mirrors and completion markers are (?:optional bookkeeping, not scope, transition or acceptance authority|bookkeeping, not scope, transition or acceptance authority; status mirrors are optional)/i,
+    /(?:elects|chooses) an eligible status update/i, /inspect the current physical content/i,
+    /change only the intended bookkeeping field/i, /verify the saved result/i,
+    /conflict[^.!?\n]*re-read and reconcile without overwriting substantive edits/i,
+    /failed mirror must be disclosed but cannot invalidate otherwise verified delivery or a clean Review/i
+  ], 'Lifecycle core status-mirror owner must retain optional guarded bookkeeping without authority or loss of evidence');
+  requireExecutionRule(markerDistinction, [
+    /(?:does not make|never makes) Implement's active approved-Plan execution tracking optional/i,
+    /only lifecycle status mirrors remain optional/i,
+    /Implement must maintain the existing progress markers/i,
+    /(?:not standalone validation proof, approval, transition or acceptance|neither validation proof nor approval, transition or acceptance)/i
+  ], 'Lifecycle core must distinguish optional status mirrors from required active-Plan progress');
+
+  // The receiving Implement coordinator independently owns correction intake;
+  // Review guidance alone cannot satisfy this obligation.
+  const implementBody = coordinatorBody(source.implementAgent, 'Implement');
+  const planIntake = uniqueCheckpointUnit(implementBody, 'Apply the inspected, explicitly approved Plan outcome');
+  requireExecutionRule(planIntake, [
+    /inspected, explicitly approved Plan outcome/i,
+    /Independently inspect the actual contained numbered physical Plan\/version and direct Research lineage/i
+  ], 'Implement coordinator must independently inspect the original physical approved Plan and lineage');
+  const correctionIntake = uniqueCheckpointUnit(implementBody, 'For supported in-boundary Review findings,');
+  requireExecutionRule(correctionIntake, [
+    /(?:engineer may manually resume Implement|engineer may resume Implement manually) with (?:the )?\*?original approved Plan\*? and (?:linked inspected physical Review context|linked physical Review context that has been inspected)/i,
+    /(?:Verify|Inspect) the Review, its reviewed report and the original Plan(?:\/| and )Research lineage/i,
+    /Findings are evidence, not (?:a )?new scope or automatic approval/i,
+    /Preserve original acceptance criteria/i,
+    /produce fresh implementation evidence/i, /(?:seek|obtain) fresh independent (?:Review|re-review)/i,
+    /do not rewrite finalized reports/i,
+    /New material scope[^.!?\n]*engineer decision and Plan-owned amendment\/new Plan/i
+  ], 'Implement coordinator correction intake must retain original Plan, linked Review lineage, manual resumption and fresh evidence');
+
+  const preservationNegation = /\b(?:do not|never|must not|should not|need not) (?:assert (?:that )?)?$/i;
+  for (const [owner, text, contradictions] of [
+    ['Lifecycle core status', `${statusSection}\n${markerSection}`,
+      /\b(?:status mirrors?|completion markers?|tracking) (?:is|are) (?:approval|acceptance|transition authority)|\b(?:status mirrors?|completion markers?) (?:approve|authorize|establish) (?:a )?(?:transition|acceptance)|\b(?:failed|denied) mirrors? (?:invalidate|erase) (?:verified )?(?:delivery|evidence|Review)|\b(?:active[- ]Plan )?(?:progress markers?|execution tracking) (?:is|are) optional|\bstatus mirrors? (?:is|are) (?:mandatory|required)|\b(?:require|mandate) status mirrors?\b/gi],
+    ['Implement correction intake', implementBody,
+      /\b(?:automatically (?:resume|invoke) Implement|(?:findings|Review) (?:automatically )?(?:grant|grants|provide|provides) (?:new )?(?:scope|edit authority|approval)|(?:omit|skip) (?:the )?(?:original Plan|linked Review|Review lineage|fresh implementation evidence|independent re-review)|(?:rewrite|edit) finalized reports|(?:resume Implement|proceed) without (?:the )?(?:\*?original approved Plan\*?|linked (?:inspected physical|physical) Review context))/gi]
+  ]) {
+    if (hasAffirmativeMatch(text, contradictions, preservationNegation)) fail(`${owner}: contradictory preservation rule`, 'RPIR-EXECUTION-CONTRACT-001');
+  }
+  if (/\b(?:do not|never|must not|should not|need not) (?:inspect the current physical content|change only the intended bookkeeping field)\b/i.test(statusSection)) {
+    fail('Lifecycle core status: contradictory preservation rule', 'RPIR-EXECUTION-CONTRACT-001');
+  }
+  if (/\b(?:do not|never|must not|should not|need not) produce fresh implementation evidence\b/i.test(implementBody)) {
+    fail('Implement correction intake: contradictory preservation rule', 'RPIR-EXECUTION-CONTRACT-001');
+  }
   checkExpectedCheckpointPlanning(source);
   return true;
 }
