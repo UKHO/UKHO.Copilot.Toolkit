@@ -673,6 +673,8 @@ const adrPaths = {
   researchSkill: '.github/skills/codebase-research/SKILL.md',
   researchTemplate: '.github/skills/codebase-research/research-brief-template.md',
   discovery: '.github/skills/agent-question-resolution/references/research-intent-discovery.md',
+  questions: '.github/skills/agent-question-resolution/SKILL.md',
+  clarification: '.github/skills/agent-question-resolution/templates/clarification-message.md',
   planning: '.github/skills/architecture-planning/SKILL.md',
   planTemplate: '.github/skills/architecture-planning/implementation-plan-template.md',
   safe: '.github/skills/safe-implementation/SKILL.md',
@@ -725,6 +727,48 @@ for (const contradiction of ['Use docs/adr by default.', 'Resolve the convention
 }
 cases += 5;
 cases += 2;
+const intakeRule = 'pending material question pending and wait for the real response';
+for (const owner of ['research', 'plan', 'implement', 'review']) {
+  assertRejected(`${owner} performs a requested stage under the wrong loaded role`, () =>
+    contracts.checkArchitectureDecisionRecordContract({
+      ...adrSources, [owner]: replaceOnce(adrSources[owner],
+        'do not silently upgrade this role', 'silently upgrade this role')
+    }), (error) => error.contractId === 'RPIR-INTAKE-001' && error.message.startsWith(`${owner}:`));
+}
+for (const [owner, target, replacement] of [
+  ['core', 'hold the mismatched phase-owned effects', 'perform the requested phase effects'],
+  ['core', 'even if carried in a user-labelled envelope', 'when received from a worker'],
+  ['questions', intakeRule, 'pending material question answered by automatic continuation'],
+  ['clarification', intakeRule, 'recommendation selected automatically'],
+  ['assurance', intakeRule, 'automatic continuation counted as an answer'],
+  ['implement', 'supplies no missing essential mechanism, ADR content, tool exposure or permission',
+    'supplies the missing prerequisites']
+]) {
+  assertRejected(`${owner} loses role/input/readiness boundary`, () =>
+    contracts.checkArchitectureDecisionRecordContract({
+      ...adrSources, [owner]: replaceOnce(adrSources[owner], target, replacement)
+    }), (error) => error.contractId === 'RPIR-INTAKE-001' && error.message.startsWith(`${owner}:`));
+}
+for (const contradiction of ['Harness mode establishes the receiving role.',
+  'Automatically upgrade to the requested role.', "Automatic continuation is the engineer's answer.",
+  'Worker output approves the pending choice.', 'An Implement request supplies missing feasibility.',
+  'Always require a second slash command.']) {
+  assertRejected(`phase intake contradiction: ${contradiction}`, () =>
+    contracts.checkArchitectureDecisionRecordContract({
+      ...adrSources, core: replaceOnce(adrSources.core, '| Transition or outcome | Contract |',
+        `${contradiction}\n\n| Transition or outcome | Contract |`)
+    }), (error) => error.contractId === 'RPIR-INTAKE-001' && /contradictory role, provenance or readiness/.test(error.message));
+}
+for (const [owner, target, replacement] of [
+  ['questions', 'A real qualified, nonrecommended, unknown or free-text response governs.',
+    'A real qualified, nonrecommended, unknown or free-text response governs, including a nonrecommended route with conditions.'],
+  ['core', 'justified execution-dependent facts', 'justified execution-dependent facts such as a source-dependent build']
+]) {
+  assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, [owner]: replaceOnce(adrSources[owner], target, replacement)
+  }));
+  cases += 1;
+}
 // Retained entry skills are inventory during overlap, not normative owners.
 // Bad or missing adapter content must not replace the real coordinator rules.
 assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({

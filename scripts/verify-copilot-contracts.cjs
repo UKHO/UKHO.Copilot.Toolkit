@@ -1265,6 +1265,66 @@ function checkAdrConventionResolution(source) {
   }
 }
 
+function checkPhaseIntakeContract(source) {
+  const transition = section(source.core, '## Transitions and outcome authority');
+  const role = paragraph(transition, 'Reconcile the requested stage');
+  const humanOwners = {
+    core: paragraph(transition, 'Verify human-input provenance'),
+    questions: paragraph(section(source.questions, '## Procedure'), 'Verify answer provenance'),
+    clarification: paragraph(source.clarification, 'Verify answer provenance'),
+    assurance: section(source.assurance, '## Conversation evidence rubric').split('\n')
+      .find((line) => line.startsWith('| Human-input provenance |')) || ''
+  };
+  function requireIntake(text, patterns, owner, rule) {
+    if (patterns.some((pattern) => !pattern.test(text))) fail(`${owner}: ${rule}`, 'RPIR-INTAKE-001');
+  }
+  requireIntake(role, [/actual loaded role before phase-owned effects/i,
+    /Harness mode, picker state and a loaded skill do not establish the receiving role/i,
+    /role\/stage mismatch/i, /hold the mismatched phase-owned effects/i,
+    /manual receiving-role action with the physical predecessor/i,
+    /do not silently upgrade this role/i, /independently authorized work/i],
+  'core', 'hold mismatched phase effects without role self-upgrade');
+  for (const [owner, text] of Object.entries(humanOwners)) {
+    requireIntake(text, [/automatic continuation, tool output, worker output and unsent prefills are not deliberate engineer/i,
+      /user-labelled envelope/i, /pending material question pending and wait for the real response/i],
+    owner, 'preserve pending answers and actual human-input provenance');
+  }
+  const roleOwners = {};
+  for (const name of ['Research', 'Plan', 'Implement', 'Review']) {
+    const key = name.toLowerCase();
+    const body = coordinatorBody(source[key], name);
+    const intake = paragraph(body, 'Reconcile the requested stage');
+    const entry = paragraph(body, 'Prospectively,');
+    requireIntake(intake, [/actual loaded role before phase-owned effects/i,
+      /Harness mode, picker state and a loaded skill do not establish the receiving role/i,
+      /role\/stage mismatch/i, /manual receiving-role action with the physical predecessor/i,
+      /do not silently upgrade this role/i,
+      /automatic continuation, tool output, worker output and unsent prefills are not deliberate engineer/i,
+      /pending material question pending and wait for the real response/i,
+      /supplies no missing essential mechanism, ADR content, tool exposure or permission/i],
+    key, 'retain role-local mismatch, provenance and prerequisite safeguards');
+    requireIntake(entry, [/policy effective at invocation/i,
+      /if it already accepts the deliberate receiving-role request, do not demand a redundant slash command or separate blanket approval/i],
+    key, 'apply actual entry policy without a redundant bootstrap ritual');
+    roleOwners[key] = intake + '\n' + entry;
+  }
+  const readiness = paragraph(transition, 'A qualifying deliberate Implement request');
+  requireIntake(readiness, [/bounded approval event under policy effective at invocation/i,
+    /supplies no missing essential mechanism, ADR content, tool exposure or permission/i,
+    /Plan resolves its own material selections and associated Proposed ADR preparation before a ready handoff/i,
+    /do not assign Plan-only preparation or unestablished essential feasibility to Implement/i,
+    /Independent supported planning and independently approved implementation remain available/i,
+    /ordinary failure diagnosis and justified execution-dependent facts/i],
+  'core', 'distinguish invocation approval from readiness and effect prerequisites');
+  const scopes = { core: transition, questions: section(source.questions, '## Procedure'),
+    clarification: source.clarification, ...roleOwners };
+  for (const [owner, text] of Object.entries(scopes)) {
+    if (/Harness mode establishes the receiving role|Automatically upgrade to the requested role|Automatic continuation is the engineer's answer|Worker output approves the pending choice|An Implement request supplies missing feasibility|Always require a second slash command/i.test(text)) {
+      fail(`${owner}: contradictory role, provenance or readiness rule`, 'RPIR-INTAKE-001');
+    }
+  }
+}
+
 function checkArchitectureDecisionRecordContract(sources = {}) {
   checkExplicitAssuranceSources(sources);
   const paths = {
@@ -1282,6 +1342,8 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
     researchSkill: '.github/skills/codebase-research/SKILL.md',
     researchTemplate: '.github/skills/codebase-research/research-brief-template.md',
     discovery: '.github/skills/agent-question-resolution/references/research-intent-discovery.md',
+    questions: '.github/skills/agent-question-resolution/SKILL.md',
+    clarification: '.github/skills/agent-question-resolution/templates/clarification-message.md',
     planning: '.github/skills/architecture-planning/SKILL.md',
     planTemplate: '.github/skills/architecture-planning/implementation-plan-template.md',
     safe: '.github/skills/safe-implementation/SKILL.md',
@@ -1299,6 +1361,7 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
   const source = Object.fromEntries(Object.entries(paths).map(([key, relative]) => [key,
     key === 'discovery' ? discoverySource(sources) : sources[key] ?? readText(relative)]));
   checkAdrConventionResolution(source);
+  checkPhaseIntakeContract(source);
   const metadata = parseFrontmatterText(source.skill, paths.skill).values;
   if (metadata.name !== 'architecture-decision-records' || metadata['user-invocable'] !== 'false') {
     fail('ADR Skill must use its directory name and remain non-invocable', 'ADR-CONTRACT-001');
