@@ -94,15 +94,22 @@ for (const [label, manifestInput, lockInput] of [
 
 const nativeResearchPath = agentPath('Research');
 const nativeResearch = readArtifact(nativeResearchPath);
-const researchTools = "tools: ['read', 'search', 'web', 'edit', 'edit/createDirectory', 'agent']";
+const researchTools = "tools: ['read', 'search', 'web', 'edit', 'edit/createDirectory', 'agent', 'execute']";
 assert.ok(nativeResearch.includes(researchTools), 'Research retains the qualified directory reference alongside edit');
 assert.doesNotThrow(() => nativeCheck(nativeResearchPath, nativeResearch));
 cases += 1;
+for (const name of ['Research', 'Plan', 'Review']) {
+  const relative = agentPath(name);
+  const original = readArtifact(relative);
+  assertRejected(`native ${name} requires execute for the Script Runner route`,
+    () => nativeCheck(relative, replaceOnce(original, ", 'execute']", "]")),
+    (error) => error.contractId === 'NATIVE-AGENT-001' && /tools differ from the nonempty role boundary/.test(error.message));
+}
 for (const [label, replacement] of [
-  ['omitted directory reference', "tools: ['read', 'search', 'web', 'edit', 'agent']"],
-  ['unqualified directory reference', "tools: ['read', 'search', 'web', 'edit', 'createDirectory', 'agent']"],
-  ['invented extension prefix', "tools: ['read', 'search', 'web', 'edit', 'github.copilot/edit/createDirectory', 'agent']"],
-  ['omitted edit alias', "tools: ['read', 'search', 'web', 'edit/createDirectory', 'agent']"]
+  ['omitted directory reference', "tools: ['read', 'search', 'web', 'edit', 'agent', 'execute']"],
+  ['unqualified directory reference', "tools: ['read', 'search', 'web', 'edit', 'createDirectory', 'agent', 'execute']"],
+  ['invented extension prefix', "tools: ['read', 'search', 'web', 'edit', 'github.copilot/edit/createDirectory', 'agent', 'execute']"],
+  ['omitted edit alias', "tools: ['read', 'search', 'web', 'edit/createDirectory', 'agent', 'execute']"]
 ]) assertRejected(`native Research ${label}`, () => nativeCheck(nativeResearchPath,
   replaceOnce(nativeResearch, researchTools, replacement)),
   (error) => error.contractId === 'NATIVE-AGENT-001' && /tools differ from the nonempty role boundary/.test(error.message));
@@ -111,7 +118,7 @@ const nativePlanPath = agentPath('Plan');
 const nativePlan = readArtifact(nativePlanPath);
 for (const [label, target, replacement] of [
   ['wrong target', 'target: github-copilot', 'target: vscode'],
-  ['empty tools', "tools: ['read', 'search', 'edit', 'agent']", 'tools: []'],
+  ['empty tools', "tools: ['read', 'search', 'edit', 'agent', 'execute']", 'tools: []'],
   ['unsupported Local delegation metadata', 'target: github-copilot', "target: github-copilot\nagents: ['Script Runner']"],
   ['wrong body specialist', 'Requirements Analyst, Architecture Analyst', 'Test Worker, Architecture Analyst'],
   ['wildcard body specialist', 'Requirements Analyst, Architecture Analyst', '*, Architecture Analyst'],
@@ -1647,6 +1654,17 @@ const executionSources = Object.fromEntries(Object.entries(executionPaths).map((
 executionSources.researchSkill = readArtifact('.github/skills/codebase-research/SKILL.md');
 assert.doesNotThrow(() => contracts.checkIncrementalRpirContract(executionSources));
 cases += 1;
+for (const [key, target] of [
+  ['researchAgent', 'this is a behavioral rule rather than platform-enforced isolation'],
+  ['planAgent', 'This is a behavioral restriction, not a platform-enforced boundary.'],
+  ['reviewAgent', 'This is a behavioral restriction, not a platform-enforced boundary.']
+]) {
+  assertRejected(`${key} omits the behavioral-only command-routing limit`,
+    () => contracts.checkIncrementalRpirContract({ ...executionSources,
+      [key]: replaceOnce(executionSources[key], target, 'This route remains bounded.') }),
+    (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' &&
+      /must route command execution through Script Runner/.test(error.message));
+}
 
 const correctionOwnerStart = cases;
 const executionError = (pattern) => (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' && pattern.test(error.message);
@@ -2014,17 +2032,18 @@ assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionS
 cases += 2;
 
 const setupOwners = [
-  ['researchAgent', 'research', '# Research coordinator', 'Inspect and reuse each safe selected documentation root',
+  ['researchAgent', 'research', '# Research coordinator', 'Use Script Runner for every command',
     ['identity, containment, absence/collision and permission', 'inspect each result before the next effect',
-      'report and stop the dependent effect', 'brief save and full readback', 'Never substitute terminal, Runner, implicit file-save parents or another location']],
+      'report and stop the dependent effect', 'brief save and full readback', 'ask Runner to create only that one directory']],
   ['core', 'core', '## Contain allocation and effects', 'For each missing selected documentation root',
-    ['identity, containment, absence including collisions and effective permission', 'inspect its result before considering the next effect',
+    ['identity, containment, absence including collisions and effective permission', 'assign only that literal directory effect',
+      'inspect its result before considering the next effect',
       'Report a missing operation, ambiguous identity, collision, conflict, failed or denied creation/save, or unverifiable result',
-      'read back its complete physical content and links', 'Do not substitute terminal commands, Script Runner directory authorship or implicit file-save parent creation, or bypass a real denial']],
+      'read back its complete physical content and links', 'Do not use the coordinator shell, implicit file-save parent creation or another location as a workaround']],
   ['researchSkill', 'method', '## Limits', 'When this method supports the Research coordinator',
-    ['each selected missing documentation root, direct `copilot/` parent and topic', 'inspecting each result before proceeding',
+    ['each selected missing documentation root, direct `copilot/` parent and topic', 'and inspecting its result',
       'Report unavailable operations, collisions, containment or permission uncertainty, denial and failed or unverifiable saves',
-      'Guard and save/read back the brief separately', 'do not substitute terminal, Script Runner or implicit-parent file creation']]
+      'Guard and save/read back the brief separately', 'do not use the coordinator shell or implicit-parent file creation as a workaround']]
 ];
 for (const [key, owner, heading, prefix, targets] of setupOwners) {
   const owned = technicalUnit(executionSources[key], heading, prefix, false);
@@ -2056,6 +2075,9 @@ for (const [key, owner, heading, prefix, targets] of setupOwners) {
   assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
     [key]: replaceOnce(executionSources[key], owned, `${owned} This remains a separate guarded effect.`) }));
   assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
+    [key]: replaceOnce(executionSources[key], owned,
+      `${owned} A coordinator may assign one explicitly selected literal directory to Script Runner after checking identity, containment, absence/collision and permission.`) }));
+  assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
     [key]: `${executionSources[key]}\n\n## Historical example\n\nScript Runner may create directories.\n` }));
   for (const statement of ['Do not bypass a denial.', 'Never bypass a denial.', 'Do not ignore a collision.',
     'Never bypass containment.']) {
@@ -2072,12 +2094,8 @@ for (const target of ['documentation root', 'direct `copilot/` parent', 'numbere
   }), executionError(/core: missing or ambiguous guarded Research directory owner/));
 }
 assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
-  core: replaceOnce(executionSources.core, coreSetup, replaceOnce(coreSetup, 'one selected directory at a time', 'one chosen directory at a time')) }));
-assert.doesNotThrow(() => contracts.checkIncrementalRpirContract({ ...executionSources,
-  core: replaceOnce(executionSources.core, coreSetup, replaceOnce(coreSetup,
-    'uses the existing dedicated create-directory operation, one selected directory at a time',
-    'uses one selected directory at a time through the existing dedicated create-directory operation')) }));
-cases += 2;
+  core: replaceOnce(executionSources.core, coreSetup, replaceOnce(coreSetup, 'single-directory creation', 'one selected directory at a time')) }));
+cases += 1;
 
 const markerFixtures = [
   ['implementAgent', '# Implement coordinator', 'The prominent execution loop is:', true, /Implement summary must preserve/],
@@ -2230,11 +2248,11 @@ console.log(`Passed ${cases - checkpointNativeStart} focused native checkpoint o
 const researchEquivalent = replaceOnce(executionSources.researchAgent,
   'Explicitly identify architectural choices after existing discovery/acknowledgment or explicit-deferral limits permit investigation.',
   'Identify architectural choices explicitly once the existing discovery/acknowledgment or explicit-deferral boundary permits investigation.');
-const researchCheckpointSentence = executionSources.researchAgent.match(/Script Runner may observe,[^\n]*?\.(?=\s|$)/)?.[0];
+const researchCheckpointSentence = executionSources.researchAgent.match(/Script Runner may observe and execute[^\n]*?\.(?=\s|$)/)?.[0];
 assert.ok(researchCheckpointSentence, 'Research fixture requires its normative checkpoint sentence');
 for (const researchAgent of [
   researchEquivalent,
-  replaceOnce(researchEquivalent, ' Script Runner may observe,', '\n\nScript Runner may observe,'),
+  replaceOnce(researchEquivalent, ' Script Runner may observe and execute', '\n\nScript Runner may observe and execute'),
   replaceOnce(researchEquivalent, 'separately granted local Git index/history checkpoint',
     'separately authorized local Git index/history checkpoint'),
   replaceOnce(researchEquivalent, 'eligible Research brief after physical save/readback',
@@ -2252,8 +2270,8 @@ for (const target of [
     ['missing safeguard', missing, executionSources.reviewAgent],
     ['historical decoy', `${missing}\n\n## Historical example (not operating policy)\n\n${researchCheckpointSentence}\n`, executionSources.reviewAgent],
     ['metadata decoy', replaceOnce(missing, 'description: ', `description: ${researchCheckpointSentence} `), executionSources.reviewAgent],
-    ['wrong-subject decoy', replaceOnce(missing, ' Script Runner may observe,',
-      ` Unrelated documentation quotes: ${researchCheckpointSentence} Script Runner may observe,`), executionSources.reviewAgent],
+    ['wrong-subject decoy', replaceOnce(missing, ' Script Runner may observe and execute',
+      ` Unrelated documentation quotes: ${researchCheckpointSentence} Script Runner may observe and execute`), executionSources.reviewAgent],
     ['wrong-owner decoy', missing, `${executionSources.reviewAgent}\n\n## Historical Research example\n\n${researchCheckpointSentence}\n`]
   ]) {
     assertRejected(`Research ${label}: ${target}`, () => contracts.checkIncrementalRpirContract({
@@ -2366,6 +2384,26 @@ assertRejected('Runner rules relocated to historical section', () => contracts.c
   ...executionSources,
   runner: `${replaceOnce(executionSources.runner, runnerOpening, 'Accept only the supplied goal.\n\nObserve the requested scope.')}\n\n## Historical example (not operating policy)\n\n${runnerOpening}\n`
 }), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' && /Script Runner summary must consume Plan authority/.test(error.message));
+
+assertRejected('Runner file effects lose approved-scope gate', () => contracts.checkIncrementalRpirContract({
+  ...executionSources,
+  runner: replaceOnce(executionSources.runner,
+    'source changes require explicit authority in the approved outcome, and Research, Plan and Review remain source-read-only.', '')
+}), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' &&
+  /Script Runner summary must consume Plan authority/.test(error.message));
+assertRejected('Runner directory collision guard removed', () => contracts.checkIncrementalRpirContract({
+  ...executionSources,
+  runner: replaceOnce(executionSources.runner,
+    'refuse collisions and do not overwrite or create implicit ancestors', 'handle directory creation')
+}), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' &&
+  /Script Runner summary must consume Plan authority/.test(error.message));
+assertRejected('Coordinator directory guard removed', () => contracts.checkIncrementalRpirContract({
+  ...executionSources,
+  repository: replaceOnce(executionSources.repository,
+    'inside the selected root and absent before creating only that directory, without overwriting or implicit ancestors',
+    'create the selected directory')
+}), (error) => error.contractId === 'RPIR-EXECUTION-CONTRACT-001' &&
+  /Repository command entry must preserve/.test(error.message));
 
 for (const replacement of ['', 'reopen all markers and unaffected completed work']) {
   let safe = replaceOnce(executionSources.safe,

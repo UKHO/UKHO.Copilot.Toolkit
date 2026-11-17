@@ -5,10 +5,10 @@ const path = require('node:path');
 const { classes, discover, inspectPath, normalize, root, skillPayloadRoots } = require('./discover-copilot-artifacts.cjs');
 
 const coordinatorTools = {
-  Research: ['read', 'search', 'web', 'edit', 'edit/createDirectory', 'agent'],
-  Plan: ['read', 'search', 'edit', 'agent'],
+  Research: ['read', 'search', 'web', 'edit', 'edit/createDirectory', 'agent', 'execute'],
+  Plan: ['read', 'search', 'edit', 'agent', 'execute'],
   Implement: ['read', 'search', 'edit', 'agent', 'runInTerminal'],
-  Review: ['read', 'search', 'edit', 'agent']
+  Review: ['read', 'search', 'edit', 'agent', 'execute']
 };
 const promptRoutes = { plan: 'Plan', implement: 'Implement', review: 'Review', 'remediate-review': 'Implement' };
 const delegateRoutes = {
@@ -1247,8 +1247,7 @@ function checkAdrConventionResolution(source) {
       /absent selected directory (?:is not available capability|remains unavailable)/i,
       /(?:unavailable\/denied|denied or unavailable|denied\/unavailable)/i,
       /hold[s]? only dependent directory\/ADR writes/i,
-      /missing-directory setup[^.!?\n]*unavailable pending[^.!?\n]*Research/i,
-      /No terminal, Runner, implicit-parent[^.!?\n]*alternate-destination workaround is authorized/i
+      /Plan may use Script Runner for a selected missing ADR directory[^.!?\n]*bounded setup contract/i
     ];
     if (required.some((pattern) => !pattern.test(text))) {
       fail(`${owner}: resolve ADR conventions through actual selection and guarded Plan-owned preparation`, 'ADR-CONVENTION-001');
@@ -1457,7 +1456,7 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
   ], 'Lifecycle core ADR exception lacks Plan-only authority, guarded effects, preservation, or version binding');
   requireADRRule(source.repository, [
     /Plan remains source\/configuration-read-only except for the narrow, associated Proposed-ADR exception/i,
-    /Script Runner and delegated analysts remain source-read-only/i,
+    /Script Runner and delegated analysts remain source-read-only during Git checkpoint effects and against source-mutating helpers/i,
     /actual agreement evidence, conditions and dependent Work Items/i
   ], 'Repository policy does not preserve the narrow ADR exception and delegated read-only boundary');
   requireADRRule(source.plan, [
@@ -1546,7 +1545,7 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
     /Assurance is advisory and grants no ADR status-write authority/i
   ], 'Stage Assurance checklist must compare sign-off evidence without granting authority');
   requireADRRule(source.runner, [
-    /Script Runner itself remains source\/configuration\/customization-read-only in every phase/i,
+    /source changes require explicit authority in the approved outcome/i,
     /Plan coordinator's separate associated-Proposed-ADR exception never transfers to Runner/i
   ], 'Script Runner guidance must not inherit Plan ADR authorship authority');
   requireADRRule(source.lifecycleInstruction, [
@@ -1684,15 +1683,15 @@ function checkNativeLifecycleInputsAndSetup(source) {
   const researchBody = uniqueCheckpointSection(source.researchAgent, '# Research coordinator');
   const dispatch = uniqueCheckpointSection(researchBody, '## Native entry and specialist dispatch');
   const setup = {
-    research: uniqueCheckpointUnit(dispatch, 'Inspect and reuse each safe selected documentation root'),
+    research: uniqueCheckpointUnit(dispatch, 'Use Script Runner for every command'),
     core: uniqueCheckpointUnit(uniqueCheckpointSection(source.core, '## Contain allocation and effects'), 'For each missing selected documentation root'),
     method: uniqueCheckpointUnit(uniqueCheckpointSection(source.researchSkill, '## Limits'), 'When this method supports the Research coordinator')
   };
   const common = [/reuse[^.!?\n]*safe[^.!?\n]*(?:director|root)/i,
     /(?:each|every)[^.!?\n]*(?:selected )?(?:missing )?(?:documentation )?root[^.!?\n]*direct `copilot\/?` parent[^.!?\n]*(?:numbered )?topic/i,
-    /(?:(?:separately|one (?:selected|chosen) directory at a time)[^.!?\n]*(?:dedicated directory operation|dedicated create-directory operation|directory operation)|(?:dedicated directory operation|dedicated create-directory operation)[^.!?\n]*one (?:selected|chosen) directory at a time)/i,
-    /inspect(?:ing)? (?:each |its )?result/i, /(?:brief[^.!?\n]*(?:save|readback)|save\/read back the brief)/i,
-    /(?:terminal)[^.!?\n]*(?:Runner|Script Runner)[^.!?\n]*implicit/i,
+    /(?:(?:one|single[- ]directory) (?:selected |chosen )?[^.!?\n]*(?:Script Runner|Runner)|(?:Script Runner|Runner)[^.!?\n]*(?:one|single[- ]directory) (?:selected |chosen )?)/i,
+    /inspect(?:ing)? (?:each |its )?result/i, /(?:(?:brief|record)[^.!?\n]*(?:save|readback)|save\/read back the brief)/i,
+    /(?:coordinator shell|terminal)[^.!?\n]*(?:implicit|workaround)/i,
     /manual setup is recovery, not an automat(?:ic-setup|ion) pass/i];
   for (const [owner, text] of Object.entries(setup)) {
     requireExecutionRule(text, [...common, /(?:unavailable|missing operation)/i, /deni(?:al|ed)/i],
@@ -1703,20 +1702,22 @@ function checkNativeLifecycleInputsAndSetup(source) {
       `${owner}: missing or ambiguous guarded Research directory owner`);
   }
   for (const [owner, patterns] of Object.entries({
-    research: [/after checking identity, containment, absence\/collision and permission[^.!?\n]*inspect each result/i,
-      /operation is unavailable or denied[^.!?\n]*report and stop the dependent effect/i, /brief save and full readback/i,
-      /Never substitute terminal, Runner, implicit file-save parents or another location/i],
-    core: [/independently establish identity, containment, absence including collisions and effective permission[^.!?\n]*attempt that directory operation[^.!?\n]*inspect its result/i,
-      /brief's identity, containment, absence\/collision and permission[^.!?\n]*read back its complete physical content and links/i,
+    research: [/check identity, containment, absence\/collision and permission before execution[^.!?\n]*inspect each result/i,
+      /Runner and that operation are unavailable or denied[^.!?\n]*report and stop the dependent effect/i, /brief save and full readback/i,
+      /ask Runner to create only that one directory/i, /never use another route to evade denial/i],
+    core: [/independently establish identity, containment, absence including collisions and effective permission[^.!?\n]*assign only that literal directory effect[^.!?\n]*inspect its result/i,
+      /every record's identity, containment, absence\/collision and permission[^.!?\n]*read back its complete physical content and links/i,
       /Report a missing operation, ambiguous identity, collision, conflict, failed or denied creation\/save, or unverifiable result/i,
-      /Do not substitute terminal commands, Script Runner directory authorship or implicit file-save parent creation, or bypass a real denial/i,
+      /assign only that literal directory effect[^.!?\n]*inspect its result/i,
+      /do not use the coordinator shell, implicit file-save parent creation or another location as a workaround/i,
       /Recursive operation capability is not authority to create implicit or unselected parents/i],
     method: [/Report unavailable operations, collisions, containment or permission uncertainty, denial and failed or unverifiable saves/i,
-      /do not substitute terminal, Script Runner or implicit-parent file creation/i]
+      /do not use the coordinator shell or implicit-parent file creation as a workaround/i]
   })) requireExecutionRule(setup[owner], patterns, `${owner}: missing or ambiguous guarded Research directory owner`);
   for (const [owner, text] of Object.entries({ research: dispatch, core: uniqueCheckpointSection(source.core, '## Contain allocation and effects'),
     method: uniqueCheckpointSection(source.researchSkill, '## Limits') })) {
-    if (/(?:Research|Script Runner|Runner) (?:may|can|should) (?:create|author|write) (?:directories|folders|parents)|(?:use|substitute) (?:a )?(?:terminal|shell|Runner|implicit[- ]parent)[^.!?\n]*(?:instead|to create|for (?:directory|folder|setup))|implicit (?:file-save )?parents? (?:may|can|should) be created|(?:manual setup|manual recovery) (?:is|counts as) (?:an? )?(?:automatic|automation) (?:setup )?pass/i.test(text) ||
+    if (/\b(?:Research|Script Runner|Runner) may create directories[.!?]/i.test(text) ||
+      /(?:use|substitute) (?:a )?(?:terminal|shell|Runner|implicit[- ]parent)[^.!?\n]*(?:instead|to create|for (?:directory|folder|setup))|implicit (?:file-save )?parents? (?:may|can|should) be created|(?:manual setup|manual recovery) (?:is|counts as) (?:an? )?(?:automatic|automation) (?:setup )?pass/i.test(text) ||
       hasAffirmativeMatch(text, /\b(?:ignore|bypass) (?:a |the )?(?:collision|containment|denial)\b/gi)) {
       fail(`${owner}: contradictory Research directory safeguard`, 'RPIR-EXECUTION-CONTRACT-001');
     }
@@ -1939,8 +1940,23 @@ function checkIncrementalRpirContract(sources = {}) {
 
   const commandEntry = uniqueCheckpointUnit(uniqueCheckpointSection(source.repository, '## Command execution entry'), '- **Goal-directed Script Runner:**', true);
   requireExecutionRule(commandEntry, [/or an explicit bounded phase-record grant/i,
-    /not duplicate approval for unchanged Plan-covered effects/i, /same runtime safeguards/i],
+    /not duplicate approval for unchanged Plan-covered effects/i, /same runtime safeguards/i,
+    /bounded, phase-authorized scripts and commands/i, /declare `execute` to supply Runner's child route/i,
+    /behaviorally delegate all command execution through it/i, /one selected literal directory creation at a time/i,
+    /source changes require explicit authority in the approved outcome/i, /does not author lifecycle records\/markers/i,
+    /inside the selected root and absent before creating only that directory/i, /without overwriting or implicit ancestors/i],
   'Repository command entry must preserve separately bounded phase-record checkpoints');
+  for (const [role, body, marker] of [
+    ['Research', coordinatorBody(source.researchAgent, 'Research'), 'Use Script Runner for every command, script, check, build or test'],
+    ['Plan', coordinatorBody(source.planAgent, 'Plan'), 'Plan declares `execute` to supply Script Runner'],
+    ['Review', coordinatorBody(source.reviewAgent, 'Review'), 'Review declares `execute` only to supply Script Runner']
+  ]) {
+    requireExecutionRule(body, [/(?:delegate every|use Script Runner for every) command, script, check, build (?:and|or) test/i,
+      /(?:do not use the coordinator shell directly|never use the coordinator shell)/i,
+      /behavioral(?:ly)? (?:rule|restriction)[^.!?\n]*platform-enforced/i],
+    `${role} must route command execution through Script Runner`);
+    if (!body.includes(marker)) fail(`${role} must declare the bounded Script Runner route`, 'RPIR-EXECUTION-CONTRACT-001');
+  }
 
   const policyCheckpoint = uniqueCheckpointUnit(uniqueCheckpointSection(source.repository, '## Lifecycle authority and transitions'), '- **Conditional local Git checkpoints:**', true);
   requireExecutionRule(policyCheckpoint, [
@@ -2004,11 +2020,16 @@ function checkIncrementalRpirContract(sources = {}) {
 
   // Only the normative opening body, never frontmatter or a historical section.
   const runner = uniqueCheckpointSection(source.runner, '# Script Runner').split(/^## /m)[0];
-  const runnerAuthority = [paragraph(runner, 'Accept a self-contained'), paragraph(runner, 'Only `read`')].join('\n\n');
+  const runnerAuthority = [paragraph(runner, 'Accept a self-contained'), paragraph(runner, 'Only `read`'),
+    paragraph(runner, 'The only Git mutation is')].join('\n\n');
   requireExecutionRule(runnerAuthority, [
     /inspected approved Plan\/version/i, /explicit bounded commit strategy with approval and qualifying Implement invocation evidence/i,
     /literal candidate/i, /no duplicate grant is required/i, /silent\/prohibiting Plan/i,
-    /source\/configuration\/customization-read-only/i, /source-mutating hook or helper/i
+    /Scripts may create or modify files only when those actual effects are within the assigned scope/i,
+    /one explicitly selected literal directory creation at a time/i,
+    /inside the selected root, absent without a file\/directory collision/i, /refuse collisions and do not overwrite or create implicit ancestors/i,
+    /source changes require explicit authority in the approved outcome/i,
+    /source-mutating hook or helper/i
   ], 'Script Runner summary must consume Plan authority without expanding tools or effects');
   requireExecutionRule(runnerAuthority, [
     /explicit bounded phase-record grant/i,
