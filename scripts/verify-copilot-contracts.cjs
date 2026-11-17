@@ -171,13 +171,14 @@ function checkNativeAgentContract(relative, parsed, agentNames, skillNames, prof
   if (!manualHandoffCoordinators.has(name) && values['user-invocable'] !== 'false') reject('worker must not be user-invocable');
 
   const rows = section(profile, '# Authoritative role profiles').split('\n').filter((line) => line.startsWith('| `'));
-  const matches = rows.map((row) => row.match(/^\| `([a-z0-9-]+\.agent\.md)` \| `(gpt-6\.1-sol|gpt-6\.1-terra|gpt-6-luna)` \| `(high|xhigh)` \|$/));
+  const matches = rows.map((row) => row.match(/^\| `([a-z0-9-]+\.agent\.md)` \| `(gpt-6\.1-sol|gpt-6\.1-terra|gpt-6-luna|hydrafusion)` \| ([^|]+) \|$/));
   if (matches.some((match) => !match)) reject('unsupported profile row');
   const own = matches.filter((match) => match[1] === path.posix.basename(relative));
   if (own.length !== 1) reject('profile must contain one role row');
   const model = parseTextScalar((values.model || '').trim(), relative, 'model');
-  const effort = parseTextScalar((values['reasoning-effort'] || '').trim(), relative, 'reasoning-effort');
-  if (model !== own[0][2] || effort !== own[0][3]) reject('scalar model and effort must match the role profile');
+  if (model !== own[0][2] || Object.hasOwn(values, 'reasoning-effort')) {
+    reject('scalar model must match the role profile and omit authored reasoning-effort');
+  }
 
   if (manualHandoffCoordinators.has(name)) {
     const body = section(text, '## Native entry and specialist dispatch');
@@ -2250,24 +2251,22 @@ function checkModelAuthoringContract(sources = {}) {
       fail(`${paths[owner]} is missing its model-profile authoring safeguard`, 'MODEL-AUTHORING-001');
     }
   }
-  // These four owners govern agent effort; prompt authoring remains independent.
+  // These four owners govern the current no-authored-effort policy; prompt authoring remains independent.
   // This is a bounded authored-text check, not a general prose/runtime oracle.
   for (const owner of ['agent', 'agentTemplate', 'maintenance', 'checklist']) {
     const owned = section(source[owner], headings[owner]);
-    const effortRules = [
-      /(?:each role's|its) own canonical profile effort(?: declaration)? as `reasoning-effort` beside its model/i,
-      /(?:without requiring runtime support proof before declaration|without runtime support proof as a prerequisite to declaration)/i,
-      /do not default all roles to `high` or inherit another role's effort/i,
-      /(?:recommended effort, declared intent, supported model configuration and separately observed effective effort|(?:assigned model and declared effort intent|assigned model and effort intent|assigned model and declared intent)[^\n]*observed effective)/i,
-      /runtime consumption(?:, compatibility and harmless ignoring (?:are|remain) (?:unestablished|not established|unverified)| and compatibility (?:remain|are) unverified)/i,
-      /(?:disclose unknown support|unobservable effective model[^\n]*not observable)/i,
-      /do not assume root effort reaches a child/i,
-      /(?:escalation grants no authority|neither escalation nor model choice grants authority|effort declarations grant no authority)/i
+    const policyRules = [
+      /current 18-role[^.\n]*profile/i,
+      /omit(?:s)? `reasoning-effort`/i,
+      /Fusion-managed reasoning/i,
+      /omission does not clear inherited or external configuration or establish observed effective effort/i,
+      /(?:assigned model|reasoning policy)[^\n]*observed effective/i,
+      /(?:escalation grants no authority|neither escalation nor model choice grants authority|model preferences grant no authority)/i
     ];
-    if (effortRules.some((pattern) => !pattern.test(owned))) {
+    if (policyRules.some((pattern) => !pattern.test(owned))) {
       fail(`${paths[owner]} is missing its effort authoring safeguard`, 'MODEL-AUTHORING-001');
     }
-    if (/(?:all|every) roles? (?:must|should) (?:use|declare) `?high`?|(?:roles?|agents?) (?:must|should) inherit (?:another role's|the parent(?:'s)?|the root(?:'s)?) effort|(?:runtime )?support proof is (?:required|mandatory) before (?:the )?declaration|(?:declared|a declared) effort is (?:always |automatically )?(?:applied|effective|supported)|(?:the )?declaration (?:proves|establishes|guarantees) (?:compatibility|support|harmless ignoring|effective effort)|(?:unsupported|unknown) (?:effort|fields?) (?:are|is) (?:safely|harmlessly) ignored|\b(?:child effort|effort in children) (?:automatically )?inherits (?:the )?(?:root|parent)|effort declarations? (?:grant|grants|expand|expands) (?:authority|tools|permissions)/i.test(owned)) {
+    if (/(?:all|every) roles? (?:must|should) (?:use|declare) `?high`?|(?:omission|absence) (?:always )?(?:clears|resets|removes) (?:all )?(?:inherited|external)|(?:omission|absence) proves? (?:effective|actual) effort|model preferences? (?:grant|grants|expand|expands) (?:authority|tools|permissions)/i.test(owned)) {
       fail(`${paths[owner]} has a contradictory effort authoring rule`, 'MODEL-AUTHORING-001');
     }
   }
@@ -2281,18 +2280,15 @@ function checkModelAuthoringContract(sources = {}) {
 function checkModelProfileCoverage(profile, agentPaths) {
   const rows = section(profile, '# Authoritative role profiles').split('\n')
     .filter((line) => /^\s*\|/.test(line))
-    .filter((line) => line !== '| Agent definition | Recommended model | Target effort |' &&
+    .filter((line) => line !== '| Agent definition | Recommended model | Reasoning policy |' &&
       line !== '| --- | --- | --- |');
   const profiles = new Map();
   for (const row of rows) {
-    const match = row.match(/^\| `([a-z0-9-]+\.agent\.md)` \| `(gpt-6\.1-sol|gpt-6\.1-terra|gpt-6-luna)` \| `(high|xhigh)` \|$/);
+    const match = row.match(/^\| `([a-z0-9-]+\.agent\.md)` \| `(gpt-6\.1-sol|gpt-6\.1-terra|gpt-6-luna|hydrafusion)` \| ([^|]+) \|$/);
     if (!match) fail(`Unsupported model profile row: ${row}`, 'MODEL-PROFILE-001');
-    const [, name, model, effort] = match;
+    const [, name, model, reasoningPolicy] = match;
     if (profiles.has(name)) fail(`Duplicate model profile: ${name}`, 'MODEL-PROFILE-001');
-    if ((model === 'gpt-6.1-sol' || model === 'gpt-6-luna') && effort !== 'high') {
-      fail(`Unsupported model and effort pairing: ${name}`, 'MODEL-PROFILE-001');
-    }
-    profiles.set(name, { model, effort });
+    profiles.set(name, { model, reasoningPolicy: reasoningPolicy.trim() });
   }
   const expected = agentPaths.map((relative) => path.posix.basename(relative));
   if (new Set(expected).size !== expected.length) fail('Duplicate agent profile identity', 'MODEL-PROFILE-001');
@@ -2312,17 +2308,8 @@ function checkModelProjection(relative, values, profiles) {
   if (actual !== expected.model) {
     fail(`${relative} model must match its profile: ${expected.model}`, 'MODEL-PROJECTION-001');
   }
-  if (typeof values['reasoning-effort'] !== 'string' || !values['reasoning-effort'].trim()) {
-    fail(`${relative} must declare its non-empty profile effort`, 'MODEL-PROJECTION-001');
-  }
-  let effort;
-  try { effort = parseTextScalar(values['reasoning-effort'].trim(), relative, 'reasoning-effort'); }
-  catch { fail(`${relative} has unsupported reasoning-effort metadata`, 'MODEL-PROJECTION-001'); }
-  if (typeof effort !== 'string' || !effort.trim()) {
-    fail(`${relative} must declare its non-empty profile effort`, 'MODEL-PROJECTION-001');
-  }
-  if (effort !== expected.effort) {
-    fail(`${relative} reasoning-effort must match its profile: ${expected.effort}`, 'MODEL-PROJECTION-001');
+  if (Object.hasOwn(values, 'reasoning-effort')) {
+    fail(`${relative} must omit authored reasoning-effort`, 'MODEL-PROJECTION-001');
   }
 }
 
@@ -2338,26 +2325,23 @@ function checkModelEffortContract(sources = {}) {
   };
   const requirements = {
     procedure: [
-      /assigned model[^\n]*declared effort intent[^\n]*separately observed effective/i,
+      /assigned model[^\n]*authored reasoning policy[^\n]*separately observed effective/i,
       /Before model configuration[^\n]*supported Copilot path[^\n]*compatibility and permission/i,
-      /Declare each role's recommended effort as `reasoning-effort` beside its model/i,
-      /(?:without requiring runtime support proof before declaration|without runtime support proof as a prerequisite to declaration)/i,
-      /declaration expresses intent, not observed effective effort/i,
-      /runtime consumption, compatibility and harmless ignoring are not established/i,
-      /(?:Do not assume a root effort propagates to a child|Do not assume child effort inherits the root)/i
+      /current 18 roles[^\n]*`hydrafusion` preference and Fusion-managed reasoning policy/i,
+      /current 18-role profile omits `reasoning-effort` so Fusion manages reasoning/i,
+      /omission does not clear inherited or external configuration or establish effective effort/i
     ],
     output: [
-      /target effort, declared effort intent, separately evidenced model configuration and observed settings/i,
+      /Fusion-managed reasoning policy, separately evidenced model configuration and observed settings/i,
       /Do not claim effective routing, effort enforcement, installed loading, or compatibility/i,
-      /effort declaration or escalation never grants tools, edits, commands, delegation, lifecycle ownership, approval, acceptance/i
+      /Model choice or escalation never grants tools, edits, commands, delegation, lifecycle ownership, approval, acceptance/i
     ],
-    introduction: [/target effort is declared as `reasoning-effort` intent, not an observed effective setting/i],
+    introduction: [/current 18-role profile uses `hydrafusion` with Fusion-managed reasoning and no authored `reasoning-effort` override/i],
     selection: [
-      /recommended target efforts[^\n]*`reasoning-effort` intent (?:without requiring runtime support proof before declaration|without runtime support proof as a prerequisite to declaration)/i,
-      /does not establish runtime consumption, compatibility, harmless ignoring or effective effort/i,
-      /report separately observed effective effort/i,
-      /Child effort is not assumed to follow the parent/i,
-      /effort declaration or escalation never expands authority[^\n]*delegation boundaries[^\n]*independent Review[^\n]*advisory assurance/i
+      /current Fusion profile authors no per-agent reasoning override/i,
+      /omission does not establish that inherited or external settings are absent or that Fusion's effective reasoning is known/i,
+      /report only separately observed effective effort/i,
+      /recommendation, configuration or escalation never expands authority[^\n]*independent Review[^\n]*advisory assurance/i
     ]
   };
   for (const [owner, patterns] of Object.entries(requirements)) {
@@ -2366,7 +2350,7 @@ function checkModelEffortContract(sources = {}) {
     }
   }
   for (const [owner, text] of Object.entries(owners)) {
-    if (/(?:runtime )?support proof is (?:required|mandatory) before (?:the )?declaration|(?:declared|a declared) effort is (?:always |automatically )?(?:applied|effective|supported)|(?:the )?declaration (?:proves|establishes|guarantees) (?:compatibility|support|harmless ignoring|effective effort)|(?:unsupported|unknown) (?:effort|fields?) (?:are|is) (?:safely|harmlessly) ignored|(?<!assume )\b(?:child effort|effort in children) (?:automatically )?inherits (?:the )?(?:root|parent)|effort declarations? (?:grant|grants|expand|expands) (?:authority|tools|permissions)/i.test(text)) {
+    if (/(?:omission|absence) (?:always )?(?:clears|resets|removes) (?:all )?(?:inherited|external)|(?:omission|absence) proves? (?:effective|actual) effort|model preferences? (?:grant|grants|expand|expands) (?:authority|tools|permissions)/i.test(text)) {
       fail(`${owner}: contradictory effort declaration/evidence boundary`, 'MODEL-EFFORT-CONTRACT-001');
     }
   }

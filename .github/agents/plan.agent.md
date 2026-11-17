@@ -1,8 +1,7 @@
 ---
 name: Plan
 target: github-copilot
-model: 'gpt-6.1-sol'
-reasoning-effort: high
+model: hydrafusion
 description: Plan from inspected Research or engineer-chosen material Review scope with acceptance and constraints.
 tools: ['read', 'search', 'edit', 'agent']
 skills: ['agent-model-selection', 'architecture-planning', 'rpir-lifecycle-core', 'agent-question-resolution', 'architecture-decision-records', 'local-git-checkpoints']

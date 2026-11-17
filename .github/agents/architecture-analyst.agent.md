@@ -1,8 +1,7 @@
 ---
 name: Architecture Analyst
 target: github-copilot
-model: 'gpt-6.1-sol'
-reasoning-effort: high
+model: hydrafusion
 description: Validate a proposed implementation approach against repository structure, reusable patterns, compatibility concerns, and design trade-offs.
 user-invocable: false
 tools: ['read', 'search']

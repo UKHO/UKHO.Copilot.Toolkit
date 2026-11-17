@@ -1,8 +1,7 @@
 ---
 name: Security Reviewer
 target: github-copilot
-model: 'gpt-6.1-sol'
-reasoning-effort: high
+model: hydrafusion
 description: Review an implementation for unsafe tool grants, delegation escape, injection, data exposure, and approval-boundary failures.
 user-invocable: false
 tools: ['read', 'search']

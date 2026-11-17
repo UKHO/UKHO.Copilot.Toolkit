@@ -1,8 +1,7 @@
 ---
 name: Research
 target: github-copilot
-model: 'gpt-6.1-sol'
-reasoning-effort: high
+model: hydrafusion
 description: Investigate a request and produce an evidence-based research brief before planning.
 tools: ['read', 'search', 'web', 'edit', 'edit/createDirectory', 'agent']
 skills: ['agent-model-selection', 'codebase-research', 'rpir-lifecycle-core', 'agent-question-resolution', 'architecture-decision-records', 'local-git-checkpoints']

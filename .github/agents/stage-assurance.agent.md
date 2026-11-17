@@ -1,8 +1,7 @@
 ---
 name: Stage Assurance
 target: github-copilot
-model: 'gpt-6.1-sol'
-reasoning-effort: high
+model: hydrafusion
 description: Provide an advisory evidence review of an RPIR stage draft's completeness, traceability, authority boundaries, unresolved issues, and intended manual handback.
 user-invocable: false
 tools: ['read', 'search']

@@ -1,8 +1,7 @@
 ---
 name: Correctness Reviewer
 target: github-copilot
-model: 'gpt-6.1-sol'
-reasoning-effort: high
+model: hydrafusion
 description: Review an approved implementation for functional correctness, edge cases, acceptance-criteria coverage, and broken customization behavior.
 user-invocable: false
 tools: ['read', 'search']

@@ -1,8 +1,7 @@
 ---
 name: Feasibility Investigator
 target: github-copilot
-model: 'gpt-6.1-terra'
-reasoning-effort: xhigh
+model: hydrafusion
 description: Assess implementation feasibility, dependencies, compatibility constraints, and unresolved risks for a delegated development request.
 user-invocable: false
 tools: ['read', 'search', 'web']

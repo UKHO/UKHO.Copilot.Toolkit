@@ -1,8 +1,7 @@
 ---
 name: Script Runner
 target: github-copilot
-model: 'gpt-6.1-sol'
-reasoning-effort: high
+model: hydrafusion
 description: Execute phase-scoped goals for Research, Plan, Implement, or Review and report inspected effects; perform only properly authorized Git metadata effects, without file authorship or delegation.
 user-invocable: false
 tools: ['read', 'search', 'execute']

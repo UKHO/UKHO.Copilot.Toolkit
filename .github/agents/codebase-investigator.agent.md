@@ -1,8 +1,7 @@
 ---
 name: Codebase Investigator
 target: github-copilot
-model: 'gpt-6.1-terra'
-reasoning-effort: high
+model: hydrafusion
 description: Inspect repository files and documentation for existing patterns, symbols, and constraints relevant to a delegated research question.
 user-invocable: false
 tools: ['read', 'search']

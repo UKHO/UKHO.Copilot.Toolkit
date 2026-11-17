@@ -115,14 +115,14 @@ for (const [label, target, replacement] of [
   ['unsupported Local delegation metadata', 'target: github-copilot', "target: github-copilot\nagents: ['Script Runner']"],
   ['wrong body specialist', 'Requirements Analyst, Architecture Analyst', 'Test Worker, Architecture Analyst'],
   ['wildcard body specialist', 'Requirements Analyst, Architecture Analyst', '*, Architecture Analyst'],
-  ['fallback model list', "model: 'gpt-6.1-sol'", "model: ['gpt-6.1-sol', 'gpt-6.1-terra']"],
-  ['wrong effort', 'reasoning-effort: high', 'reasoning-effort: xhigh']
+  ['fallback model list', 'model: hydrafusion', "model: ['hydrafusion', 'gpt-6.1-terra']"],
+  ['authored effort', 'model: hydrafusion', 'model: hydrafusion\nreasoning-effort:']
 ]) assertRejected(`native ${label}`, () => nativeCheck(nativePlanPath, replaceOnce(nativePlan, target, replacement)));
 assertRejected('unresolved named skill', () => nativeCheck(nativePlanPath, nativePlan,
   new Set([...nativeSkillNames].filter((name) => name !== 'architecture-planning'))),
   (error) => error.contractId === 'NATIVE-AGENT-001' && /named skills/.test(error.message));
 assertRejected('missing native profile row', () => nativeCheck(nativePlanPath, nativePlan, nativeSkillNames,
-  replaceOnce(nativeProfile, '| `plan.agent.md` | `gpt-6.1-sol` | `high` |', '')),
+  replaceOnce(nativeProfile, '| `plan.agent.md` | `hydrafusion` | Fusion-managed; no authored override |', '')),
   (error) => error.contractId === 'NATIVE-AGENT-001' && /one role row/.test(error.message));
 const routeSentence = nativePlan.split('\n').find((line) => line.startsWith('Permitted specialists are exactly'));
 assert.ok(routeSentence);
@@ -366,147 +366,106 @@ assert.doesNotThrow(() => contracts.checkManifestParity(manifest, inventory));
 const profilePath = '.github/skills/agent-model-selection/references/role-profiles.md';
 const profileText = readArtifact(profilePath);
 const expectedProfiles = {
-  'architecture-analyst': ['gpt-6.1-sol', 'high'], 'codebase-investigator': ['gpt-6.1-terra', 'high'],
-  'correctness-reviewer': ['gpt-6.1-sol', 'high'], 'domain-investigator': ['gpt-6.1-terra', 'high'],
-  'feasibility-investigator': ['gpt-6.1-terra', 'xhigh'], 'implement': ['gpt-6.1-sol', 'high'],
-  'implementation-worker': ['gpt-6.1-terra', 'xhigh'], 'maintainability-reviewer': ['gpt-6.1-terra', 'high'],
-  'plan': ['gpt-6.1-sol', 'high'], 'requirements-analyst': ['gpt-6.1-terra', 'high'],
-  'research': ['gpt-6.1-sol', 'high'], 'review': ['gpt-6.1-sol', 'high'],
-  'script-runner': ['gpt-6.1-sol', 'high'], 'security-reviewer': ['gpt-6.1-sol', 'high'],
-  'stage-assurance': ['gpt-6.1-sol', 'high'], 'test-strategist': ['gpt-6.1-terra', 'xhigh'],
-  'test-worker': ['gpt-6.1-terra', 'high'], 'validation-worker': ['gpt-6-luna', 'high']
+  'architecture-analyst': 'hydrafusion', 'codebase-investigator': 'hydrafusion',
+  'correctness-reviewer': 'hydrafusion', 'domain-investigator': 'hydrafusion',
+  'feasibility-investigator': 'hydrafusion', 'implement': 'hydrafusion',
+  'implementation-worker': 'hydrafusion', 'maintainability-reviewer': 'hydrafusion',
+  'plan': 'hydrafusion', 'requirements-analyst': 'hydrafusion',
+  'research': 'hydrafusion', 'review': 'hydrafusion',
+  'script-runner': 'hydrafusion', 'security-reviewer': 'hydrafusion',
+  'stage-assurance': 'hydrafusion', 'test-strategist': 'hydrafusion',
+  'test-worker': 'hydrafusion', 'validation-worker': 'hydrafusion'
 };
-function assertBaselinePairs(profiles) {
-  for (const [name, [model, effort]] of Object.entries(expectedProfiles)) {
-    assert.deepEqual(profiles.get(`${name}.agent.md`), { model, effort }, `${name} allocation`);
+function assertBaselineModels(profiles) {
+  for (const [name, model] of Object.entries(expectedProfiles)) {
+    assert.deepEqual(profiles.get(`${name}.agent.md`), {
+      model, reasoningPolicy: 'Fusion-managed; no authored override'
+    }, `${name} allocation`);
   }
 }
 const profiles = contracts.checkModelProfileCoverage(profileText, agentPaths);
-assertBaselinePairs(profiles);
+assertBaselineModels(profiles);
 
-// These focused cases run before the full structural positive control so an
-// unrelated missing source link cannot hide the declaration-specific result.
-const effortCaseStart = cases;
-const effortPaths = [
-  '.github/agents/codebase-investigator.agent.md',
-  '.github/agents/feasibility-investigator.agent.md'
-];
-function serializedEffort(relative, field) {
+const projectionPath = '.github/agents/validation-worker.agent.md';
+const projectionValues = agents.get(projectionPath).values;
+function serializedProjection(relative, field) {
   const text = readArtifact(relative);
-  assert.equal([...text.matchAll(/^reasoning-effort: [^\n]*$/gm)].length, 1, `${relative} has one effort header`);
-  return text.replace(/^reasoning-effort: [^\n]*$/m, field);
+  return text.replace(/^model: [^\n]*$/m, (model) => `${model}\n${field}`);
 }
-function projectSerialized(relative, text, selectedProfiles = profiles) {
+function projectSerialized(relative, text, selectedProfiles) {
   const parsed = contracts.parseFrontmatterText(text, relative);
   contracts.checkModelProjection(relative, parsed.values, selectedProfiles);
 }
-for (const [relative, effort] of [[effortPaths[0], 'high'], [effortPaths[1], 'xhigh']]) {
-  for (const scalar of [effort, `'${effort}'`, `"${effort}"`]) {
-    assert.doesNotThrow(() => projectSerialized(relative, serializedEffort(relative, `reasoning-effort: ${scalar}`)));
-    cases += 1;
-  }
-  for (const [label, field, message] of [
-    ['missing', '', /must declare its non-empty profile effort/],
-    ['empty', 'reasoning-effort:', /must declare its non-empty profile effort/],
-    ['whitespace', 'reasoning-effort:    ', /must declare its non-empty profile effort/],
-    ['single-quoted empty', "reasoning-effort: ''", /must declare its non-empty profile effort/],
-    ['double-quoted empty', 'reasoning-effort: ""', /must declare its non-empty profile effort/],
-    ['quoted whitespace', 'reasoning-effort: "   "', /must declare its non-empty profile effort/],
-    ['wrong role', `reasoning-effort: ${effort === 'high' ? 'xhigh' : 'high'}`, /reasoning-effort must match its profile/],
-    ['case mismatch', `reasoning-effort: ${effort.toUpperCase()}`, /reasoning-effort must match its profile/],
-    ['medium', 'reasoning-effort: medium', /reasoning-effort must match its profile/],
-    ['max', 'reasoning-effort: max', /reasoning-effort must match its profile/],
-    ['array', 'reasoning-effort: [high]', /unsupported reasoning-effort metadata/],
-    ['map', 'reasoning-effort: {value: high}', /unsupported reasoning-effort metadata/],
-    ['alias', 'reasoning-effort: *effort', /unsupported reasoning-effort metadata/],
-    ['anchor', 'reasoning-effort: &effort high', /unsupported reasoning-effort metadata/],
-    ['tag', 'reasoning-effort: !effort high', /unsupported reasoning-effort metadata/],
-    ['literal block', 'reasoning-effort: |', /unsupported reasoning-effort metadata/],
-    ['folded block', 'reasoning-effort: >', /unsupported reasoning-effort metadata/],
-    ['malformed single quote', "reasoning-effort: 'high", /unsupported reasoning-effort metadata/],
-    ['malformed double quote', 'reasoning-effort: "high', /unsupported reasoning-effort metadata/],
-    ['invalid escape', 'reasoning-effort: "hi\\qgh"', /unsupported reasoning-effort metadata/]
-  ]) {
-    assertRejected(`${relative} ${label} serialized effort`, () => projectSerialized(relative, serializedEffort(relative, field)),
-      (error) => error.contractId === 'MODEL-PROJECTION-001' && message.test(error.message));
-  }
-  for (const [label, suffix, diagnostic] of [
-    ['identical duplicate', `\nreasoning-effort: ${effort}`, /duplicate frontmatter field: reasoning-effort/],
-    ['conflicting duplicate', `\nreasoning-effort: ${effort === 'high' ? 'xhigh' : 'high'}`, /duplicate frontmatter field: reasoning-effort/],
-    ['continuation', '\n  continued', /unsupported continuation metadata for reasoning-effort/],
-    ['block continuation', '\n  high', /unsupported continuation metadata for reasoning-effort/]
-  ]) {
-    const first = label === 'block continuation' ? 'reasoning-effort: |' : `reasoning-effort: ${effort}`;
-    assertRejected(`${relative} ${label} serialized effort`, () => projectSerialized(relative, serializedEffort(relative, first + suffix)),
-      (error) => error.contractId === 'STRUCT-001' && diagnostic.test(error.message));
-  }
+assert.equal(Object.keys(expectedProfiles).length, agentPaths.length, 'all contributed agents have expected profiles');
+for (const relative of agentPaths) {
+  assert.equal(profiles.get(relative.slice('.github/agents/'.length)).model, 'hydrafusion', `${relative} model`);
+  assert.equal(profiles.get(relative.slice('.github/agents/'.length)).reasoningPolicy,
+    'Fusion-managed; no authored override', `${relative} reasoning policy`);
+  assert.equal(Object.hasOwn(agents.get(relative).values, 'reasoning-effort'), false, `${relative} omits effort`);
+  cases += 1;
 }
-const highRow = '| `codebase-investigator.agent.md` | `gpt-6.1-terra` | `high` |';
-const xhighRow = '| `feasibility-investigator.agent.md` | `gpt-6.1-terra` | `xhigh` |';
-const swappedEfforts = replaceOnce(replaceOnce(profileText, highRow, highRow.replace('`high`', '`xhigh`')),
-  xhighRow, xhighRow.replace('`xhigh`', '`high`'));
-const swappedProfiles = contracts.checkModelProfileCoverage(swappedEfforts, agentPaths);
-assert.doesNotThrow(() => projectSerialized(effortPaths[0], serializedEffort(effortPaths[0], 'reasoning-effort: xhigh'), swappedProfiles));
-assert.doesNotThrow(() => projectSerialized(effortPaths[1], serializedEffort(effortPaths[1], 'reasoning-effort: high'), swappedProfiles));
-cases += 2;
-assertRejected('count-preserving coordinated effort swap', () => assertBaselinePairs(swappedProfiles), /codebase-investigator allocation/);
+for (const [label, field] of [
+  ['empty', 'reasoning-effort:'],
+  ['empty quoted', "reasoning-effort: ''"],
+  ['configured', 'reasoning-effort: high'],
+  ['unsupported value', 'reasoning-effort: fusion-managed'],
+  ['sequence', 'reasoning-effort: [high]']
+]) {
+  assertRejected(`${label} authored reasoning-effort`, () => projectSerialized(
+    projectionPath, serializedProjection(projectionPath, field), profiles
+  ), (error) => error.contractId === 'MODEL-PROJECTION-001' && /must omit authored reasoning-effort/.test(error.message));
+}
+assertRejected('missing model projection', () => {
+  const text = readArtifact(projectionPath).replace(/^model: [^\n]*\n/m, '');
+  projectSerialized(projectionPath, text, profiles);
+}, (error) => error.contractId === 'MODEL-PROJECTION-001');
+for (const [label, field] of [
+  ['empty', 'model:'],
+  ['wrong scalar', "model: 'gpt-6.1-sol'"],
+  ['fallback list', "model: ['hydrafusion', 'gpt-6.1-sol']"],
+  ['alias', 'model: *fusion']
+]) {
+  assertRejected(`${label} model projection`, () => {
+    const text = readArtifact(projectionPath).replace(/^model: [^\n]*$/m, field);
+    projectSerialized(projectionPath, text, profiles);
+  }, (error) => error.contractId === 'MODEL-PROJECTION-001');
+}
 
 const effortOwners = {
   skill: readArtifact('.github/skills/agent-model-selection/SKILL.md'), profile: profileText
 };
 assert.doesNotThrow(() => contracts.checkModelEffortContract(effortOwners));
-cases += 1;
 for (const [owner, target, replacement, sectionName] of [
-  ['skill', 'declared effort intent, and separately observed effective', 'effort', 'procedure'],
-  ['skill', 'Before model configuration', 'Before any configuration', 'procedure'],
-  ['skill', 'without requiring runtime support proof before declaration', 'after support has been demonstrated', 'procedure'],
-  ['skill', 'runtime consumption, compatibility and harmless ignoring are not established', 'runtime behavior is established', 'procedure'],
-  ['skill', 'Do not assume a root effort propagates to a child', 'Assume a root effort propagates to a child', 'procedure'],
-  ['skill', 'effort declaration or escalation never grants tools', 'effort declaration or escalation grants tools', 'output'],
-  ['profile', 'target effort is declared as `reasoning-effort` intent, not an observed effective setting', 'target effort is an effective setting', 'introduction'],
-  ['profile', 'without requiring runtime support proof before declaration', 'after runtime support proof', 'selection'],
-  ['profile', 'does not establish runtime consumption, compatibility, harmless ignoring or effective effort', 'establishes effective effort', 'selection'],
-  ['profile', 'Child effort is not assumed to follow the parent', 'Child effort follows the parent', 'selection'],
-  ['profile', 'effort declaration or escalation never expands authority', 'effort declaration or escalation expands authority', 'selection']
+  ['skill', 'authored reasoning policy, and separately observed effective model and effort distinct', 'reasoning is not configured', 'procedure'],
+  ['skill', 'current 18-role profile omits `reasoning-effort` so Fusion manages reasoning', 'authored effort policy', 'procedure'],
+  ['skill', 'Omission does not clear inherited or external configuration or establish effective effort', 'omission resets configuration', 'procedure'],
+  ['profile', 'current 18-role profile uses `hydrafusion` with Fusion-managed reasoning and no authored `reasoning-effort` override', 'current profile', 'introduction'],
+  ['profile', 'current Fusion profile authors no per-agent reasoning override', 'profile changed', 'selection'],
+  ['profile', 'omission does not establish that inherited or external settings are absent or that Fusion\'s effective reasoning is known', 'omission resets settings', 'selection']
 ]) {
-  assertRejected(`${owner} ${sectionName} missing or reversed effort rule`, () => contracts.checkModelEffortContract({
+  assertRejected(`${owner} ${sectionName} missing or reversed policy`, () => contracts.checkModelEffortContract({
     ...effortOwners, [owner]: replaceOnce(effortOwners[owner], target, replacement)
-  }), (error) => error.contractId === 'MODEL-EFFORT-CONTRACT-001' && error.message === `${sectionName}: missing effort declaration/evidence boundary`);
+  }), (error) => error.contractId === 'MODEL-EFFORT-CONTRACT-001' &&
+    error.message === `${sectionName}: missing effort declaration/evidence boundary`);
 }
 for (const [owner, boundary, sectionName] of [
   ['skill', '## Output and boundary', 'procedure'],
-  ['profile', '| Agent definition | Recommended model | Target effort |', 'introduction'],
+  ['profile', '| Agent definition | Recommended model | Reasoning policy |', 'introduction'],
   ['profile', 'The forward target is Copilot', 'selection']
 ]) {
   for (const contradiction of [
-    'Runtime support proof is required before declaration.',
-    'Declared effort is automatically applied.',
-    'The declaration proves compatibility.',
-    'The declaration guarantees harmless ignoring.',
-    'Unsupported effort is safely ignored.',
-    'Child effort automatically inherits the parent.',
-    'Effort declarations grant authority.'
+    'Omission clears inherited configuration.',
+    'Absence proves effective effort.',
+    'Model preferences grant authority.'
   ]) {
-    assertRejected(`${owner} ${sectionName} additive contradiction: ${contradiction}`, () => contracts.checkModelEffortContract({
-      ...effortOwners, [owner]: replaceOnce(effortOwners[owner], boundary, `${contradiction}\n\n${boundary}`)
-    }), (error) => error.contractId === 'MODEL-EFFORT-CONTRACT-001' && error.message === `${sectionName}: contradictory effort declaration/evidence boundary`);
+    assertRejected(`${owner} ${sectionName} additive contradiction: ${contradiction}`, () =>
+      contracts.checkModelEffortContract({
+        ...effortOwners, [owner]: replaceOnce(effortOwners[owner], boundary, `${contradiction}\n\n${boundary}`)
+      }), (error) => error.contractId === 'MODEL-EFFORT-CONTRACT-001' &&
+        error.message === `${sectionName}: contradictory effort declaration/evidence boundary`);
   }
 }
-const noInheritance = 'Do not assume a root effort propagates to a child';
-assertRejected('historical decoy cannot supply procedure no-inheritance rule', () => contracts.checkModelEffortContract({
-  ...effortOwners, skill: `${replaceOnce(effortOwners.skill, noInheritance, 'Record observed settings')}\n\n## Historical example\n\n${noInheritance}.\n`
-}), (error) => error.contractId === 'MODEL-EFFORT-CONTRACT-001' && /procedure: missing/.test(error.message));
-for (const [owner, target, replacement] of [
-  ['skill', 'without requiring runtime support proof before declaration', 'without runtime support proof as a prerequisite to declaration'],
-  ['skill', 'Do not assume a root effort propagates to a child', 'Do not assume child effort inherits the root'],
-  ['profile', 'without requiring runtime support proof before declaration', 'without runtime support proof as a prerequisite to declaration']
-]) {
-  assert.doesNotThrow(() => contracts.checkModelEffortContract({
-    ...effortOwners, [owner]: replaceOnce(effortOwners[owner], target, replacement)
-  }));
-  cases += 1;
-}
-console.log(`Passed ${cases - effortCaseStart} focused effort declaration cases.`);
+cases += 1;
 const authoringCaseStart = cases;
 const modelAuthoringPaths = {
   agent: '.github/skills/create-copilot-agent/SKILL.md',
@@ -543,20 +502,12 @@ const authoringOwners = [
   ['checklist', '## Editing and test evidence']
 ];
 for (const [owner, boundary] of authoringOwners) {
-  const projection = owner === 'agentTemplate'
-    ? 'its own canonical profile effort as `reasoning-effort` beside its model'
-    : `each role's own canonical profile effort${owner === 'agent' ? '' : ' declaration'} as \`reasoning-effort\` beside its model`;
-  const observation = owner === 'agent' ? 'assigned model and declared effort intent from observed effective'
-    : owner === 'agentTemplate' ? 'assigned model and effort intent from separately observed effective'
-      : owner === 'maintenance' ? 'assigned model and declared intent from observed effective'
-        : 'recommended effort, declared intent, supported model configuration and separately observed effective effort';
-  const runtime = owner === 'agent' || owner === 'agentTemplate' ? 'Runtime consumption and compatibility'
-    : 'Runtime consumption, compatibility and harmless ignoring';
-  const unknown = owner === 'agent' || owner === 'agentTemplate' ? 'unobservable effective model'
-    : owner === 'maintenance' ? 'unobservable effective model' : 'disclose unknown support';
-  for (const target of [projection, 'without requiring runtime support proof before declaration',
-    'do not default all roles to `high` or inherit another role\'s effort',
-    observation, runtime, unknown, ['agentTemplate', 'maintenance'].includes(owner) ? 'do not assume root effort reaches a child' : 'Do not assume root effort reaches a child']) {
+  const effortPolicy = owner === 'agent' || owner === 'agentTemplate'
+    ? 'current 18-role Fusion profile' : 'current 18-role profile';
+  const omissionRule = owner === 'agent' || owner === 'agentTemplate'
+    ? 'Omission does not clear inherited or external configuration or establish observed effective effort'
+    : 'omission does not clear inherited or external configuration or establish observed effective effort';
+  for (const target of [effortPolicy, '`reasoning-effort`', 'Fusion-managed reasoning', omissionRule]) {
     assertRejected(`${owner} omits effort rule: ${target}`, () => contracts.checkModelAuthoringContract({
       ...modelAuthoringSources, [owner]: replaceOnce(modelAuthoringSources[owner], target, 'rule omitted')
     }), (error) => error.contractId === 'MODEL-AUTHORING-001' &&
@@ -564,36 +515,25 @@ for (const [owner, boundary] of authoringOwners) {
   }
   const noAuthority = owner === 'agent' ? 'escalation grants no authority'
     : owner === 'agentTemplate' ? 'neither escalation nor model choice grants authority'
-      : owner === 'maintenance' ? 'Effort declarations grant no authority' : 'effort declarations grant no authority';
+      : 'Model preferences grant no authority';
   assertRejected(`${owner} omits authority boundary`, () => contracts.checkModelAuthoringContract({
     ...modelAuthoringSources, [owner]: replaceOnce(modelAuthoringSources[owner], noAuthority, 'authority expanded')
   }), (error) => error.contractId === 'MODEL-AUTHORING-001' &&
     error.message === `${modelAuthoringPaths[owner]} is missing its effort authoring safeguard`);
   for (const contradiction of [
-    'All roles must use `high`.', 'Agents must inherit the parent effort.',
-    'Runtime support proof is required before declaration.', 'Declared effort is automatically applied.',
-    'The declaration proves compatibility.', 'Unsupported effort is safely ignored.',
-    'Child effort automatically inherits the parent.', 'Effort declarations grant authority.'
+    'Omission clears inherited configuration.', 'Absence proves effective effort.',
+    'Model preferences grant authority.'
   ]) {
     assertRejected(`${owner} additive contradiction: ${contradiction}`, () => contracts.checkModelAuthoringContract({
       ...modelAuthoringSources, [owner]: replaceOnce(modelAuthoringSources[owner], boundary, `${contradiction}\n\n${boundary}`)
     }), (error) => error.contractId === 'MODEL-AUTHORING-001' &&
       error.message === `${modelAuthoringPaths[owner]} has a contradictory effort authoring rule`);
   }
-  const missing = replaceOnce(modelAuthoringSources[owner], projection, 'the profile recommendation');
+  const missing = replaceOnce(modelAuthoringSources[owner], 'Fusion-managed reasoning', 'the model recommendation');
   assertRejected(`${owner} historical effort decoy`, () => contracts.checkModelAuthoringContract({
-    ...modelAuthoringSources, [owner]: `${missing}\n\n## Historical example\n\n${projection}\n`
+    ...modelAuthoringSources, [owner]: `${missing}\n\n## Historical example\n\nFusion-managed reasoning\n`
   }), (error) => error.contractId === 'MODEL-AUTHORING-001' &&
     error.message === `${modelAuthoringPaths[owner]} is missing its effort authoring safeguard`);
-  for (const [target, replacement] of [
-    ['without requiring runtime support proof before declaration', 'without runtime support proof as a prerequisite to declaration'],
-    ...(owner === 'checklist' ? [['Runtime consumption, compatibility and harmless ignoring are unestablished', 'Runtime consumption, compatibility and harmless ignoring are not established']] : [])
-  ]) {
-    assert.doesNotThrow(() => contracts.checkModelAuthoringContract({
-      ...modelAuthoringSources, [owner]: replaceOnce(modelAuthoringSources[owner], target, replacement)
-    }));
-    cases += 1;
-  }
 }
 for (const entry of ['model: "<model>"', 'reasoning-effort: "<effort>"', 'reasoning-effort: high']) {
   assertRejected(`starter contains active ${entry}`, () => contracts.checkModelAuthoringContract({
@@ -603,10 +543,10 @@ for (const entry of ['model: "<model>"', 'reasoning-effort: "<effort>"', 'reason
     error.message === `${modelAuthoringPaths.agentTemplate} must keep model and effort frontmatter inert`);
 }
 const futurePath = '.github/agents/future.agent.md';
-const futureValues = { name: 'Future Role', model: 'gpt-6.1-terra', 'reasoning-effort': 'xhigh',
+const futureValues = { name: 'Future Role', model: 'gpt-6.1-terra',
   tools: "['read', 'search']", 'user-invocable': 'false' };
 const classifiedFuture = contracts.checkModelProfileCoverage(
-  `${profileText}\n| \`future.agent.md\` | \`gpt-6.1-terra\` | \`xhigh\` |\n`, [...agentPaths, futurePath]);
+  `${profileText}\n| \`future.agent.md\` | \`gpt-6.1-terra\` | \`Future role classification\` |\n`, [...agentPaths, futurePath]);
 assert.doesNotThrow(() => contracts.checkModelProjection(futurePath, futureValues, classifiedFuture));
 cases += 1;
 assertRejected('profile entry cannot bypass unknown-role authority guard', () => contracts.checkAgentMetadata(
@@ -617,35 +557,21 @@ assert.doesNotThrow(() => contracts.checkCustomizationContracts(inventory));
 for (const [relative, parsed] of agents) {
   assert.doesNotThrow(() => contracts.checkModelProjection(relative, parsed.values, profiles));
 }
-const projectionPath = '.github/agents/validation-worker.agent.md';
-const projectionValues = agents.get(projectionPath).values;
-for (const [label, model] of [
-  ['missing', undefined], ['wrong role model', "'gpt-6.1-sol'"],
-  ['fallback list', "['gpt-6-luna', 'gpt-6.1-terra']"],
-  ['alias', '*luna'], ['empty', '']
-]) {
-  assertRejected(`${label} model projection`, () => contracts.checkModelProjection(
-    projectionPath, { ...projectionValues, model }, profiles
-  ), (error) => error.contractId === 'MODEL-PROJECTION-001');
-}
-for (const model of ['gpt-6-luna', "'gpt-6-luna'", '"gpt-6-luna"']) {
-  assert.doesNotThrow(() => contracts.checkModelProjection(projectionPath, { ...projectionValues, model }, profiles));
-}
-const sampleRow = '| `validation-worker.agent.md` | `gpt-6-luna` | `high` |';
+const sampleRow = '| `validation-worker.agent.md` | `hydrafusion` | Fusion-managed; no authored override |';
 for (const [label, text, paths, diagnostic] of [
   ['missing profile', replaceOnce(profileText, sampleRow, ''), agentPaths, /Missing model profile/],
   ['duplicate profile', replaceOnce(profileText, sampleRow, `${sampleRow}\n${sampleRow}`), agentPaths, /Duplicate model profile/],
-  ['orphan profile', `${profileText}\n| ` + '`orphan.agent.md` | `gpt-6-luna` | `high` |\n', agentPaths, /Orphan model profile/],
-  ['invalid effort', replaceOnce(profileText, sampleRow, sampleRow.replace('`high`', '`max`')), agentPaths, /Unsupported model profile row/],
-  ['unquoted duplicate profile', replaceOnce(profileText, sampleRow, `${sampleRow}\n| validation-worker.agent.md | \`gpt-6-luna\` | \`high\` |`), agentPaths, /Unsupported model profile row/],
-  ['unquoted orphan profile', `${profileText}\n| orphan.agent.md | \`gpt-6-luna\` | \`high\` |\n`, agentPaths, /Unsupported model profile row/],
+  ['orphan profile', `${profileText}\n| ` + '`orphan.agent.md` | `hydrafusion` | Fusion-managed; no authored override |\n', agentPaths, /Orphan model profile/],
+  ['invalid model', replaceOnce(profileText, sampleRow, sampleRow.replace('hydrafusion', 'unsupported-model')), agentPaths, /Unsupported model profile row/],
+  ['unquoted duplicate profile', replaceOnce(profileText, sampleRow, `${sampleRow}\n| validation-worker.agent.md | \`hydrafusion\` | Fusion-managed; no authored override |`), agentPaths, /Unsupported model profile row/],
+  ['unquoted orphan profile', `${profileText}\n| orphan.agent.md | \`hydrafusion\` | Fusion-managed |\n`, agentPaths, /Unsupported model profile row/],
   ['unclassified future agent', profileText, [...agentPaths, '.github/agents/future.agent.md'], /Missing model profile/]
 ]) assertRejected(label, () => contracts.checkModelProfileCoverage(text, paths),
   (error) => error.contractId === 'MODEL-PROFILE-001' && diagnostic.test(error.message));
-const futureProfile = `${profileText}\n| ` + '`future.agent.md` | `gpt-6-luna` | `high` |\n';
+const futureProfile = `${profileText}\n| ` + '`future.agent.md` | `gpt-6.1-terra` | `Future role classification` |\n';
 assert.equal(contracts.checkModelProfileCoverage(futureProfile, [...agentPaths, '.github/agents/future.agent.md']).size, agentPaths.length + 1);
-const swapped = replaceOnce(profileText, sampleRow, sampleRow.replace('gpt-6-luna', 'gpt-6.1-sol'));
-assertRejected('current role pair drift', () => assertBaselinePairs(contracts.checkModelProfileCoverage(swapped, agentPaths)), /validation-worker allocation/);
+const swapped = replaceOnce(profileText, sampleRow, sampleRow.replace('hydrafusion', 'gpt-6.1-sol'));
+assertRejected('current role model drift', () => assertBaselineModels(contracts.checkModelProfileCoverage(swapped, agentPaths)), /validation-worker allocation/);
 for (const [relative, parsed] of agents) {
   assert.doesNotThrow(() => contracts.checkAgentMetadata(relative, parsed.values, parsed.blocks, agentNames));
 }

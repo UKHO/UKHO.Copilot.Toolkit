@@ -17,9 +17,9 @@ Installation does not create workspace lifecycle records or begin RPIR. Start wo
 
 ## Agent model recommendations
 
-The [shared role profiles](.github/skills/agent-model-selection/references/role-profiles.md) own each agent's allocation and target effort. The authored Copilot-native configuration projects one runtime ID and each role's own `reasoning-effort` as a preferred default; effective routing is not runtime-verified. Do not assume child effort inherits from the root or that declared effort is applied. Explicit overrides require an evidenced supported route and do not grant authority.
+The [shared role profiles](.github/skills/agent-model-selection/references/role-profiles.md) own each agent's allocation. The current 18-role candidate projects the scalar preference `hydrafusion` and omits `reasoning-effort` so Fusion manages reasoning. This authored preference is not observed dispatch, and omission does not clear inherited or external configuration or establish effective effort. Explicit overrides require an evidenced supported route and do not grant authority.
 
-Report assigned and observed effective models separately. If effective selection is unavailable, say "not observable"; if a fallback is observed but its reason is unavailable, say "cause not exposed". Missing telemetry alone does not establish fallback or stop independent safe work; a known wrong default is not a pass. Static configuration does not prove active client version, model availability, dispatch, effort consumption or compatibility across future builds.
+Report assigned and observed effective models separately. If effective selection is unavailable, say "not observable"; if a fallback is observed but its reason is unavailable, say "cause not exposed". Missing telemetry alone does not establish fallback or stop independent safe work; a known wrong default is not a pass. Static configuration does not prove active client version, model availability, dispatch, effective reasoning or compatibility across future builds. No quality, speed or cost comparison is claimed.
 
 ## Follow the RPIR workflow
 

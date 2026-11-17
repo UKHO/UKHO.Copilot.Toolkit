@@ -1,8 +1,7 @@
 ---
 name: Validation Worker
 target: github-copilot
-model: 'gpt-6-luna'
-reasoning-effort: high
+model: hydrafusion
 description: Perform read-only structural and manual validation of an implementation against its approved plan and report evidence-backed gaps.
 user-invocable: false
 tools: ['read', 'search']

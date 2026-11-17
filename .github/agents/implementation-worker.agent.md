@@ -1,8 +1,7 @@
 ---
 name: Implementation Worker
 target: github-copilot
-model: 'gpt-6.1-terra'
-reasoning-effort: xhigh
+model: hydrafusion
 description: Apply one explicitly assigned work package from an approved plan and report the precise changes and remaining validation gaps.
 user-invocable: false
 tools: ['read', 'search', 'edit', 'execute']

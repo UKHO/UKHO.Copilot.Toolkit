@@ -1,8 +1,7 @@
 ---
 name: Review
 target: github-copilot
-model: 'gpt-6.1-sol'
-reasoning-effort: high
+model: hydrafusion
 description: Review an inspected implementation report and record an evidence-backed conditional RPIR outcome.
 tools: ['read', 'search', 'edit', 'agent']
 skills: ['agent-model-selection', 'code-review', 'rpir-lifecycle-core', 'agent-question-resolution', 'architecture-decision-records', 'local-git-checkpoints', 'rpir-stage-assurance']

@@ -1,8 +1,7 @@
 ---
 name: Test Worker
 target: github-copilot
-model: 'gpt-6.1-terra'
-reasoning-effort: high
+model: hydrafusion
 description: Prepare or assess tests and verification cases for an approved implementation without changing repository files or running commands.
 user-invocable: false
 tools: ['read', 'search']

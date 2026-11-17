@@ -1,8 +1,7 @@
 ---
 name: Domain Investigator
 target: github-copilot
-model: 'gpt-6.1-terra'
-reasoning-effort: high
+model: hydrafusion
 description: Investigate domain terminology, documented requirements, and trusted sources needed to clarify a delegated development request.
 user-invocable: false
 tools: ['read', 'search', 'web']

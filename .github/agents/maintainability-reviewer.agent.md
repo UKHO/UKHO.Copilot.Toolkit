@@ -1,8 +1,7 @@
 ---
 name: Maintainability Reviewer
 target: github-copilot
-model: 'gpt-6.1-terra'
-reasoning-effort: high
+model: hydrafusion
 description: Review an implementation for clarity, duplication, discoverability, consistency, and long-term maintenance risks.
 user-invocable: false
 tools: ['read', 'search']

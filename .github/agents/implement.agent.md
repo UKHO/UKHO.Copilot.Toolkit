@@ -1,8 +1,7 @@
 ---
 name: Implement
 target: github-copilot
-model: 'gpt-6.1-sol'
-reasoning-effort: high
+model: hydrafusion
 description: Deliver an inspected approved Plan, including supported original-criteria Review corrections, and report validation.
 tools: ['read', 'search', 'edit', 'agent', 'execute']
 skills: ['agent-model-selection', 'safe-implementation', 'rpir-lifecycle-core', 'agent-question-resolution', 'architecture-decision-records', 'local-git-checkpoints']
