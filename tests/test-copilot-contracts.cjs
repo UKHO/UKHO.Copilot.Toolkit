@@ -690,6 +690,39 @@ const adrPaths = {
 const adrSources = Object.fromEntries(Object.entries(adrPaths).map(([key, relative]) => [key, readArtifact(relative)]));
 assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract(adrSources));
 assert.doesNotThrow(() => contracts.checkLocalLinks(adrPaths.skill, adrSources.skill));
+// Authored convention paths, not a simulation of directory creation or consent.
+for (const [owner, target, replacement] of [
+  ['skill', 'Reuse an unambiguous verified convention without needless confirmation or duplicate ADRs.',
+    'Reuse an unambiguous verified convention without needless confirmation or duplicate ADRs; retain its existing naming and governance.'],
+  ['skill', 'the next unused `NNN-subject.md`', 'the next unused `decision-NNN-subject.md`'],
+  ['plan', 'preserve an engineer-selected alternative and qualifications',
+    'preserve an engineer-selected alternative and qualifications, including a different contained destination']
+]) {
+  assert.doesNotThrow(() => contracts.checkArchitectureDecisionRecordContract({
+    ...adrSources, [owner]: replaceOnce(adrSources[owner], target, replacement)
+  }));
+  cases += 1;
+}
+for (const owner of ['skill', 'plan', 'planning']) {
+  for (const [target, replacement] of [
+    ['If no convention is evidenced, ask the engineer to select or qualify', 'If no convention is evidenced, choose'],
+    [/wait for the actual selection/i, 'apply the recommendation immediately'],
+    ['absent selected directory', 'selected directory']
+  ]) {
+    assertRejected(`${owner} loses convention selection/directory guard: ${target}`, () =>
+      contracts.checkArchitectureDecisionRecordContract({
+        ...adrSources, [owner]: replaceOnce(adrSources[owner], target, replacement)
+      }), (error) => error.contractId === 'ADR-CONVENTION-001' && error.message.startsWith(`${owner}:`));
+  }
+}
+for (const contradiction of ['Use docs/adr by default.', 'Resolve the convention later in Implement.',
+  'Selection proves directory creation.', 'Bypass a denied directory operation.']) {
+  assertRejected(`ADR convention contradiction: ${contradiction}`, () =>
+    contracts.checkArchitectureDecisionRecordContract({
+      ...adrSources, skill: replaceOnce(adrSources.skill, '## Authority and effect safeguards',
+        `${contradiction}\n\n## Authority and effect safeguards`)
+    }), (error) => error.contractId === 'ADR-CONVENTION-001' && /contradictory ADR convention/.test(error.message));
+}
 cases += 5;
 cases += 2;
 // Retained entry skills are inventory during overlap, not normative owners.

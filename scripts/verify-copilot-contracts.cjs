@@ -1226,6 +1226,45 @@ function checkImplementSignoffContract(source) {
   return true;
 }
 
+function checkAdrConventionResolution(source) {
+  const owners = {
+    skill: section(source.skill, '## Consumer convention resolution'),
+    plan: paragraph(coordinatorBody(source.plan, 'Plan'), 'Resolve ADR conventions'),
+    planning: paragraph(section(source.planning, '### Resolve material planning gaps'), 'Resolve ADR conventions')
+  };
+  for (const [owner, text] of Object.entries(owners)) {
+    const required = [
+      /inspect[s]? for an established (?:consumer )?(?:ADR )?convention/i,
+      /without needless confirmation or duplicate ADRs/i,
+      /If no convention is evidenced, ask the engineer to select or qualify (?:one |a )concrete proposed new convention/i,
+      /(?:contained destination|destination grounded in the verified consumer root)/i,
+      /naming/i, /template/i, /status/i, /not (?:an )?existing (?:consumer )?rule/i,
+      /Toolkit-wide default/i, /wait for the actual selection/i,
+      /preserve an engineer-selected alternative and qualifications/i,
+      /Plan coordinator|existing Plan exception/i, /associated Proposed ADRs/i,
+      /separately guard/i, /directory|directories/i, /file/i,
+      /absent selected directory (?:is not available capability|remains unavailable)/i,
+      /(?:unavailable\/denied|denied or unavailable|denied\/unavailable)/i,
+      /hold[s]? only dependent directory\/ADR writes/i,
+      /missing-directory setup[^.!?\n]*unavailable pending[^.!?\n]*Research/i,
+      /No terminal, Runner, implicit-parent[^.!?\n]*alternate-destination workaround is authorized/i
+    ];
+    if (required.some((pattern) => !pattern.test(text))) {
+      fail(`${owner}: resolve ADR conventions through actual selection and guarded Plan-owned preparation`, 'ADR-CONVENTION-001');
+    }
+    if (/Use docs\/adr by default|Resolve the convention later in Implement|Selection proves directory creation|Bypass a denied directory operation/i.test(text)) {
+      fail(`${owner}: contradictory ADR convention or directory rule`, 'ADR-CONVENTION-001');
+    }
+  }
+  const skill = owners.skill;
+  for (const pattern of [/save\/read back each file/i,
+    /exact path\/ID, section, substantive version, state, actual agreement\/conditions and affected Work Items/i,
+    /keep one delivery hierarchy and preserve accepted history/i,
+    /do not claim a creation or save that was not observed/i]) {
+    if (!pattern.test(skill)) fail('skill: retain exact ADR binding and observed persistence', 'ADR-CONVENTION-001');
+  }
+}
+
 function checkArchitectureDecisionRecordContract(sources = {}) {
   checkExplicitAssuranceSources(sources);
   const paths = {
@@ -1259,6 +1298,7 @@ function checkArchitectureDecisionRecordContract(sources = {}) {
   };
   const source = Object.fromEntries(Object.entries(paths).map(([key, relative]) => [key,
     key === 'discovery' ? discoverySource(sources) : sources[key] ?? readText(relative)]));
+  checkAdrConventionResolution(source);
   const metadata = parseFrontmatterText(source.skill, paths.skill).values;
   if (metadata.name !== 'architecture-decision-records' || metadata['user-invocable'] !== 'false') {
     fail('ADR Skill must use its directory name and remain non-invocable', 'ADR-CONTRACT-001');
