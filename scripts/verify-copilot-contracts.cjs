@@ -2281,6 +2281,11 @@ function checkConciseRpirContract(sources = {}) {
     discovery: '.github/skills/agent-question-resolution/references/research-intent-discovery.md',
     research: '.github/skills/codebase-research/research-brief-template.md',
     researchAgent: '.github/agents/research.agent.md',
+    planAgent: '.github/agents/plan.agent.md',
+    implementAgent: '.github/agents/implement.agent.md',
+    reviewAgent: '.github/agents/review.agent.md',
+    policy: '.github/copilot-instructions.md',
+    instruction: '.github/instructions/lifecycle-records.instructions.md',
     assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
     planReport: '.github/skills/architecture-planning/implementation-plan-template.md',
     implementationReport: '.github/skills/safe-implementation/implementation-report-template.md',
@@ -2310,19 +2315,40 @@ function checkConciseRpirContract(sources = {}) {
     /do not establish live behavior or measured readability improvement/i], 'core', 'retain concise output and material evidence');
   const questions = owned(source.questions, '## Procedure', 'questions');
   const framing = questions.split('\n').find((line) => line.startsWith('6. ')) || '';
-  requireOutput(framing, [/simple clarification[^.!?\n]*direct contextual question/i,
+  requireOutput(framing, [/simple factual clarification[^.!?\n]*direct contextual question/i,
     /without mandatory four-label or lettered formatting/i,
-    /material choices[^.!?\n]*supported advice[^.!?\n]*meaningful alternatives/i,
+    /evidence requests unbundled/i,
     /evidence-supply\/acquisition route instead of guessing/i,
     /Presentation never replaces actual acknowledgment, waiting, explicit deferral or manual approval/i],
   'questions', 'proportionate questions retain decision and approval safeguards');
+  function requireMaterialQuestion(text, owner) {
+    requireOutput(text, [/one material decision at a time/i,
+      /plain[- ]English/i, /meaningful lettered alternatives/i,
+      /ending (?:with|in)[^.!?\n]*free[- ]text\/unknown\/other/i,
+      /supported recommendation and (?:its )?reason/i,
+      /stop for the (?:engineer's )?actual answer/i],
+    owner, 'retain sequential material-choice framing and actual waiting');
+  }
+  requireMaterialQuestion(framing, 'questions');
   const answer = questions.split('\n').find((line) => line.startsWith('7. ')) || '';
   requireOutput(answer, [/actual qualified or nonrecommended answers and conditions/i,
     /rather than automatically selecting the recommendation/i,
     /do not invoke or approve a phase transition/i], 'questions', 'retain actual answers and manual transitions');
   const clarification = source.clarification.split('\n\n**Known:**')[0];
-  requireOutput(clarification, [/simple clarification[^\n]*direct contextual question/i,
+  requireOutput(clarification, [/simple factual clarification[^\n]*direct contextual question/i,
     /without mandatory labels or letters/i, /optional aids/i], 'clarification', 'allow direct simple clarification');
+  requireMaterialQuestion(clarification, 'clarification');
+  const questionConsumers = {
+    core: section(source.core, '## Continue phase work and resolve unknowns'),
+    discovery: section(source.discovery, '## Discover the objective adaptively'),
+    researchAgent: coordinatorBody(source.researchAgent, 'Research'),
+    planAgent: coordinatorBody(source.planAgent, 'Plan'),
+    implementAgent: coordinatorBody(source.implementAgent, 'Implement'),
+    reviewAgent: coordinatorBody(source.reviewAgent, 'Review'),
+    policy: section(source.policy, '## Lifecycle authority and transitions'),
+    instruction: section(source.instruction, '## Shared workflow and effect contract')
+  };
+  for (const [owner, text] of Object.entries(questionConsumers)) requireMaterialQuestion(text, owner);
   const discovery = owned(source.discovery, '## Read back, correct and stop', 'discovery');
   requireOutput(discovery, [/actual acknowledgment|readback is acknowledged/i,
     /end the turn/i, /Do not emit a readback and start dependent investigation/i,
@@ -2332,9 +2358,10 @@ function checkConciseRpirContract(sources = {}) {
     /not a running discovery\/Q&A history/i, /actual engineer acknowledgment/i,
     /scope\/timing/i, /never label provisional understanding confirmed/i], 'research', 'current substance is not a discovery history');
   const rubric = owned(source.assurance, '## Conversation evidence rubric', 'assurance');
-  requireOutput(rubric, [/Simple clarification may be direct without mandatory labels or letters/i,
+  requireOutput(rubric, [/Simple factual clarification may be direct without mandatory labels or letters/i,
     /qualified or nonrecommended direction and conditions/i,
     /recorded claim, not an observed conversation/i], 'assurance', 'assess proportionate questions and observed evidence');
+  requireMaterialQuestion(rubric, 'assurance');
   const reportScopes = {};
   for (const owner of ['planReport', 'implementationReport', 'reviewReport']) {
     const opening = source[owner].split(/^## /m)[0];
@@ -2357,10 +2384,11 @@ function checkConciseRpirContract(sources = {}) {
       : owned(source[owner], owner === 'implementationReport' ? '## Delivered outcome and progress' : '## Disposition and comparison', owner) +
         section(source[owner], '## Validation') + section(source[owner], '## Execution and review evidence') + section(source[owner], '## Findings'));
   }
-  const scopes = { core: outputs, questions, clarification, discovery, research: intent,
-    researchAgent: coordinatorBody(source.researchAgent, 'Research'), assurance: rubric, ...reportScopes };
+  const scopes = { ...questionConsumers, core: outputs + questionConsumers.core, questions,
+    clarification, discovery: discovery + questionConsumers.discovery, research: intent,
+    assurance: rubric, ...reportScopes };
   for (const [owner, text] of Object.entries(scopes)) {
-    if (/Every question must use four labels|All questions require lettered paths|A running discovery history is required|Acknowledgment may be assumed|An answer approves the next phase|Always substitute the recommendation|Required failures may be omitted|Invocation proves persisted acceptance|Final markers prove timely handling|A real denial may be bypassed|Unresolved findings may be accepted|Decision conditions may be omitted/i.test(text)) {
+    if (/Every question must use four labels|All questions require lettered paths|Material choices may omit lettered alternatives|Material-choice formatting is optional|Continue without the actual answer|Require a letter-only answer|A running discovery history is required|Acknowledgment may be assumed|An answer approves the next phase|Always substitute the recommendation|Required failures may be omitted|Invocation proves persisted acceptance|Final markers prove timely handling|A real denial may be bypassed|Unresolved findings may be accepted|Decision conditions may be omitted/i.test(text)) {
       fail(`${owner}: contradictory output or authority rule`, 'RPIR-OUTPUT-001');
     }
   }

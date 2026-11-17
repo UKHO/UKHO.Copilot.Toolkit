@@ -3179,6 +3179,11 @@ const concisePaths = {
   discovery: '.github/skills/agent-question-resolution/references/research-intent-discovery.md',
   research: '.github/skills/codebase-research/research-brief-template.md',
   researchAgent: '.github/agents/research.agent.md',
+  planAgent: '.github/agents/plan.agent.md',
+  implementAgent: '.github/agents/implement.agent.md',
+  reviewAgent: '.github/agents/review.agent.md',
+  policy: '.github/copilot-instructions.md',
+  instruction: '.github/instructions/lifecycle-records.instructions.md',
   assurance: '.github/skills/rpir-stage-assurance/stage-assurance-checklist.md',
   planReport: '.github/skills/architecture-planning/implementation-plan-template.md',
   implementationReport: '.github/skills/safe-implementation/implementation-report-template.md',
@@ -3198,6 +3203,31 @@ for (const [owner, target, replacement] of [
 }
 const conciseDiagnostic = (owner, rule) => (error) => error.contractId === 'RPIR-OUTPUT-001' &&
   error.message === `${owner}: ${rule}`;
+for (const [target, replacement] of [
+  ['one material decision at a time', 'several decisions together'],
+  ['give meaningful lettered alternatives', 'give optional alternatives'],
+  ['ending with a genuine free-text/unknown/other route', 'ending with the recommended option'],
+  ['supported recommendation and its reason', 'recommendation without a reason'],
+  ["stop for the engineer's actual answer", 'continue with the recommendation']
+]) {
+  assertRejected(`material question loses ${target}`, () => contracts.checkConciseRpirContract({
+    ...conciseSources, questions: replaceOnce(conciseSources.questions, target, replacement)
+  }), conciseDiagnostic('questions', 'retain sequential material-choice framing and actual waiting'));
+}
+for (const [owner, boundary] of [
+  ['questions', '## Outputs'], ['clarification', '**Known:**'],
+  ['discovery', '## Read back, correct and stop'],
+  ['planAgent', 'Permitted specialists are exactly'],
+  ['policy', '### Planning-stage architecture decisions'],
+  ['instruction', '## Stage schemas']
+]) {
+  for (const contradiction of ['Material choices may omit lettered alternatives.',
+    'Material-choice formatting is optional.', 'Continue without the actual answer.', 'Require a letter-only answer.']) {
+    assertRejected(`${owner} material-choice contradiction: ${contradiction}`, () => contracts.checkConciseRpirContract({
+      ...conciseSources, [owner]: replaceOnce(conciseSources[owner], boundary, `${contradiction}\n\n${boundary}`)
+    }), conciseDiagnostic(owner, 'contradictory output or authority rule'));
+  }
+}
 for (const [owner, target, replacement, rule] of [
   ['questions', 'Presentation never replaces actual acknowledgment, waiting, explicit deferral or manual approval',
     'Presentation replaces acknowledgment', 'proportionate questions retain decision and approval safeguards'],

@@ -16,7 +16,7 @@ Treat the initial prompt as evidence and a hypothesis, not a complete specificat
 
 Challenge consequential assumptions or contradictions using supplied facts or eligible evidence: explain the tension and ask what would distinguish the interpretations. Respect genuine solution constraints and do not manufacture disagreement. Broaden toward overlooked needs or plausible alternative problem framings when evidence warrants it, not merely to prolong the conversation.
 
-After each answer, reconcile current understanding and select the highest-value unresolved follow-up that depends on it; do not require a running account of each change. A simple clarification may be a direct question without mandatory labels or letters. For material choices, give useful context, supported advice and meaningful alternatives/trade-offs where needed; optional structured choices may help. If a factual conclusion is unknown, recommend a practical evidence route rather than guessing or inventing competing facts. Invite free text, qualifications and unknown/other answers; preserve actual qualified or nonrecommended selections and their conditions, not automatically the recommendation. Keep dependent decisions sequential; there is no fixed question/round quota or canned questionnaire.
+After each answer, reconcile current understanding and select the highest-value unresolved follow-up that depends on it; do not require a running account of each change. A simple factual clarification may be one direct question without mandatory labels or letters. For material choices, ask one material decision at a time using the shared contract: plain-English facts, uncertainty and affected action; meaningful lettered alternatives ending in a genuine free-text/unknown/other route; a supported recommendation and reason; then stop for the engineer's actual answer before dependent questions or effects. If a factual conclusion is unknown, recommend a practical evidence route rather than guessing or inventing competing facts. Invite free text, qualifications and unknown/other answers; preserve actual qualified or nonrecommended selections and their conditions, not automatically the recommendation. Keep dependent decisions sequential; there is no fixed question/round quota or canned questionnaire.
 
 For a plausible alternative framing, explicitly label it as a **hypothesis**, explain its evidence, and ask a brief focused probe to test it. Use that answer to present the competing directions with meaningful choices/trade-offs and a supported recommendation when available. Obtain the engineer's direction choice before deeper exploration; a probe answer alone is not a direction change. Preserve the original objective unless the engineer chooses otherwise. Choosing an alternative direction still requires reconciled readback before broad investigation, unless explicitly deferred.
 
@@ -44,7 +44,7 @@ When the same objective resumes or the engineer answers/corrects pending dialogu
 
 ## Labelled illustrations — not operating scripts
 
-These hypothetical examples illustrate the active method above. Structured fields and lettered paths are optional here, not required presentation. A direct simple question such as “Which supplied example best shows the problem?” is also valid. They are self-contained, not a fixed script, question quota, historical operating policy or evidence of runtime compliance. No historical record needs loading to use them.
+These hypothetical examples illustrate the active method above. Labels are optional; material choices require the shared sequential explanation, lettered alternatives ending in free text/unknown/other, recommendation/reason and actual wait. A direct simple factual question such as “Which supplied example best shows the problem?” is also valid. They are self-contained, not a fixed script, question quota, historical operating policy or evidence of runtime compliance. No historical record needs loading to use them.
 
 ### Positive illustration: useful choices without a reminder
 
@@ -54,6 +54,7 @@ These hypothetical examples illustrate the active method above. Structured field
 
 - **A — Current clutter:** Focus discovery on the existing backlog; future accumulation remains outside scope.
 - **B — Recurring effort:** Also establish what future retention should achieve; broader discovery, but addresses repeated work.
+- **C — Free text/unknown/other:** Qualify the focus, propose another direction or say what remains unknown.
 
 **Recommendation:** B fits your stated concern about repeated manual effort; this is a discovery direction, not a cleanup design.
 
@@ -115,6 +116,7 @@ After the engineer replies that nobody was watching:
 
 - **A — Display focus:** Preserve the original objective; leave unattended awareness outside this investigation.
 - **B — Awareness focus:** Explore when people need to notice failures; broader than display layout, without choosing a technical solution.
+- **C — Free text/unknown/other:** Retain another direction or explain what is still unclear.
 
 **Recommendation:** B better matches the example you supplied.
 
@@ -131,6 +133,7 @@ The probe answer did not authorize switching objectives. After the direction cho
 - **A — Mostly accurate:** Investigate this objective and carry the unknown duration.
 - **B — Correct a point:** Identify the statement, inference or boundary to revise.
 - **C — Deepen first:** Add the missing example, priority or constraint that changes the objective.
+- **D — Free text/unknown/other:** Confirm in your own words, qualify the readback or say what remains unknown.
 
 **Recommendation:** A is reasonable if the inference is close; B or C is better if a correction would change what investigation is relevant.
 
