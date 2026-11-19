@@ -1,7 +1,7 @@
 ---
 name: Architecture Analyst
 target: github-copilot
-model: hydrafusion
+model: fusion
 description: Validate a proposed implementation approach against repository structure, reusable patterns, compatibility concerns, and design trade-offs.
 user-invocable: false
 tools: ['read', 'search']

@@ -1,7 +1,7 @@
 ---
 name: Security Reviewer
 target: github-copilot
-model: hydrafusion
+model: fusion
 description: Review an implementation for unsafe tool grants, delegation escape, injection, data exposure, and approval-boundary failures.
 user-invocable: false
 tools: ['read', 'search']

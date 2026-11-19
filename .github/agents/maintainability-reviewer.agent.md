@@ -1,7 +1,7 @@
 ---
 name: Maintainability Reviewer
 target: github-copilot
-model: hydrafusion
+model: fusion
 description: Review an implementation for clarity, duplication, discoverability, consistency, and long-term maintenance risks.
 user-invocable: false
 tools: ['read', 'search']

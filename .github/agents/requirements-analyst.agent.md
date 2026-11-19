@@ -1,7 +1,7 @@
 ---
 name: Requirements Analyst
 target: github-copilot
-model: hydrafusion
+model: fusion
 description: Analyze an approved research brief for requirements, scope boundaries, acceptance criteria, and unresolved decisions.
 user-invocable: false
 tools: ['read', 'search']

@@ -1,7 +1,7 @@
 ---
 name: Validation Worker
 target: github-copilot
-model: hydrafusion
+model: fusion
 description: Perform read-only structural and manual validation of an implementation against its approved plan and report evidence-backed gaps.
 user-invocable: false
 tools: ['read', 'search']

@@ -1,7 +1,7 @@
 ---
 name: Codebase Investigator
 target: github-copilot
-model: hydrafusion
+model: fusion
 description: Inspect repository files and documentation for existing patterns, symbols, and constraints relevant to a delegated research question.
 user-invocable: false
 tools: ['read', 'search']

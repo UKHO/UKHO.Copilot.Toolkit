@@ -1,7 +1,7 @@
 ---
 name: Domain Investigator
 target: github-copilot
-model: hydrafusion
+model: fusion
 description: Investigate domain terminology, documented requirements, and trusted sources needed to clarify a delegated development request.
 user-invocable: false
 tools: ['read', 'search', 'web']

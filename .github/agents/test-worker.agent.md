@@ -1,7 +1,7 @@
 ---
 name: Test Worker
 target: github-copilot
-model: hydrafusion
+model: fusion
 description: Prepare or assess tests and verification cases for an approved implementation without changing repository files or running commands.
 user-invocable: false
 tools: ['read', 'search']

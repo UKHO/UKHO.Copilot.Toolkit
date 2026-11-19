@@ -1,7 +1,7 @@
 ---
 name: Script Runner
 target: github-copilot
-model: hydrafusion
+model: fusion
 description: Execute bounded phase-authorized scripts and commands, including guarded selected-directory setup, and report actual effects.
 user-invocable: false
 tools: ['read', 'search', 'execute']

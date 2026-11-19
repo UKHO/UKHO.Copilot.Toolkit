@@ -17,6 +17,8 @@ Use this Skill for read-only investigation that turns an ambiguous request into 
 
 ## Procedure
 
+When supporting the Research coordinator, assign significant investigation, analysis and drafting to the appropriate Codebase Investigator, Domain Investigator or Feasibility Investigator, and commands to Script Runner. The coordinator retains only brief orientation, engineer dialogue and decisions, bounded assignment, checking returned evidence and effects, synthesis, and authorship and readback of its physical phase record. An unavailable or ambiguous required specialist is reported to the engineer for an alternate route, not replaced by coordinator execution; never bypass a real denial. This is a behavioral contract, not a runtime guarantee.
+
 1. Identify the request, scope, success criteria, and terms that need clarification.
 2. Inspect documentation and relevant files before drawing conclusions; search for symbols, patterns, and related tests.
 3. Prefer existing conventions and reusable components over speculative design.

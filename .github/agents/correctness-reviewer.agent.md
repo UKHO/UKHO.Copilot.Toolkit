@@ -1,7 +1,7 @@
 ---
 name: Correctness Reviewer
 target: github-copilot
-model: hydrafusion
+model: fusion
 description: Review an approved implementation for functional correctness, edge cases, acceptance-criteria coverage, and broken customization behavior.
 user-invocable: false
 tools: ['read', 'search']

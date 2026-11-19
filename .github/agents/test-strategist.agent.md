@@ -1,7 +1,7 @@
 ---
 name: Test Strategist
 target: github-copilot
-model: hydrafusion
+model: fusion
 description: Design a verification matrix and validation strategy from an approved research brief for Plan construction, including boundaries, negative paths, regressions, and unavailable automation.
 user-invocable: false
 tools: ['read', 'search']

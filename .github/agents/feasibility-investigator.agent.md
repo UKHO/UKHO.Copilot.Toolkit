@@ -1,7 +1,7 @@
 ---
 name: Feasibility Investigator
 target: github-copilot
-model: hydrafusion
+model: fusion
 description: Assess implementation feasibility, dependencies, compatibility constraints, and unresolved risks for a delegated development request.
 user-invocable: false
 tools: ['read', 'search', 'web']
