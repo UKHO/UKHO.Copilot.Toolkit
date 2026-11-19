@@ -54,6 +54,14 @@ const nativeSkills = {
   'Script Runner': ['agent-model-selection', 'local-git-checkpoints']
 };
 const manualHandoffCoordinators = new Set(['Research', 'Plan', 'Implement', 'Review']);
+const coordinatorProfileFiles = new Set(['research.agent.md', 'plan.agent.md', 'implement.agent.md', 'review.agent.md']);
+const specialistProfileFiles = new Set([
+  'architecture-analyst.agent.md', 'codebase-investigator.agent.md', 'correctness-reviewer.agent.md',
+  'domain-investigator.agent.md', 'feasibility-investigator.agent.md', 'implementation-worker.agent.md',
+  'maintainability-reviewer.agent.md', 'requirements-analyst.agent.md', 'script-runner.agent.md',
+  'security-reviewer.agent.md', 'stage-assurance.agent.md', 'test-strategist.agent.md',
+  'test-worker.agent.md', 'validation-worker.agent.md'
+]);
 const templateLinkPlaceholders = new Map([
   ['.github/skills/create-copilot-skill/templates/skill.md', 'relative-path'],
   ['.github/skills/create-runbook/templates/runbook.md', 'repository-relative-link'],
@@ -171,40 +179,40 @@ function checkNativeAgentContract(relative, parsed, agentNames, skillNames, prof
   if (!manualHandoffCoordinators.has(name) && values['user-invocable'] !== 'false') reject('worker must not be user-invocable');
 
   const rows = section(profile, '# Authoritative role profiles').split('\n').filter((line) => line.startsWith('| `'));
-  const matches = rows.map((row) => row.match(/^\| `([a-z0-9-]+\.agent\.md)` \| `(gpt-6\.1-sol|gpt-6\.1-terra|gpt-6-luna|hydrafusion)` \| ([^|]+) \|$/));
-  if (matches.some((match) => !match)) reject('unsupported profile row');
-  const own = matches.filter((match) => match[1] === path.posix.basename(relative));
-  if (own.length !== 1) reject('profile must contain one role row');
-  const model = parseTextScalar((values.model || '').trim(), relative, 'model');
-  if (model !== own[0][2] || Object.hasOwn(values, 'reasoning-effort')) {
-    reject('scalar model must match the role profile and omit authored reasoning-effort');
-  }
+  const names = rows.map((row) => row.match(/^\| `([a-z0-9-]+\.agent\.md)` \|/)?.[1]);
+  if (names.filter((entry) => entry === path.posix.basename(relative)).length !== 1) reject('profile must contain one role row');
+  try {
+    const profiles = checkModelProfileCoverage(profile, names.map((entry) => `.github/agents/${entry}`));
+    checkModelProjection(relative, values, profiles);
+  } catch { reject('model, reasoning and selection policy must match the role profile'); }
 
   if (manualHandoffCoordinators.has(name)) {
     const body = section(text, '## Native entry and specialist dispatch');
+    const active = activeSpecialistText(text);
     const route = [...body.matchAll(/^Permitted specialists are exactly \*\*([^*]+)\*\*/gm)];
     if (text.split('\n').filter((line) => line === '## Native entry and specialist dispatch').length !== 1 || route.length !== 1) reject('missing or ambiguous body route');
     const actual = route[0][1].replace(/, and /g, ', ').split(', ');
     if (!equal(actual, delegateRoutes[name]) || actual.some((role) => !agentNames.has(role))) reject('body route differs from permitted specialists');
     if (!/discovered native custom-agent catalogue/i.test(body) || !/hardcoded generated ID or generic substitute/i.test(body) ||
         !/reconcile (?:the )?returned evidence and effects/i.test(body) || !/behavioral controls, not a native per-parent filter/i.test(body)) reject('dispatch and reconciliation safeguards are missing');
-    // Check additive route claims throughout the loaded section, while allowing
+    checkSpecialistCoordinatorContract(name, text);
+    // Check additive route claims throughout active guidance, while allowing
     // a second enumeration of roles already permitted for this coordinator.
-    if (/\b(?:any|all) (?:specialists|workers|agents) (?:may|can) be (?:used|delegated|invoked)|\bonly (?:a |the )?(?:subset|some|selected) (?:of )?(?:the )?(?:permitted )?(?:specialists|workers|agents) (?:may|can|should) be (?:used|invoked|delegated)/i.test(body) ||
-      hasAffirmativeMatch(body, /\b(?:use|choose|invoke|delegate to) (?:an? )?(?:generic|arbitrary) (?:worker|agent|specialist)(?: instead)?/gi) ||
-      hasAffirmativeMatch(body, /\b(?:use|choose|invoke|delegate to) (?:the |a )?hardcoded generated (?:agent )?ID\b/gi) ||
-      hasAffirmativeMatch(body, /\b(?:use|choose|invoke|delegate to) (?:the )?`(?:[a-z0-9-]*agent[a-z0-9-]*[-_][0-9a-f]{4,}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})`/gi)) reject('contradictory body route');
-    for (const match of body.matchAll(/\b(?:may|can|should) (?:invoke|delegate to|use) (?:the )?([^.!?\n]+)/gi)) {
+    if (/\b(?:any|all) (?:specialists|workers|agents) (?:may|can) be (?:used|delegated|invoked)|\bonly (?:a |the )?(?:subset|some|selected) (?:of )?(?:the )?(?:permitted )?(?:specialists|workers|agents) (?:may|can|should) be (?:used|invoked|delegated)/i.test(active) ||
+      hasAffirmativeMatch(active, /\b(?:use|choose|invoke|delegate to) (?:an? )?(?:generic|arbitrary) (?:worker|agent|specialist)(?: instead)?/gi) ||
+      hasAffirmativeMatch(active, /\b(?:use|choose|invoke|delegate to) (?:the |a )?hardcoded generated (?:agent )?ID\b/gi) ||
+      hasAffirmativeMatch(active, /\b(?:use|choose|invoke|delegate to) (?:the )?`(?:[a-z0-9-]*agent[a-z0-9-]*[-_][0-9a-f]{4,}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})`/gi)) reject('contradictory body route');
+    for (const match of active.matchAll(/\b(?:may|can|should) (?:invoke|delegate to|use) (?:the )?([^.!?\n]+)/gi)) {
       const named = Object.values(delegateRoutes).flat().filter((role) =>
         new RegExp(`\\b${role}\\b`, 'i').test(match[1]));
       if (named.some((role) => !delegateRoutes[name].includes(role))) reject('contradictory body route');
     }
-    for (const match of body.matchAll(/\bonly\s+([^.!?\n]+?)\s+(?:may|can|should) be (?:used|invoked|delegated(?: to)?)(?=\s*[.!?])/gi)) {
+    for (const match of active.matchAll(/\bonly\s+([^.!?\n]+?)\s+(?:may|can|should) be (?:used|invoked|delegated(?: to)?)(?=\s*[.!?])/gi)) {
       const named = [...new Set(Object.values(delegateRoutes).flat().filter((role) =>
         new RegExp(`\\b${role}\\b`, 'i').test(match[1])))];
       if (named.length && (named.length !== delegateRoutes[name].length || named.some((role) => !delegateRoutes[name].includes(role)))) reject('contradictory body route');
     }
-    for (const match of body.matchAll(/\b(?:use|invoke|choose)\s+([^.!?\n]+?)\s+instead\b/gi)) {
+    for (const match of active.matchAll(/\b(?:use|invoke|choose)\s+([^.!?\n]+?)\s+instead\b/gi)) {
       if (Object.values(delegateRoutes).flat().some((role) => !delegateRoutes[name].includes(role) &&
           new RegExp(`\\b${role}\\b`, 'i').test(match[1]))) reject('contradictory body route');
     }
@@ -409,6 +417,156 @@ function section(text, heading) {
 
 function paragraph(text, start) {
   return text.split(/\n\s*\n/).find((part) => part.trimStart().startsWith(start)) || '';
+}
+
+// Scan all active headings, not a fixed heading list. Explicitly labelled
+// historical/illustrative sections and fenced examples are not instructions.
+// This is a bounded Markdown selector, not a general Markdown parser.
+function activeSpecialistText(text) {
+  const lines = text.split('\n');
+  const frontmatterEnd = lines[0] === '---' ? lines.indexOf('---', 1) : -1;
+  let excludedDepth = 0;
+  let fence = null;
+  return lines.slice(frontmatterEnd < 0 ? 0 : frontmatterEnd + 1).map((line) => {
+    const marker = line.match(/^ {0,3}(`{3,}|~{3,})/);
+    if (fence) {
+      if (marker && marker[1][0] === fence[0] && marker[1].length >= fence.length &&
+          new RegExp(`^ {0,3}${fence[0]}{${fence.length},}\\s*$`).test(line)) fence = null;
+      return '';
+    }
+    if (marker) { fence = marker[1]; return ''; }
+    const heading = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (heading) {
+      const depth = heading[1].length;
+      if (excludedDepth && depth <= excludedDepth) excludedDepth = 0;
+      if (!excludedDepth && /^(?:(?:historical|illustrative)(?:\s+[\w-]+)?\s+(?:examples?|notes?|illustrations?|scenarios?)|examples?)(?:\s*[,:(—-].*)?$/i.test(heading[2])) excludedDepth = depth;
+    }
+    return excludedDepth ? '' : line;
+  }).join('\n');
+}
+
+// Match an obligation only when its immediate governing clause is not
+// negated. This is intentionally bounded prose recognition, not an NLP gate.
+function hasRequiredObligation(text, pattern) {
+  const flags = pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`;
+  return [...text.matchAll(new RegExp(pattern.source, flags))].some((match) => {
+    const before = text.slice(Math.max(0, match.index - 100), match.index).split(/[.!?;\n]/).pop();
+    return !/\b(?:(?:(?:do|does|did|must|should|need|shall|will|may|can) not|never|cannot|can't|don't|doesn't|not necessary to)\s+(?:(?:ask|instruct|require|tell|say|state|assert)\s+(?:that\s+)?)?|it is (?:not true|false) that\s+(?:the (?:Plan |Implement |Review )?coordinator(?: should)?\s+)?)$/i.test(before);
+  });
+}
+
+function rejectSpecialistContradictions(text, owner) {
+  const contradiction = /\b(?:delegation (?:is|remains) optional|(?:use|assign) specialists? (?:only )?when (?:useful|helpful)|(?:coordinator|coordinators) (?:may|can|should) (?:perform|undertake|handle|do) (?:any |all |significant |substantive )?(?:investigation|analysis|drafting|source edits?|commands?|tests?|review)|(?:coordinator|coordinators) (?:may|can|should) (?:substitute|self-substitute)|(?:any|all) (?:coordinator )?work is an exception|(?:unavailable|ambiguous) specialists? (?:may|can) be replaced by the coordinator|(?:a )?(?:real )?denial may be bypassed|(?:bypass|evade) (?:a |the )?(?:real |platform )?denial|(?:static checks|these instructions) (?:guarantee|prove) runtime (?:compliance|enforcement)|(?:coordinator|coordinators) (?:may|can|should) (?:replace|substitute for) (?:an? )?(?:unavailable|ambiguous|required) specialist|(?:unavailable|ambiguous|required) specialists? (?:may|can|should) be (?:replaced|substituted) by (?:the )?coordinator|(?:coordinator )?exceptions (?:also )?(?:include|permit|allow) (?:significant|substantive|all|any) (?:work|investigation|analysis|drafting|edits?|commands?|tests?|review))\b/gi;
+  const affirmative = [...text.matchAll(contradiction)].some((match) => {
+    const before = text.slice(Math.max(0, match.index - 200), match.index).split(/[.!?;\n]|\bbut\b/i).pop();
+    return !/\b(?:(?:do|does|must|should|need) not|never|cannot|can't|don't)\s+(?:(?:assert (?:that )?)|(?:use another route to )|(?:(?:silently substitute coordinator execution|delegate irrelevant work|replace (?:the|an? (?:unavailable|ambiguous|required)) specialist) or ))?\s*$/i.test(before);
+  });
+  if (affirmative ||
+      /\b(?:(?:do|must|should|need) not|never)\s+(?:assign (?:every |significant )|report (?:an? |the )?(?:unavailable|ambiguous|required) specialist|wait for (?:the )?(?:actual |engineer|readback|answer|acknowledgment)|ask and wait)/i.test(text)) {
+    fail(`${owner}: contradictory specialist boundary`, 'RPIR-SPECIALIST-001');
+  }
+}
+
+const researchGateContradiction = /\b(?:investigate|delegate investigation|start implementation|edit source|run (?:commands?|tests?)|perform substantive effects) before (?:the )?(?:actual )?(?:answer|acknowledgment|readback)|\b(?:critic|repair instruction|automatic continuation) (?:may|can|should|must) (?:override|replace|bypass) (?:the )?(?:Research )?(?:stop|gate|question)|\b(?:the )?final (?:surfaced )?(?:response|answer) (?:may|can|should|must) (?:ignore|override|replace) (?:the )?(?:Research )?(?:stop|gate|question)|\b(?:the )?final (?:surfaced )?(?:response|answer) (?:may|can|should|must) (?:implement|complete implementation|provide implementation|produce implementation work)/gi;
+const researchGateNegation = /\b(?:(?:do|must|should|shall|can) not|never|cannot|can't|don't) (?:assert (?:that )?)?$/i;
+
+// Owner-local authored-text checks only: no runtime dispatch or gate is proven.
+function checkSpecialistCoordinatorContract(name, text) {
+  const body = coordinatorBody(text, name);
+  const active = activeSpecialistText(text);
+  const owners = body.split(/\n\s*\n/).filter((part) => part.startsWith('Permitted specialists are exactly'));
+  const owner = owners.length === 1 ? owners[0] : '';
+  const routes = {
+    Research: [/investigators gather Research evidence/i, /Script Runner executes commands/i],
+    Plan: [/Requirements Analyst, Architecture Analyst and Test Strategist perform their planning analyses/i, /Script Runner executes commands/i],
+    Implement: [/Implementation Worker performs source changes/i, /Script Runner executes commands and tests/i, /Test Worker and Validation Worker provide read-only assessment/i],
+    Review: [/Correctness Reviewer, Security Reviewer and Maintainability Reviewer perform their review lenses/i, /Script Runner executes observational commands/i]
+  };
+  const required = [
+    /Assign every significant investigation, analysis, drafting, source edit, command, test and review to the appropriate named specialist/i,
+    /Coordinator exceptions are limited to brief orientation, engineer dialogue and decisions, bounded assignment, checking returned evidence and effects, synthesis, and authorship and readback of its physical phase record(?:, with its separately guarded Plan marker and ADR sign-off effects)?\./i,
+    /required specialist is unavailable or ambiguous[^.!?\n]*report it to the engineer for an alternate route/i,
+    /report it to the engineer for an alternate route/i,
+    /do not silently substitute coordinator execution or bypass a real denial/i,
+    /behavioral controls, not a native per-parent filter or runtime guarantee/i,
+    ...(routes[name] || [])
+  ];
+  if (!owner || required.some((pattern) => !hasRequiredObligation(owner, pattern))) {
+    fail(`${name}: missing or ambiguous mandatory specialist contract`, 'RPIR-SPECIALIST-001');
+  }
+  rejectSpecialistContradictions(active, name);
+  if (name === 'Research') {
+    const gates = body.split(/\n\s*\n/).filter((part) => part.startsWith('The final surfaced response must remain Research-phase correct:'));
+    const gate = gates.length === 1 ? gates[0] : '';
+    if ([/ask and wait for the engineer's actual answer and acknowledged or corrected readback before significant investigation or other substantive effects/i,
+      /unless the engineer explicitly directs the existing discovery deferral/i,
+      /conflicting critic, repair instruction or automatic continuation must not turn a phase-correct Research question or stop into implementation work/i,
+      /static checks are behavioral safeguards, not a runtime guarantee or sandbox/i,
+      /observe the final response and effects in separately authorized runtime testing/i].some((pattern) => !hasRequiredObligation(gate, pattern))) {
+      fail('Research: missing or ambiguous final surfaced-response gate', 'RPIR-SPECIALIST-001');
+    }
+    if (hasAffirmativeMatch(active, researchGateContradiction, researchGateNegation)) fail('Research: contradictory final surfaced-response gate', 'RPIR-SPECIALIST-001');
+  }
+  return true;
+}
+
+function checkSpecialistSkillContracts(sources = {}) {
+  const paths = {
+    research: '.github/skills/codebase-research/SKILL.md',
+    planning: '.github/skills/architecture-planning/SKILL.md',
+    safe: '.github/skills/safe-implementation/SKILL.md',
+    review: '.github/skills/code-review/SKILL.md',
+    questions: '.github/skills/agent-question-resolution/SKILL.md'
+  };
+  const source = Object.fromEntries(Object.entries(paths).map(([key, relative]) => [key,
+    Object.hasOwn(sources, key) ? sources[key] : readText(relative)]));
+  const rules = {
+    research: ['When supporting the Research coordinator,', /assign significant investigation, analysis and drafting to the appropriate Codebase Investigator, Domain Investigator or Feasibility Investigator, and commands to Script Runner/i, /The coordinator retains only brief orientation, engineer dialogue and decisions, bounded assignment, checking returned evidence and effects, synthesis, and authorship and readback of its physical phase record\./i],
+    planning: ['The Plan coordinator assigns significant', /assigns significant investigation, analysis and drafting to the appropriate Requirements Analyst, Architecture Analyst, Test Strategist or other permitted specialist, and commands to Script Runner/i, /Coordinator exceptions are limited to brief orientation, engineer dialogue and decisions, bounded assignment, checking returned evidence and effects, synthesis, and authorship and readback of its physical phase record and separately guarded associated Proposed ADR\./i],
+    safe: ['The Implement coordinator assigns significant', /assigns significant investigation, analysis, drafting and source changes to Implementation Worker, assessment to the appropriate permitted read-only specialist, and commands and tests to Script Runner/i, /Coordinator exceptions are limited to brief orientation, engineer dialogue and decisions, bounded assignment, checking returned evidence and effects, synthesis, and authorship and readback of its physical phase record; its separately guarded existing Plan markers and ADR sign-off effects remain coordinator-owned\./i],
+    review: ['The Review coordinator assigns significant', /assigns significant investigation, analysis, drafting and review to the appropriate Correctness Reviewer, Security Reviewer or Maintainability Reviewer, and observational commands to Script Runner/i, /Coordinator exceptions are limited to brief orientation, engineer dialogue and decisions, bounded assignment, checking returned evidence and effects, synthesis, and authorship and readback of its physical phase record\./i, /source-read-only/i],
+    questions: ['4. Assign significant factual-gap investigation', /Assign significant factual-gap investigation to the active phase's appropriate named specialist; brief coordinator orientation and checking returned evidence remain permitted\./i, /Research intake is limited by step 1/i]
+  };
+  const normativeScopes = {};
+  for (const [key, [prefix, ...patterns]] of Object.entries(rules)) {
+    const text = typeof source[key] === 'string' ? source[key] : '';
+    const procedure = uniqueCheckpointSection(text, '## Procedure');
+    const owner = uniqueCheckpointUnit(procedure, prefix, key === 'questions');
+    if (!owner || [...patterns, /unavailable or ambiguous required specialist/i, /engineer for an alternate route/i,
+      /(?:never bypass|do not[^.!?\n]*bypass) a real denial/i].some((pattern) => !hasRequiredObligation(owner, pattern))) {
+      fail(`${key}: missing or ambiguous specialist method`, 'RPIR-SPECIALIST-001');
+    }
+    const reporting = /(?:Report an unavailable or ambiguous required specialist to the engineer for an alternate route|An unavailable or ambiguous required specialist is reported to the engineer for an alternate route)/i;
+    if (!hasRequiredObligation(owner, reporting)) fail(`${key}: missing specialist reporting route`, 'RPIR-SPECIALIST-001');
+    const normative = activeSpecialistText(text);
+    normativeScopes[key] = normative;
+    rejectSpecialistContradictions(normative, key);
+    if (hasAffirmativeMatch(normative, /\b(?:investigate directly or use a suitable read-only specialist when useful|use a suitable available specialist when helpful|Implement may (?:run|execute|use)[^.!?\n]*direct(?:ly| command capability)|delegation is not compulsory per unit)\b/gi)) {
+      fail(`${key}: contradictory specialist method`, 'RPIR-SPECIALIST-001');
+    }
+  }
+  const questionProcedure = uniqueCheckpointSection(source.questions, '## Procedure');
+  const gate = uniqueCheckpointUnit(questionProcedure, "Research's final surfaced response must remain phase-correct:");
+  if ([/conflicting critic, repair instruction or automatic continuation must not turn a pending question or readback stop into implementation work/i,
+    /wait for the actual engineer answer and acknowledged or corrected readback unless the engineer explicitly directs the existing deferral/i,
+    /static checks do not guarantee runtime enforcement/i, /inspect the final response and effects/i].some((pattern) => !hasRequiredObligation(gate, pattern))) {
+    fail('questions: missing or ambiguous final surfaced-response gate', 'RPIR-SPECIALIST-001');
+  }
+  if (hasAffirmativeMatch(normativeScopes.questions, researchGateContradiction, researchGateNegation)) {
+    fail('questions: contradictory final surfaced-response gate', 'RPIR-SPECIALIST-001');
+  }
+  const worker = Object.hasOwn(sources, 'worker') ? sources.worker : readText('.github/agents/implementation-worker.agent.md');
+  const checklist = Object.hasOwn(sources, 'checklist') ? sources.checklist : readText('.github/skills/safe-implementation/validation-checklist.md');
+  const workerSafety = uniqueCheckpointSection(typeof worker === 'string' ? worker : '', '## Safety and exclusions');
+  const capabilities = uniqueCheckpointSection(typeof checklist === 'string' ? checklist : '', '## Capabilities and effects');
+  const executionScopes = [worker, checklist].map((text) => activeSpecialistText(typeof text === 'string' ? text : ''));
+  if (!hasRequiredObligation(workerSafety, /Return relevant checks and rechecks to Implement for assignment to Script Runner; do not execute commands or tests directly or delegate them yourself/i) ||
+      !hasRequiredObligation(capabilities, /Implement assigns every command and test to Script Runner; Implementation Worker returns needed checks to Implement and does not execute or delegate them/i) ||
+      executionScopes.some((text) => hasAffirmativeMatch(text, /\b(?:Implementation Worker|Implement) (?:may|can|should) (?:execute|run) (?:ordinary |local )?(?:checks|commands|tests)\b/gi) ||
+        /delegation is (?:useful, )?not compulsory/i.test(text))) {
+    fail('implementation execution: missing or contradictory Script Runner route', 'RPIR-SPECIALIST-001');
+  }
+  return true;
 }
 
 function planArchitectureGuidance(text) {
@@ -906,7 +1064,7 @@ function checkResearchCompleteHandoffs(source) {
         /affected Work Items\/effects and acceptance/i, /engineer-escalation condition/i, /independent work that can continue/i,
         /unestablished essential mechanism, architectural or not/i, /do not require proof earlier discovery was impossible/i]],
     ['implement', 'implement', '# Implement coordinator', 'If an essential mechanism or its feasibility', false, execution],
-    ['implementOperations', 'implement', '# Implement coordinator', 'Own the permitted direct edit–test–repair loop:', false,
+    ['implementOperations', 'implement', '# Implement coordinator', 'Own the specialist-led edit–test–repair loop:', false,
       [/investigate ordinary failures/i, /related files and tests/i, /correct attributable errors/i, /rerun relevant checks/i,
         /projected files or debugging steps[^.!?\n]*exhaustive repair whitelist/i]],
     ['safe', 'safe', '## Procedure', 'Apply the supported mechanism', false,
@@ -2050,7 +2208,7 @@ function checkIncrementalRpirContract(sources = {}) {
     /eligible Research brief (?:after|following) physical save\/readback/i
   ], 'Research must retain its separately authorized saved-brief checkpoint route');
 
-  const implement = uniqueCheckpointUnit(coordinatorBody(source.implementAgent, 'Implement'), 'Own the permitted direct edit', true);
+  const implement = uniqueCheckpointUnit(coordinatorBody(source.implementAgent, 'Implement'), 'Own the specialist-led edit', true);
   requireExecutionRule(implement, [
     /inspected approved Plan explicitly includes a bounded strategy/i,
     /approval supplies authority for covered commits after the qualifying Implement transition under policy effective at invocation without a second grant/i,
@@ -2272,13 +2430,16 @@ function checkModelAuthoringContract(sources = {}) {
       fail(`${paths[owner]} is missing its model-profile authoring safeguard`, 'MODEL-AUTHORING-001');
     }
   }
-  // These four owners govern the current no-authored-effort policy; prompt authoring remains independent.
+  // These four owners govern the current split profile; prompt authoring remains independent.
   // This is a bounded authored-text check, not a general prose/runtime oracle.
   for (const owner of ['agent', 'agentTemplate', 'maintenance', 'checklist']) {
     const owned = section(source[owner], headings[owner]);
     const policyRules = [
       /current 18-role[^.\n]*profile/i,
+      /`gpt-6\.1-sol`\/high\/required/i,
+      /14 `?hydrafusion`? specialists/i,
       /omit(?:s)? `reasoning-effort`/i,
+      /`model-policy`/i,
       /Fusion-managed reasoning/i,
       /omission does not clear inherited or external configuration or establish observed effective effort/i,
       /(?:assigned model|reasoning policy)[^\n]*observed effective/i,
@@ -2292,7 +2453,7 @@ function checkModelAuthoringContract(sources = {}) {
     }
   }
   const templateFrontmatter = source.agentTemplate.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1] || '';
-  if (!templateFrontmatter || /^\s*(?:model|reasoning-effort):/m.test(templateFrontmatter)) {
+  if (!templateFrontmatter || /^\s*(?:model|model-policy|reasoning-effort):/m.test(templateFrontmatter)) {
     fail(`${paths.agentTemplate} must keep model and effort frontmatter inert`, 'MODEL-AUTHORING-001');
   }
   return true;
@@ -2301,15 +2462,22 @@ function checkModelAuthoringContract(sources = {}) {
 function checkModelProfileCoverage(profile, agentPaths) {
   const rows = section(profile, '# Authoritative role profiles').split('\n')
     .filter((line) => /^\s*\|/.test(line))
-    .filter((line) => line !== '| Agent definition | Recommended model | Reasoning policy |' &&
-      line !== '| --- | --- | --- |');
+    .filter((line) => line !== '| Agent definition | Recommended model | Reasoning policy | Selection policy |' &&
+      line !== '| --- | --- | --- | --- |');
   const profiles = new Map();
   for (const row of rows) {
-    const match = row.match(/^\| `([a-z0-9-]+\.agent\.md)` \| `(gpt-6\.1-sol|gpt-6\.1-terra|gpt-6-luna|hydrafusion)` \| ([^|]+) \|$/);
+    const match = row.match(/^\| `([a-z0-9-]+\.agent\.md)` \| `(gpt-6\.1-sol|gpt-6\.1-terra|gpt-6-luna|hydrafusion)` \| ([^|]+) \| (Required|No authored override) \|$/);
     if (!match) fail(`Unsupported model profile row: ${row}`, 'MODEL-PROFILE-001');
-    const [, name, model, reasoningPolicy] = match;
+    const [, name, model, reasoningPolicy, selectionPolicy] = match;
     if (profiles.has(name)) fail(`Duplicate model profile: ${name}`, 'MODEL-PROFILE-001');
-    profiles.set(name, { model, reasoningPolicy: reasoningPolicy.trim() });
+    const entry = { model, reasoningPolicy: reasoningPolicy.trim(), selectionPolicy };
+    const fixed = coordinatorProfileFiles.has(name)
+      ? { model: 'gpt-6.1-sol', reasoningPolicy: 'High; authored override', selectionPolicy: 'Required' }
+      : specialistProfileFiles.has(name)
+        ? { model: 'hydrafusion', reasoningPolicy: 'Fusion-managed; no authored override', selectionPolicy: 'No authored override' }
+        : null;
+    if (fixed && !equal(entry, fixed)) fail(`Model profile drift: ${name}`, 'MODEL-PROFILE-001');
+    profiles.set(name, entry);
   }
   const expected = agentPaths.map((relative) => path.posix.basename(relative));
   if (new Set(expected).size !== expected.length) fail('Duplicate agent profile identity', 'MODEL-PROFILE-001');
@@ -2329,8 +2497,24 @@ function checkModelProjection(relative, values, profiles) {
   if (actual !== expected.model) {
     fail(`${relative} model must match its profile: ${expected.model}`, 'MODEL-PROJECTION-001');
   }
-  if (Object.hasOwn(values, 'reasoning-effort')) {
-    fail(`${relative} must omit authored reasoning-effort`, 'MODEL-PROJECTION-001');
+  const coordinator = coordinatorProfileFiles.has(path.posix.basename(relative));
+  const fixed = coordinator
+    ? { model: 'gpt-6.1-sol', reasoningPolicy: 'High; authored override', selectionPolicy: 'Required' }
+    : specialistProfileFiles.has(path.posix.basename(relative))
+      ? { model: 'hydrafusion', reasoningPolicy: 'Fusion-managed; no authored override', selectionPolicy: 'No authored override' }
+      : null;
+  if (fixed && !equal(expected, fixed)) fail(`${relative} profile differs from its fixed allocation`, 'MODEL-PROJECTION-001');
+  if (coordinator) {
+    for (const [field, expectedValue] of [['reasoning-effort', 'high'], ['model-policy', 'required']]) {
+      let actualValue;
+      try { actualValue = parseTextScalar((values[field] || '').trim(), relative, field); }
+      catch { fail(`${relative} has unsupported ${field} metadata`, 'MODEL-PROJECTION-001'); }
+      if (actualValue !== expectedValue) fail(`${relative} must declare ${field}: ${expectedValue}`, 'MODEL-PROJECTION-001');
+    }
+  } else {
+    if (Object.hasOwn(values, 'reasoning-effort')) fail(`${relative} must omit authored reasoning-effort`, 'MODEL-PROJECTION-001');
+    if (Object.hasOwn(values, 'model-policy')) fail(`${relative} must omit authored model-policy`, 'MODEL-PROJECTION-001');
+    if (expected.selectionPolicy !== 'No authored override') fail(`${relative} has unsupported selection policy`, 'MODEL-PROJECTION-001');
   }
 }
 
@@ -2348,18 +2532,18 @@ function checkModelEffortContract(sources = {}) {
     procedure: [
       /assigned model[^\n]*authored reasoning policy[^\n]*separately observed effective/i,
       /Before model configuration[^\n]*supported Copilot path[^\n]*compatibility and permission/i,
-      /current 18 roles[^\n]*`hydrafusion` preference and Fusion-managed reasoning policy/i,
-      /current 18-role profile omits `reasoning-effort` so Fusion manages reasoning/i,
+      /current 18 roles[^\n]*`gpt-6\.1-sol`\/high\/required coordinator entries and `hydrafusion`\/Fusion-managed specialist entries/i,
+      /four coordinators author `reasoning-effort: high` and `model-policy: required`[^\n]*14 specialists omit `reasoning-effort` and `model-policy`/i,
       /omission does not clear inherited or external configuration or establish effective effort/i
     ],
     output: [
-      /Fusion-managed reasoning policy, separately evidenced model configuration and observed settings/i,
+      /assigned model and reasoning policy, separately evidenced model configuration and observed settings/i,
       /Do not claim effective routing, effort enforcement, installed loading, or compatibility/i,
       /Model choice or escalation never grants tools, edits, commands, delegation, lifecycle ownership, approval, acceptance/i
     ],
-    introduction: [/current 18-role profile uses `hydrafusion` with Fusion-managed reasoning and no authored `reasoning-effort` override/i],
+    introduction: [/current 18-role profile assigns four coordinators `gpt-6\.1-sol`, `high` reasoning and `required` model policy[^\n]*other 14 use `hydrafusion` with Fusion-managed reasoning and no authored `reasoning-effort` or `model-policy` override/i],
     selection: [
-      /current Fusion profile authors no per-agent reasoning override/i,
+      /current Fusion specialist profile authors no per-agent reasoning override/i,
       /omission does not establish that inherited or external settings are absent or that Fusion's effective reasoning is known/i,
       /report only separately observed effective effort/i,
       /recommendation, configuration or escalation never expands authority[^\n]*independent Review[^\n]*advisory assurance/i
@@ -2558,6 +2742,7 @@ function checkCustomizationContracts(inventory) {
   }
   checkArchitectureDecisionRecordContract();
   checkIncrementalRpirContract();
+  checkSpecialistSkillContracts();
   checkModelAuthoringContract();
   checkModelEffortContract();
   checkConciseRpirContract();
@@ -2617,6 +2802,7 @@ if (require.main === module) {
 module.exports = {
   checkAgentMetadata, checkLocalLinks, checkManifestParity, checkPromptMetadata,
   checkNativeAgentContract, checkNativeSupportMetadata, checkNativeModelObservationContract,
+  checkSpecialistCoordinatorContract, checkSpecialistSkillContracts,
   checkPhysicalRecordContract, checkLifecycleCandidatePatterns,
   checkDecisionReadinessContract, checkImplementSignoffContract,
   checkConciseRpirContract,

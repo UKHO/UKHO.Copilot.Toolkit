@@ -79,6 +79,362 @@ const nativeSkillNames = new Set(inventory.chatSkills.map((relative) =>
 const nativeLock = JSON.parse(readArtifact('package-lock.json'));
 const nativeCheck = (relative, text = readArtifact(relative), skills = nativeSkillNames, profile = nativeProfile) =>
   contracts.checkNativeAgentContract(relative, contracts.parseFrontmatterText(text, relative), agentNames, skills, profile);
+
+// These fixtures exercise authored contracts, not actual host behavior.
+const specialistError = (error) => error.contractId === 'RPIR-SPECIALIST-001';
+const mandatoryAssignment = 'Assign every significant investigation, analysis, drafting, source edit, command, test and review to the appropriate named specialist';
+const narrowExceptions = 'Coordinator exceptions are limited to brief orientation, engineer dialogue and decisions, bounded assignment, checking returned evidence and effects, synthesis, and authorship and readback of its physical phase record';
+for (const [name, route, commandRoute] of [
+  ['Research', 'investigators gather Research evidence', 'Script Runner executes commands'],
+  ['Plan', 'Requirements Analyst, Architecture Analyst and Test Strategist perform their planning analyses', 'Script Runner executes commands'],
+  ['Implement', 'Implementation Worker performs source changes', 'Script Runner executes commands and tests'],
+  ['Review', 'Correctness Reviewer, Security Reviewer and Maintainability Reviewer perform their review lenses', 'Script Runner executes observational commands']
+]) {
+  const original = readArtifact(agentPath(name));
+  const owner = original.split('\n').find((line) => line.startsWith('Permitted specialists are exactly'));
+  const check = (changed) => contracts.checkSpecialistCoordinatorContract(name, changed);
+  assert.ok(owner);
+  assert.doesNotThrow(() => check(original));
+  assert.doesNotThrow(() => check(`${original}\n\n## Historical example\n\nDelegation is optional.\n`));
+  cases += 2;
+  for (const target of [mandatoryAssignment, narrowExceptions, route, commandRoute,
+    'required specialist is unavailable or ambiguous', 'report it to the engineer for an alternate route',
+    'do not silently substitute coordinator execution or bypass a real denial',
+    'behavioral controls, not a native per-parent filter or runtime guarantee']) {
+    const missing = replaceOnce(original, owner, replaceOnce(owner, target, 'omitted safeguard'));
+    assertRejected(`${name} specialist missing ${target}`, () => check(missing), specialistError);
+    assertRejected(`${name} specialist history cannot restore ${target}`,
+      () => check(`${missing}\n\n## Historical example\n\n${owner}\n`), specialistError);
+  }
+  for (const statement of ['Delegation is optional.', 'The coordinator may perform significant investigation.',
+    'Any coordinator work is an exception.', 'A real denial may be bypassed.',
+    'Static checks guarantee runtime enforcement.', 'The coordinator may replace an unavailable specialist.',
+    'Coordinator exceptions also include significant investigation.', 'Bypass a real denial.',
+    'Do not bypass a real denial; but bypass a real denial.']) {
+    assertRejected(`${name} specialist contradiction: ${statement}`, () => check(replaceOnce(original, owner,
+      `${owner}\n\n${statement}`)), specialistError);
+  }
+  for (const [target, replacement] of [
+    [mandatoryAssignment, `Do not ${mandatoryAssignment}`],
+    ['report it to the engineer for an alternate route', 'do not report it to the engineer for an alternate route'],
+    [narrowExceptions, `${narrowExceptions}, significant investigation`]
+  ]) {
+    assertRejected(`${name} negated or expanded specialist obligation: ${target}`, () => check(replaceOnce(original, owner,
+      replaceOnce(owner, target, replacement))), specialistError);
+  }
+  for (const target of [route, commandRoute, ...(name === 'Implement'
+    ? ['Test Worker and Validation Worker provide read-only assessment'] : [])]) {
+    const negatedOwner = replaceOnce(owner, target, `it is not true that ${target}`);
+    assert.ok(negatedOwner.startsWith('Permitted specialists are exactly') && negatedOwner.includes(target));
+    assertRejected(`${name} complete specialist route explicitly negated: ${target}`,
+      () => check(replaceOnce(original, owner, negatedOwner)),
+      (error) => specialistError(error) && error.message === `${name}: missing or ambiguous mandatory specialist contract`);
+    assert.doesNotThrow(() => check(replaceOnce(original, owner,
+      replaceOnce(owner, target, `it is true that ${target}`))));
+    cases += 1;
+    assertRejected(`${name} complete specialist route falsely declared false: ${target}`,
+      () => check(replaceOnce(original, owner, replaceOnce(owner, target, `it is false that ${target}`))),
+      (error) => specialistError(error) && error.message === `${name}: missing or ambiguous mandatory specialist contract`);
+  }
+  for (const statement of ['Do not bypass a real denial.', 'Never replace an unavailable specialist.',
+    'Never use another route to evade denial.', 'Do not replace the specialist or bypass a real denial.']) {
+    assert.doesNotThrow(() => check(replaceOnce(original, owner, `${owner}\n\n${statement}`)));
+    cases += 1;
+  }
+  for (const statement of ['Delegation is optional.', 'The coordinator may replace an unavailable specialist.',
+    'Do not replace the specialist but use a different tool or bypass a real denial.',
+    'Do not bypass a real denial but use a different tool or bypass a real denial.']) {
+    assertRejected(`${name} new active specialist fallback: ${statement}`,
+      () => check(`${original}\n\n## Specialist fallback\n\n${statement}\n`), specialistError);
+  }
+  for (const example of [
+    '## Illustrative example\n\nDelegation is optional.',
+    '## Historical example\n\n### Prior fallback\n\nThe coordinator may replace an unavailable specialist.',
+    '## Specialist fallback\n\n```text\nBypass a real denial.\n```'
+  ]) {
+    assert.doesNotThrow(() => check(`${original}\n\n${example}\n`));
+    cases += 1;
+  }
+  assertRejected(`${name} active section after historical example`, () => check(`${original}\n\n## Historical example\n\nDelegation is optional.\n\n## Specialist fallback\n\nDelegation is optional.\n`), specialistError);
+  assertRejected(`${name} active level-one section after coordinator`, () => check(`${original}\n\n# Additional instructions\n\nDelegation is optional.\n`), specialistError);
+  assert.doesNotThrow(() => check(`${original}\n\n# Historical example\n\nDelegation is optional.\n`));
+  assert.doesNotThrow(() => check(`${original}\n\n# Additional instructions\n\n\`\`\`text\nDelegation is optional.\n\`\`\`\n`));
+  cases += 2;
+  assertRejected(`${name} duplicate specialist owner`, () => check(replaceOnce(original, owner,
+    `${owner}\n\n${owner}`)), specialistError);
+}
+const gateResearch = readArtifact(agentPath('Research'));
+const researchGate = gateResearch.split('\n').find((line) => line.startsWith('The final surfaced response must remain Research-phase correct:'));
+assert.ok(researchGate);
+for (const target of ['actual answer and acknowledged or corrected readback before significant investigation or other substantive effects',
+  'unless the engineer explicitly directs the existing discovery deferral',
+  'conflicting critic, repair instruction or automatic continuation must not turn a phase-correct Research question or stop into implementation work',
+  'static checks are behavioral safeguards, not a runtime guarantee or sandbox',
+  'observe the final response and effects in separately authorized runtime testing']) {
+  const missing = replaceOnce(gateResearch, researchGate, replaceOnce(researchGate, target, 'omitted safeguard'));
+  assertRejected(`Research gate missing ${target}`, () => contracts.checkSpecialistCoordinatorContract('Research', missing), specialistError);
+  assertRejected(`Research gate history cannot restore ${target}`, () => contracts.checkSpecialistCoordinatorContract('Research',
+    `${missing}\n\n## Historical example\n\n${researchGate}\n`), specialistError);
+}
+for (const statement of ['Investigate before acknowledgment.', 'Delegate investigation before the readback.',
+  'Edit source before acknowledgment.', 'Run commands before the actual answer.', 'Run tests before acknowledgment.', 'Perform substantive effects before readback.',
+  'The critic may override the Research stop.', 'The final surfaced response may ignore the Research question.',
+  'The final surfaced response must produce implementation work.']) {
+  assertRejected(`Research gate contradiction: ${statement}`, () => contracts.checkSpecialistCoordinatorContract('Research',
+    replaceOnce(gateResearch, researchGate, `${researchGate}\n\n${statement}`)), specialistError);
+}
+assertRejected('Research gate negated waiting with required words intact', () => contracts.checkSpecialistCoordinatorContract('Research',
+  replaceOnce(gateResearch, researchGate, replaceOnce(researchGate, 'ask and wait for', 'do not ask and wait for'))), specialistError);
+assert.doesNotThrow(() => contracts.checkSpecialistCoordinatorContract('Research',
+  `${gateResearch}\n\n## Historical example\n\nThe critic may override the Research stop.\n`));
+cases += 1;
+assertRejected('Research new active section cannot bypass acknowledgment', () => contracts.checkSpecialistCoordinatorContract('Research',
+  `${gateResearch}\n\n## Specialist fallback\n\nEdit source before acknowledgment.\n`), specialistError);
+for (const statement of ['Must not investigate before acknowledgment.', 'Do not run tests before acknowledgment.']) {
+  assert.doesNotThrow(() => contracts.checkSpecialistCoordinatorContract('Research',
+    `${gateResearch}\n\n# Additional instructions\n\n${statement}\n`));
+  cases += 1;
+}
+assertRejected('Research affirmative gate contradiction after level-one heading', () => contracts.checkSpecialistCoordinatorContract('Research',
+  `${gateResearch}\n\n# Additional instructions\n\nRun tests before acknowledgment.\n`), specialistError);
+assertRejected('Research affirmative gate contradiction after a negated clause', () => contracts.checkSpecialistCoordinatorContract('Research',
+  `${gateResearch}\n\n# Additional instructions\n\nMust not investigate before acknowledgment; but investigate before acknowledgment.\n`), specialistError);
+for (const example of ['# Historical example\n\nRun tests before acknowledgment.',
+  '# Additional instructions\n\n```text\nRun tests before acknowledgment.\n```']) {
+  assert.doesNotThrow(() => contracts.checkSpecialistCoordinatorContract('Research', `${gateResearch}\n\n${example}\n`));
+  cases += 1;
+}
+assert.doesNotThrow(() => contracts.checkSpecialistCoordinatorContract('Research',
+  `${gateResearch}\n\n## Illustrative example\n\nEdit source before acknowledgment.\n`));
+cases += 1;
+
+const specialistSkillPaths = {
+  research: '.github/skills/codebase-research/SKILL.md', planning: '.github/skills/architecture-planning/SKILL.md',
+  safe: '.github/skills/safe-implementation/SKILL.md', review: '.github/skills/code-review/SKILL.md',
+  questions: '.github/skills/agent-question-resolution/SKILL.md',
+  worker: '.github/agents/implementation-worker.agent.md', checklist: '.github/skills/safe-implementation/validation-checklist.md'
+};
+const specialistSkills = Object.fromEntries(Object.entries(specialistSkillPaths).map(([key, relative]) => [key, readArtifact(relative)]));
+assert.doesNotThrow(() => contracts.checkSpecialistSkillContracts(specialistSkills));
+cases += 1;
+for (const [key, prefix] of [['research', 'When supporting the Research coordinator,'],
+  ['planning', 'The Plan coordinator assigns significant'], ['safe', 'The Implement coordinator assigns significant'],
+  ['review', 'The Review coordinator assigns significant'], ['questions', '4. Assign significant factual-gap investigation']]) {
+  const original = specialistSkills[key];
+  const owner = original.split('\n').find((line) => line.startsWith(prefix));
+  assert.ok(owner);
+  for (const target of ['unavailable or ambiguous required specialist', 'engineer for an alternate route', 'a real denial']) {
+    const missing = replaceOnce(original, owner, replaceOnce(owner, target, 'omitted safeguard'));
+    assertRejected(`${key} specialist method missing ${target}`,
+      () => contracts.checkSpecialistSkillContracts({ ...specialistSkills, [key]: missing }), specialistError);
+    assertRejected(`${key} method history cannot restore ${target}`,
+      () => contracts.checkSpecialistSkillContracts({ ...specialistSkills, [key]: `${missing}\n\n## Historical example\n\n${owner}\n` }), specialistError);
+  }
+  assertRejected(`${key} duplicate method owner`, () => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+    [key]: replaceOnce(original, owner, `${owner}\n\n${owner}`) }), specialistError);
+  const assignment = {
+    research: 'assign significant investigation, analysis and drafting to the appropriate Codebase Investigator, Domain Investigator or Feasibility Investigator, and commands to Script Runner',
+    planning: 'assigns significant investigation, analysis and drafting to the appropriate Requirements Analyst, Architecture Analyst, Test Strategist or other permitted specialist, and commands to Script Runner',
+    safe: 'assigns significant investigation, analysis, drafting and source changes to Implementation Worker, assessment to the appropriate permitted read-only specialist, and commands and tests to Script Runner',
+    review: 'assigns significant investigation, analysis, drafting and review to the appropriate Correctness Reviewer, Security Reviewer or Maintainability Reviewer, and observational commands to Script Runner',
+    questions: "Assign significant factual-gap investigation to the active phase's appropriate named specialist; brief coordinator orientation and checking returned evidence remain permitted."
+  }[key];
+  const subject = { planning: 'the Plan coordinator ', safe: 'the Implement coordinator ', review: 'the Review coordinator ' }[key];
+  const assignmentFixture = (negative) => {
+    const qualifier = negative ? 'It is not true that' : 'It is true that';
+    if (subject) return replaceOnce(owner, prefix, `${prefix} attention: ${qualifier} ${subject}${prefix.slice(subject.length)}`);
+    if (key === 'questions') return replaceOnce(owner, prefix, `${prefix}: ${qualifier} the coordinator should Assign significant factual-gap investigation`);
+    return replaceOnce(owner, assignment, `${qualifier} the coordinator should ${assignment}`);
+  };
+  const negatedAssignment = assignmentFixture(true);
+  assert.ok(negatedAssignment.startsWith(prefix) && negatedAssignment.includes(assignment) && negatedAssignment.includes('not true'));
+  assertRejected(`${key} complete method assignment explicitly negated`, () => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+    [key]: replaceOnce(original, owner, negatedAssignment) }),
+  (error) => specialistError(error) && error.message === `${key}: missing or ambiguous specialist method`);
+  const neverAssignment = subject
+    ? replaceOnce(owner, prefix, `${prefix} attention: ${subject}never ${prefix.slice(subject.length)}`)
+    : key === 'questions'
+      ? replaceOnce(owner, prefix, `${prefix}: the coordinator should never Assign significant factual-gap investigation`)
+      : replaceOnce(owner, assignment, `never ${assignment}`);
+  assert.ok(neverAssignment.startsWith(prefix) && neverAssignment.includes(assignment) && neverAssignment.includes('never'));
+  assertRejected(`${key} complete method assignment directly negated`, () => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+    [key]: replaceOnce(original, owner, neverAssignment) }),
+  (error) => specialistError(error) && error.message === `${key}: missing or ambiguous specialist method`);
+  assert.doesNotThrow(() => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+    [key]: replaceOnce(original, owner, assignmentFixture(false)) }));
+  cases += 1;
+  const reportClause = key === 'research'
+    ? 'An unavailable or ambiguous required specialist is reported to the engineer for an alternate route'
+    : 'Report an unavailable or ambiguous required specialist to the engineer for an alternate route';
+  const reportFixture = (negative) => replaceOnce(owner, reportClause,
+    `It is ${negative ? 'not ' : ''}true that ${key === 'research' ? '' : 'the coordinator should '}${reportClause}`);
+  const negatedReport = reportFixture(true);
+  assert.ok(negatedReport.startsWith(prefix) && negatedReport.includes(reportClause) && negatedReport.includes('not true'));
+  assertRejected(`${key} complete specialist reporting explicitly negated`, () => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+    [key]: replaceOnce(original, owner, negatedReport) }),
+  (error) => specialistError(error) && error.message === `${key}: missing specialist reporting route`);
+  assert.doesNotThrow(() => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+    [key]: replaceOnce(original, owner, reportFixture(false)) }));
+  cases += 1;
+  for (const statement of ['The coordinator may replace an unavailable specialist.',
+    'Coordinator exceptions also include significant analysis.', 'Bypass a real denial.',
+    'Static checks guarantee runtime enforcement.']) {
+    assertRejected(`${key} additive method contradiction: ${statement}`, () => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+      [key]: replaceOnce(original, owner, `${owner}\n\n${statement}`) }), specialistError);
+  }
+  assert.doesNotThrow(() => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+    [key]: replaceOnce(original, owner, `${owner}\n\nDo not bypass a real denial.`) }));
+  cases += 1;
+}
+for (const [key, headings] of [
+  ['research', ['## Trigger', '## Inputs', '## Procedure', '## Outputs', '## Limits', '## Validation']],
+  ['planning', ['## Trigger', '## Inputs', '## Procedure', '## Limits', '## Validation', '## Outputs']],
+  ['safe', ['## Trigger', '## Inputs', '## Procedure', '## Limits', '## Execution, validation and record evidence', '## Outputs']],
+  ['review', ['## Trigger and inputs', '## Procedure', '## Output and validation', '### Checkpoint planning and boundary assessment']],
+  ['questions', ['## Trigger', '## Inputs', '## Procedure', '## Outputs', '## Limits', '## Validation', '## Linked resource']]
+]) {
+  for (const heading of headings) {
+    const statement = 'The coordinator may replace an unavailable specialist.';
+    assertRejected(`${key} ${heading} section-local contradiction`, () => contracts.checkSpecialistSkillContracts({
+      ...specialistSkills, [key]: replaceOnce(specialistSkills[key], heading, `${heading}\n\n${statement}`)
+    }), (error) => specialistError(error) && error.message === `${key}: contradictory specialist boundary`);
+    for (const guard of ['Do not bypass a real denial.', 'Do not use a suitable available specialist when helpful.']) {
+      assert.doesNotThrow(() => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+        [key]: replaceOnce(specialistSkills[key], heading, `${heading}\n\n${guard}`) }));
+      cases += 1;
+    }
+  }
+  assert.doesNotThrow(() => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+    [key]: `${specialistSkills[key]}\n\n## Historical example\n\nThe coordinator may replace an unavailable specialist.\n` }));
+  cases += 1;
+  for (const statement of ['Delegation is optional.', 'The coordinator may replace an unavailable specialist.',
+    'Do not replace the specialist but use a different tool or bypass a real denial.']) {
+    assertRejected(`${key} new active specialist fallback: ${statement}`, () => contracts.checkSpecialistSkillContracts({
+      ...specialistSkills, [key]: `${specialistSkills[key]}\n\n## Specialist fallback\n\n${statement}\n`
+    }), specialistError);
+  }
+  for (const example of [
+    '## Illustrative example\n\nDelegation is optional.',
+    '## Historical example\n\n### Prior fallback\n\nThe coordinator may replace an unavailable specialist.',
+    '## Specialist fallback\n\n~~~text\nBypass a real denial.\n~~~',
+    '## Specialist fallback\n\nDo not replace the specialist or bypass a real denial.'
+  ]) {
+    assert.doesNotThrow(() => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+      [key]: `${specialistSkills[key]}\n\n${example}\n` }));
+    cases += 1;
+  }
+  assertRejected(`${key} active section after historical example`, () => contracts.checkSpecialistSkillContracts({
+    ...specialistSkills, [key]: `${specialistSkills[key]}\n\n## Historical example\n\nDelegation is optional.\n\n## Specialist fallback\n\nDelegation is optional.\n`
+  }), specialistError);
+}
+for (const heading of ['## Outputs', '## Limits', '## Validation', '## Linked resource']) {
+  assertRejected(`questions ${heading} Research gate contradiction`, () => contracts.checkSpecialistSkillContracts({
+    ...specialistSkills, questions: replaceOnce(specialistSkills.questions, heading,
+      `${heading}\n\nInvestigate before acknowledgment.`)
+  }), (error) => specialistError(error) && error.message === 'questions: contradictory final surfaced-response gate');
+  assert.doesNotThrow(() => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+    questions: replaceOnce(specialistSkills.questions, heading, `${heading}\n\nDo not investigate before acknowledgment.`) }));
+  cases += 1;
+}
+for (const [key, target] of [
+  ['research', 'authorship and readback of its physical phase record.'],
+  ['planning', 'authorship and readback of its physical phase record and separately guarded associated Proposed ADR.'],
+  ['safe', 'authorship and readback of its physical phase record;'],
+  ['review', 'authorship and readback of its physical phase record.'],
+  ['questions', 'brief coordinator orientation and checking returned evidence remain permitted.']
+]) {
+  const owner = specialistSkills[key].split('\n').find((line) => line.includes(target));
+  assert.ok(owner);
+  const expanded = target.endsWith(';') ? `${target.slice(0, -1)}, significant investigation;`
+    : `${target.slice(0, -1)}, significant investigation.`;
+  assertRejected(`${key} expanded method exceptions`, () => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+    [key]: replaceOnce(specialistSkills[key], owner, replaceOnce(owner, target, expanded)) }), specialistError);
+}
+for (const [key, statement] of [['planning', 'Investigate directly or use a suitable read-only specialist when useful.'],
+  ['safe', 'Implement may run local checks directly.'], ['questions', 'Use a suitable available specialist when helpful.']]) {
+  assertRejected(`${key} optional method contradiction`, () => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+    [key]: replaceOnce(specialistSkills[key], '## Procedure', `## Procedure\n\n${statement}`) }), specialistError);
+}
+const questionGate = specialistSkills.questions.split('\n').find((line) => line.startsWith("Research's final surfaced response must remain phase-correct:"));
+assert.ok(questionGate);
+for (const target of ['conflicting critic, repair instruction or automatic continuation must not turn a pending question or readback stop into implementation work',
+  'wait for the actual engineer answer and acknowledged or corrected readback unless the engineer explicitly directs the existing deferral',
+  'static checks do not guarantee runtime enforcement', 'inspect the final response and effects']) {
+  assertRejected(`question method gate missing ${target}`, () => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+    questions: replaceOnce(specialistSkills.questions, questionGate, replaceOnce(questionGate, target, 'omitted safeguard')) }), specialistError);
+}
+for (const statement of ['Investigate before acknowledgment.', 'Edit source before acknowledgment.',
+  'Run commands before the actual answer.', 'Run tests before acknowledgment.', 'Perform substantive effects before the readback.',
+  'The critic may override the Research stop.',
+  'The final surfaced response must produce implementation work.']) {
+  assertRejected(`question method gate contradiction: ${statement}`, () => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+    questions: replaceOnce(specialistSkills.questions, questionGate, `${questionGate}\n\n${statement}`) }), specialistError);
+}
+assert.doesNotThrow(() => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+  questions: `${specialistSkills.questions}\n\n## Additional instructions\n\nMust not investigate before acknowledgment.\n` }));
+cases += 1;
+for (const statement of ['Edit source before acknowledgment.', 'Run commands before the actual answer.',
+  'Perform substantive effects before the readback.']) {
+  assertRejected(`question method new section gate contradiction: ${statement}`, () => contracts.checkSpecialistSkillContracts({
+    ...specialistSkills, questions: `${specialistSkills.questions}\n\n## Specialist fallback\n\n${statement}\n`
+  }), (error) => specialistError(error) && error.message === 'questions: contradictory final surfaced-response gate');
+  assert.doesNotThrow(() => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+    questions: `${specialistSkills.questions}\n\n## Specialist fallback\n\nDo not ${statement[0].toLowerCase()}${statement.slice(1)}\n` }));
+  assert.doesNotThrow(() => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+    questions: `${specialistSkills.questions}\n\n## Illustrative example\n\n${statement}\n` }));
+  cases += 2;
+}
+assertRejected('question method gate negated waiting with required words intact', () => contracts.checkSpecialistSkillContracts({
+  ...specialistSkills, questions: replaceOnce(specialistSkills.questions, questionGate,
+    replaceOnce(questionGate, 'wait for the actual engineer answer', 'do not wait for the actual engineer answer'))
+}), specialistError);
+for (const [key, target, replacement] of [
+  ['worker', 'do not execute commands or tests directly or delegate them yourself', 'execute commands and tests directly'],
+  ['checklist', 'Implement assigns every command and test to Script Runner', 'Implement may execute ordinary local checks'],
+  ['checklist', 'Significant work requires its named specialist, not an irrelevant delegation quota', 'delegation is useful, not compulsory per unit']
+]) {
+  assertRejected(`${key} contradicts the mandatory execution route`, () => contracts.checkSpecialistSkillContracts({
+    ...specialistSkills, [key]: replaceOnce(specialistSkills[key], target, replacement)
+  }), specialistError);
+}
+for (const [key, heading, statement] of [
+  ['worker', '## Safety and exclusions', 'Implementation Worker may execute local checks.'],
+  ['checklist', '## Capabilities and effects', 'Implement may run local tests.']
+]) {
+  assertRejected(`${key} additive direct execution contradiction`, () => contracts.checkSpecialistSkillContracts({
+    ...specialistSkills, [key]: replaceOnce(specialistSkills[key], heading, `${heading}\n\n${statement}`)
+  }), specialistError);
+  assert.doesNotThrow(() => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+    [key]: `${specialistSkills[key]}\n\n## Historical example\n\n${statement}\n` }));
+  cases += 1;
+}
+for (const [key, heading, statement] of [
+  ['worker', '## Execution and output', 'Implementation Worker may execute local checks.'],
+  ['checklist', '## Scope and recovery', 'Implement may run local tests.']
+]) {
+  for (const contradiction of [statement, 'Delegation is useful, not compulsory per unit.']) {
+    assertRejected(`${key} execution contradiction in existing ${heading}: ${contradiction}`,
+      () => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+        [key]: replaceOnce(specialistSkills[key], heading, `${heading}\n\n${contradiction}`) }), specialistError);
+    assertRejected(`${key} execution contradiction in another active section: ${contradiction}`,
+      () => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+        [key]: `${specialistSkills[key]}\n\n# Additional instructions\n\n${contradiction}\n` }), specialistError);
+    assertRejected(`${key} execution contradiction after historical section: ${contradiction}`,
+      () => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+        [key]: `${specialistSkills[key]}\n\n## Historical example\n\n${contradiction}\n\n## Additional instructions\n\n${contradiction}\n` }), specialistError);
+    for (const example of [`# Historical example\n\n${contradiction}`, `## Additional instructions\n\n\`\`\`text\n${contradiction}\n\`\`\``]) {
+      assert.doesNotThrow(() => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+        [key]: `${specialistSkills[key]}\n\n${example}\n` }));
+      cases += 1;
+    }
+  }
+  assert.doesNotThrow(() => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+    [key]: `${specialistSkills[key]}\n\n## Additional instructions\n\nDo not assert that ${statement}\n` }));
+  cases += 1;
+}
+assert.doesNotThrow(() => contracts.checkSpecialistSkillContracts({ ...specialistSkills,
+  questions: `${specialistSkills.questions}\n\n## Historical example\n\nThe critic may override the Research stop.\n` }));
+cases += 1;
 for (const relative of agentPaths) {
   assert.doesNotThrow(() => nativeCheck(relative));
   cases += 1;
@@ -120,16 +476,16 @@ for (const [label, target, replacement] of [
   ['wrong target', 'target: github-copilot', 'target: vscode'],
   ['empty tools', "tools: ['read', 'search', 'edit', 'agent', 'execute']", 'tools: []'],
   ['unsupported Local delegation metadata', 'target: github-copilot', "target: github-copilot\nagents: ['Script Runner']"],
-  ['wrong body specialist', 'Requirements Analyst, Architecture Analyst', 'Test Worker, Architecture Analyst'],
-  ['wildcard body specialist', 'Requirements Analyst, Architecture Analyst', '*, Architecture Analyst'],
-  ['fallback model list', 'model: hydrafusion', "model: ['hydrafusion', 'gpt-6.1-terra']"],
-  ['authored effort', 'model: hydrafusion', 'model: hydrafusion\nreasoning-effort:']
+  ['wrong body specialist', 'Permitted specialists are exactly **Requirements Analyst, Architecture Analyst', 'Permitted specialists are exactly **Test Worker, Architecture Analyst'],
+  ['wildcard body specialist', 'Permitted specialists are exactly **Requirements Analyst, Architecture Analyst', 'Permitted specialists are exactly ***, Architecture Analyst'],
+  ['fallback model list', 'model: gpt-6.1-sol', "model: ['gpt-6.1-sol', 'gpt-6.1-terra']"],
+  ['wrong effort', 'reasoning-effort: high', 'reasoning-effort:']
 ]) assertRejected(`native ${label}`, () => nativeCheck(nativePlanPath, replaceOnce(nativePlan, target, replacement)));
 assertRejected('unresolved named skill', () => nativeCheck(nativePlanPath, nativePlan,
   new Set([...nativeSkillNames].filter((name) => name !== 'architecture-planning'))),
   (error) => error.contractId === 'NATIVE-AGENT-001' && /named skills/.test(error.message));
 assertRejected('missing native profile row', () => nativeCheck(nativePlanPath, nativePlan, nativeSkillNames,
-  replaceOnce(nativeProfile, '| `plan.agent.md` | `hydrafusion` | Fusion-managed; no authored override |', '')),
+  replaceOnce(nativeProfile, '| `plan.agent.md` | `gpt-6.1-sol` | High; authored override | Required |', '')),
   (error) => error.contractId === 'NATIVE-AGENT-001' && /one role row/.test(error.message));
 const routeSentence = nativePlan.split('\n').find((line) => line.startsWith('Permitted specialists are exactly'));
 assert.ok(routeSentence);
@@ -250,6 +606,12 @@ for (const [name, forbidden] of [['Research', 'Implementation Worker'], ['Plan',
     assertRejected(`${name} additive route contradiction: ${statement}`, () => nativeCheck(relative,
       replaceOnce(original, route, `${route}\n\n${statement}`)),
     (error) => error.contractId === 'NATIVE-AGENT-001' && /contradictory body route/.test(error.message));
+    assertRejected(`${name} new active section route contradiction: ${statement}`, () => nativeCheck(relative,
+      `${original}\n\n## Specialist fallback\n\n${statement}\n`),
+    (error) => error.contractId === 'NATIVE-AGENT-001' && /contradictory body route/.test(error.message));
+    assertRejected(`${name} level-one active section route contradiction: ${statement}`, () => nativeCheck(relative,
+      `${original}\n\n# Additional instructions\n\n${statement}\n`),
+    (error) => error.contractId === 'NATIVE-AGENT-001' && /contradictory body route/.test(error.message));
   }
   assert.doesNotThrow(() => nativeCheck(relative, replaceOnce(original, route,
     `${route}\n\nThe coordinator may invoke ${allowed[0]} or ${allowed[1]} when appropriate.`)));
@@ -281,7 +643,9 @@ for (const [name, forbidden] of [['Research', 'Implementation Worker'], ['Plan',
     cases += 1;
   }
   assert.doesNotThrow(() => nativeCheck(relative, `${original}\n\n## Historical example\n\nOnly Script Runner may be delegated to.\nUse an arbitrary worker.\n`));
-  cases += 7;
+  assert.doesNotThrow(() => nativeCheck(relative, `${original}\n\n## Illustrative example\n\nUse a generic worker instead.\n`));
+  assert.doesNotThrow(() => nativeCheck(relative, `${original}\n\n## Specialist fallback\n\n\`\`\`text\nUse a generic worker instead.\n\`\`\`\n`));
+  cases += 9;
 }
 for (const [owner, original, boundary] of [['skill', nativeSkill, '## Output and boundary'],
   ['profile', nativeProfile, 'The forward target is Copilot']]) {
@@ -375,10 +739,10 @@ const profileText = readArtifact(profilePath);
 const expectedProfiles = {
   'architecture-analyst': 'hydrafusion', 'codebase-investigator': 'hydrafusion',
   'correctness-reviewer': 'hydrafusion', 'domain-investigator': 'hydrafusion',
-  'feasibility-investigator': 'hydrafusion', 'implement': 'hydrafusion',
+  'feasibility-investigator': 'hydrafusion', 'implement': 'gpt-6.1-sol',
   'implementation-worker': 'hydrafusion', 'maintainability-reviewer': 'hydrafusion',
-  'plan': 'hydrafusion', 'requirements-analyst': 'hydrafusion',
-  'research': 'hydrafusion', 'review': 'hydrafusion',
+  'plan': 'gpt-6.1-sol', 'requirements-analyst': 'hydrafusion',
+  'research': 'gpt-6.1-sol', 'review': 'gpt-6.1-sol',
   'script-runner': 'hydrafusion', 'security-reviewer': 'hydrafusion',
   'stage-assurance': 'hydrafusion', 'test-strategist': 'hydrafusion',
   'test-worker': 'hydrafusion', 'validation-worker': 'hydrafusion'
@@ -386,7 +750,8 @@ const expectedProfiles = {
 function assertBaselineModels(profiles) {
   for (const [name, model] of Object.entries(expectedProfiles)) {
     assert.deepEqual(profiles.get(`${name}.agent.md`), {
-      model, reasoningPolicy: 'Fusion-managed; no authored override'
+      model, reasoningPolicy: model === 'gpt-6.1-sol' ? 'High; authored override' : 'Fusion-managed; no authored override',
+      selectionPolicy: model === 'gpt-6.1-sol' ? 'Required' : 'No authored override'
     }, `${name} allocation`);
   }
 }
@@ -405,10 +770,15 @@ function projectSerialized(relative, text, selectedProfiles) {
 }
 assert.equal(Object.keys(expectedProfiles).length, agentPaths.length, 'all contributed agents have expected profiles');
 for (const relative of agentPaths) {
-  assert.equal(profiles.get(relative.slice('.github/agents/'.length)).model, 'hydrafusion', `${relative} model`);
-  assert.equal(profiles.get(relative.slice('.github/agents/'.length)).reasoningPolicy,
-    'Fusion-managed; no authored override', `${relative} reasoning policy`);
-  assert.equal(Object.hasOwn(agents.get(relative).values, 'reasoning-effort'), false, `${relative} omits effort`);
+  const name = relative.slice('.github/agents/'.length).replace(/\.agent\.md$/, '');
+  const coordinator = expectedProfiles[name] === 'gpt-6.1-sol';
+  assert.equal(profiles.get(`${name}.agent.md`).model, expectedProfiles[name], `${relative} model`);
+  assert.equal(profiles.get(`${name}.agent.md`).reasoningPolicy,
+    coordinator ? 'High; authored override' : 'Fusion-managed; no authored override', `${relative} reasoning policy`);
+  assert.equal(profiles.get(`${name}.agent.md`).selectionPolicy,
+    coordinator ? 'Required' : 'No authored override', `${relative} selection policy`);
+  assert.equal(agents.get(relative).values['reasoning-effort'], coordinator ? 'high' : undefined, `${relative} effort`);
+  assert.equal(agents.get(relative).values['model-policy'], coordinator ? 'required' : undefined, `${relative} policy`);
   cases += 1;
 }
 for (const [label, field] of [
@@ -421,6 +791,43 @@ for (const [label, field] of [
   assertRejected(`${label} authored reasoning-effort`, () => projectSerialized(
     projectionPath, serializedProjection(projectionPath, field), profiles
   ), (error) => error.contractId === 'MODEL-PROJECTION-001' && /must omit authored reasoning-effort/.test(error.message));
+}
+for (const name of ['Research', 'Plan', 'Implement', 'Review']) {
+  const relative = agentPath(name);
+  const original = readArtifact(relative);
+  for (const [label, target, replacement] of [
+    ['missing policy', 'model-policy: required\n', ''],
+    ['wrong policy', 'model-policy: required', 'model-policy: preferred'],
+    ['empty policy', 'model-policy: required', 'model-policy:'],
+    ['wrong model', 'model: gpt-6.1-sol', 'model: hydrafusion'],
+    ['missing effort', 'reasoning-effort: high\n', ''],
+    ['wrong effort', 'reasoning-effort: high', 'reasoning-effort: medium'],
+    ['fallback list', 'model: gpt-6.1-sol', "model: ['gpt-6.1-sol', 'hydrafusion']"]
+  ]) {
+    const changed = replaceOnce(original, target, replacement);
+    assertRejected(`${name} ${label} projection`, () => projectSerialized(relative, changed, profiles),
+      (error) => error.contractId === 'MODEL-PROJECTION-001');
+    assertRejected(`${name} ${label} native contract`, () => nativeCheck(relative, changed),
+      (error) => error.contractId === 'NATIVE-AGENT-001');
+  }
+  const row = `| \`${name.toLowerCase()}.agent.md\` | \`gpt-6.1-sol\` | High; authored override | Required |`;
+  for (const changed of [row.replace('Required', 'No authored override'),
+    row.replace('High; authored override', 'Fusion-managed; no authored override'), row.replace('gpt-6.1-sol', 'hydrafusion')]) {
+    assertRejected(`${name} profile drift`, () => contracts.checkModelProfileCoverage(replaceOnce(profileText, row, changed), agentPaths),
+      (error) => error.contractId === 'MODEL-PROFILE-001');
+  }
+}
+for (const relative of agentPaths.filter((entry) => expectedProfiles[path.posix.basename(entry, '.agent.md')] === 'hydrafusion')) {
+  for (const field of ['model-policy: required', 'reasoning-effort: high']) {
+    assertRejected(`${relative} specialist policy spill: ${field}`, () => projectSerialized(relative, serializedProjection(relative, field), profiles),
+      (error) => error.contractId === 'MODEL-PROJECTION-001');
+  }
+  const row = `| \`${path.posix.basename(relative)}\` | \`hydrafusion\` | Fusion-managed; no authored override | No authored override |`;
+  for (const changed of [row.replace('hydrafusion', 'gpt-6.1-sol'), row.replace('No authored override |', 'Required |'),
+    row.replace('Fusion-managed; no authored override', 'High; authored override')]) {
+    assertRejected(`${relative} specialist profile spill`, () => contracts.checkModelProfileCoverage(replaceOnce(profileText, row, changed), agentPaths),
+      (error) => error.contractId === 'MODEL-PROFILE-001');
+  }
 }
 assertRejected('missing model projection', () => {
   const text = readArtifact(projectionPath).replace(/^model: [^\n]*\n/m, '');
@@ -444,10 +851,10 @@ const effortOwners = {
 assert.doesNotThrow(() => contracts.checkModelEffortContract(effortOwners));
 for (const [owner, target, replacement, sectionName] of [
   ['skill', 'authored reasoning policy, and separately observed effective model and effort distinct', 'reasoning is not configured', 'procedure'],
-  ['skill', 'current 18-role profile omits `reasoning-effort` so Fusion manages reasoning', 'authored effort policy', 'procedure'],
+  ['skill', 'four coordinators author `reasoning-effort: high` and `model-policy: required`; the 14 specialists omit `reasoning-effort` and `model-policy`', 'authored effort policy', 'procedure'],
   ['skill', 'Omission does not clear inherited or external configuration or establish effective effort', 'omission resets configuration', 'procedure'],
-  ['profile', 'current 18-role profile uses `hydrafusion` with Fusion-managed reasoning and no authored `reasoning-effort` override', 'current profile', 'introduction'],
-  ['profile', 'current Fusion profile authors no per-agent reasoning override', 'profile changed', 'selection'],
+  ['profile', 'current 18-role profile assigns four coordinators `gpt-6.1-sol`, `high` reasoning and `required` model policy; the other 14 use `hydrafusion` with Fusion-managed reasoning and no authored `reasoning-effort` or `model-policy` override', 'current profile', 'introduction'],
+  ['profile', 'current Fusion specialist profile authors no per-agent reasoning override', 'profile changed', 'selection'],
   ['profile', 'omission does not establish that inherited or external settings are absent or that Fusion\'s effective reasoning is known', 'omission resets settings', 'selection']
 ]) {
   assertRejected(`${owner} ${sectionName} missing or reversed policy`, () => contracts.checkModelEffortContract({
@@ -457,7 +864,7 @@ for (const [owner, target, replacement, sectionName] of [
 }
 for (const [owner, boundary, sectionName] of [
   ['skill', '## Output and boundary', 'procedure'],
-  ['profile', '| Agent definition | Recommended model | Reasoning policy |', 'introduction'],
+  ['profile', '| Agent definition | Recommended model | Reasoning policy | Selection policy |', 'introduction'],
   ['profile', 'The forward target is Copilot', 'selection']
 ]) {
   for (const contradiction of [
@@ -509,12 +916,11 @@ const authoringOwners = [
   ['checklist', '## Editing and test evidence']
 ];
 for (const [owner, boundary] of authoringOwners) {
-  const effortPolicy = owner === 'agent' || owner === 'agentTemplate'
-    ? 'current 18-role Fusion profile' : 'current 18-role profile';
+  const effortPolicy = 'current 18-role profile';
   const omissionRule = owner === 'agent' || owner === 'agentTemplate'
     ? 'Omission does not clear inherited or external configuration or establish observed effective effort'
     : 'omission does not clear inherited or external configuration or establish observed effective effort';
-  for (const target of [effortPolicy, '`reasoning-effort`', 'Fusion-managed reasoning', omissionRule]) {
+  for (const target of [effortPolicy, '`reasoning-effort`', '`model-policy`', 'Fusion-managed reasoning', omissionRule]) {
     assertRejected(`${owner} omits effort rule: ${target}`, () => contracts.checkModelAuthoringContract({
       ...modelAuthoringSources, [owner]: replaceOnce(modelAuthoringSources[owner], target, 'rule omitted')
     }), (error) => error.contractId === 'MODEL-AUTHORING-001' &&
@@ -542,7 +948,7 @@ for (const [owner, boundary] of authoringOwners) {
   }), (error) => error.contractId === 'MODEL-AUTHORING-001' &&
     error.message === `${modelAuthoringPaths[owner]} is missing its effort authoring safeguard`);
 }
-for (const entry of ['model: "<model>"', 'reasoning-effort: "<effort>"', 'reasoning-effort: high']) {
+for (const entry of ['model: "<model>"', 'model-policy: required', 'reasoning-effort: "<effort>"', 'reasoning-effort: high']) {
   assertRejected(`starter contains active ${entry}`, () => contracts.checkModelAuthoringContract({
     ...modelAuthoringSources, agentTemplate: replaceOnce(modelAuthoringSources.agentTemplate,
       '# Add only when justified for this specific role:', `${entry}\n# Add only when justified for this specific role:`)
@@ -553,7 +959,7 @@ const futurePath = '.github/agents/future.agent.md';
 const futureValues = { name: 'Future Role', model: 'gpt-6.1-terra',
   tools: "['read', 'search']", 'user-invocable': 'false' };
 const classifiedFuture = contracts.checkModelProfileCoverage(
-  `${profileText}\n| \`future.agent.md\` | \`gpt-6.1-terra\` | \`Future role classification\` |\n`, [...agentPaths, futurePath]);
+  `${profileText}\n| \`future.agent.md\` | \`gpt-6.1-terra\` | \`Future role classification\` | No authored override |\n`, [...agentPaths, futurePath]);
 assert.doesNotThrow(() => contracts.checkModelProjection(futurePath, futureValues, classifiedFuture));
 cases += 1;
 assertRejected('profile entry cannot bypass unknown-role authority guard', () => contracts.checkAgentMetadata(
@@ -564,21 +970,22 @@ assert.doesNotThrow(() => contracts.checkCustomizationContracts(inventory));
 for (const [relative, parsed] of agents) {
   assert.doesNotThrow(() => contracts.checkModelProjection(relative, parsed.values, profiles));
 }
-const sampleRow = '| `validation-worker.agent.md` | `hydrafusion` | Fusion-managed; no authored override |';
+const sampleRow = '| `validation-worker.agent.md` | `hydrafusion` | Fusion-managed; no authored override | No authored override |';
 for (const [label, text, paths, diagnostic] of [
   ['missing profile', replaceOnce(profileText, sampleRow, ''), agentPaths, /Missing model profile/],
   ['duplicate profile', replaceOnce(profileText, sampleRow, `${sampleRow}\n${sampleRow}`), agentPaths, /Duplicate model profile/],
-  ['orphan profile', `${profileText}\n| ` + '`orphan.agent.md` | `hydrafusion` | Fusion-managed; no authored override |\n', agentPaths, /Orphan model profile/],
+  ['orphan profile', `${profileText}\n| ` + '`orphan.agent.md` | `hydrafusion` | Fusion-managed; no authored override | No authored override |\n', agentPaths, /Orphan model profile/],
   ['invalid model', replaceOnce(profileText, sampleRow, sampleRow.replace('hydrafusion', 'unsupported-model')), agentPaths, /Unsupported model profile row/],
   ['unquoted duplicate profile', replaceOnce(profileText, sampleRow, `${sampleRow}\n| validation-worker.agent.md | \`hydrafusion\` | Fusion-managed; no authored override |`), agentPaths, /Unsupported model profile row/],
   ['unquoted orphan profile', `${profileText}\n| orphan.agent.md | \`hydrafusion\` | Fusion-managed |\n`, agentPaths, /Unsupported model profile row/],
   ['unclassified future agent', profileText, [...agentPaths, '.github/agents/future.agent.md'], /Missing model profile/]
 ]) assertRejected(label, () => contracts.checkModelProfileCoverage(text, paths),
   (error) => error.contractId === 'MODEL-PROFILE-001' && diagnostic.test(error.message));
-const futureProfile = `${profileText}\n| ` + '`future.agent.md` | `gpt-6.1-terra` | `Future role classification` |\n';
+const futureProfile = `${profileText}\n| ` + '`future.agent.md` | `gpt-6.1-terra` | `Future role classification` | No authored override |\n';
 assert.equal(contracts.checkModelProfileCoverage(futureProfile, [...agentPaths, '.github/agents/future.agent.md']).size, agentPaths.length + 1);
 const swapped = replaceOnce(profileText, sampleRow, sampleRow.replace('hydrafusion', 'gpt-6.1-sol'));
-assertRejected('current role model drift', () => assertBaselineModels(contracts.checkModelProfileCoverage(swapped, agentPaths)), /validation-worker allocation/);
+assertRejected('current role model drift', () => contracts.checkModelProfileCoverage(swapped, agentPaths),
+  (error) => error.contractId === 'MODEL-PROFILE-001' && /Model profile drift/.test(error.message));
 for (const [relative, parsed] of agents) {
   assert.doesNotThrow(() => contracts.checkAgentMetadata(relative, parsed.values, parsed.blocks, agentNames));
 }
@@ -1018,7 +1425,7 @@ const technicalOwners = [
   ['planningGapResidual', 'planning', '### Resolve material planning gaps', 'For any remaining material factual unknown', false, 'Name the supported mechanism tested'],
   ['planTemplateResidual', 'planTemplate', '## Detailed work items', '**Residual factual unknown (include only when a material fact remains):**', true, 'supported mechanism this fact tests'],
   ['implement', 'implement', '# Implement coordinator', 'If an essential mechanism or its feasibility', false, 'recommend scoped Research continuation when evidence is needed'],
-  ['implementOperations', 'implement', '# Implement coordinator', 'Own the permitted direct edit–test–repair loop:', false, 'related files and tests'],
+  ['implementOperations', 'implement', '# Implement coordinator', 'Own the specialist-led edit–test–repair loop:', false, 'related files and tests'],
   ['safe', 'safe', '## Procedure', 'Apply the supported mechanism', false, 'architectural or not'],
   ['validation', 'validation', '## Scope and recovery', '- [ ] Apply an evidence-supported essential mechanism', true, 'architectural or not'],
   ['implement', 'implement', '# Implement coordinator', 'If an essential mechanism or its feasibility', false, 'architectural or not'],
