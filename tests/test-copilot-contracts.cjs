@@ -478,26 +478,37 @@ for (const [relative, placeholder] of [
     () => contracts.checkLocalLinks(checkpointSkill, `[fixture](<${placeholder}>)`), /local link/);
 }
 
-// A small test-local filesystem adapter feeds the real source modules. All discovery,
-// guarded reads, resource traversal and routine composition run unmodified.
+// A small test-local filesystem adapter feeds the real source modules. Discovery,
+// guarded reads, resource traversal and routine composition use those modules.
 // There is no host fallback and no filesystem write API.
 const discoverySource = readArtifact('scripts/discover-copilot-artifacts.cjs');
 const verifierSource = readArtifact('scripts/verify-copilot-contracts.cjs');
 const boundarySource = readArtifact('scripts/verify-vsix-boundary.cjs');
 const fixtureRoot = path.resolve(root, '__contract_fixture__');
-function loadFixture(sources, routine = false) {
-  const files = new Map([...sources].map(([relative, text]) => [path.resolve(fixtureRoot, relative), text]));
+function fixtureFilesystem(sources, explicitDirectories = []) {
+  function fixturePath(relative) {
+    const full = path.resolve(fixtureRoot, relative);
+    assert.ok(full === fixtureRoot || full.startsWith(`${fixtureRoot}${path.sep}`),
+      `Fixture path must stay inside its in-memory root: ${relative}`);
+    return full;
+  }
+  const files = new Map([...sources].map(([relative, text]) => {
+    const full = fixturePath(relative);
+    assert.notEqual(full, fixtureRoot, 'Fixture files must be beneath the in-memory root');
+    return [full, text];
+  }));
   const directories = new Set([fixtureRoot, path.join(fixtureRoot, '.github'),
     ...['instructions', 'agents', 'skills'].map((name) => path.join(fixtureRoot, '.github', name))]);
-  for (const full of files.keys()) {
-    for (let parent = path.dirname(full); parent.startsWith(fixtureRoot); parent = path.dirname(parent)) {
+  const directoryPaths = [...explicitDirectories.map(fixturePath), ...[...files.keys()].map((full) => path.dirname(full))];
+  for (const full of directoryPaths) {
+    for (let parent = full; ; parent = path.dirname(parent)) {
       directories.add(parent);
       if (parent === fixtureRoot) break;
     }
   }
   const reads = [];
   const missing = (full) => Object.assign(new Error(`Missing fixture path: ${full}`), { code: 'ENOENT' });
-  const fixtureFs = {
+  const fixtureFs = new Proxy({
     lstatSync(full) {
       if (!files.has(full) && !directories.has(full)) throw missing(full);
       return { isDirectory: () => !files.has(full) && directories.has(full),
@@ -515,7 +526,16 @@ function loadFixture(sources, routine = false) {
       const content = files.get(full);
       return encoding ? content.toString() : Buffer.from(content);
     }
-  };
+  }, {
+    get(target, operation) {
+      if (!Object.hasOwn(target, operation)) throw new Error(`Unsupported fixture filesystem operation: ${String(operation)}`);
+      return target[operation];
+    }
+  });
+  return { fs: fixtureFs, reads };
+}
+function loadFixture(sources, routine = false, explicitDirectories = []) {
+  const { fs: fixtureFs, reads } = fixtureFilesystem(sources, explicitDirectories);
   const discoveryModule = { exports: {} };
   const fixtureBuiltin = (name) => {
     if (name === 'fs' || name === 'node:fs') return fixtureFs;
@@ -575,13 +595,20 @@ fixtureSources.set(ordinaryPrompt, "---\nname: explain-change\nagent: RPIR Imple
 const controlledInventory = loadFixture(fixtureSources).discover();
 fixtureSources.set('package.json', JSON.stringify(desiredManifest(sourceManifest, controlledInventory)));
 
-const imported = loadFixture(fixtureSources);
+// This controlled tree intentionally contains only populated Skill roots and
+// resources. It does not mirror or waive the checkout's retained empty shells:
+// fresh hidden-inclusive physical validation remains a separate Runner check.
+const validDirectories = [path.posix.dirname(nestedResourcePath)];
+const imported = loadFixture(fixtureSources, false, validDirectories);
 assert.equal(imported.output.length + imported.errors.length + imported.reads.length, 0, 'import must not run main');
+const physicalFixture = imported.contracts.checkSkillInventory(imported.discover());
+assert.equal(physicalFixture.skillCount, 24, 'full inventory includes the repository-only Skill');
+assert.equal(physicalFixture.fileCount, [...fixtureSources.keys()].filter((relative) => relative.startsWith('.github/skills/')).length);
 const aggregate = imported.contracts.checkCustomizationContracts(imported.discover());
 assert.equal(aggregate.artifactCount, classes.reduce((count, definition) => count + controlledInventory[definition.name].length, 0));
 assert.ok(aggregate.resourceCount >= controlledInventory.chatSkills.length + 5);
 assert.ok(imported.reads.includes(nestedResourcePath), 'aggregate must traverse nested Skill resources');
-const routine = loadFixture(fixtureSources, true);
+const routine = loadFixture(fixtureSources, true, validDirectories);
 assert.equal(routine.process.exitCode, 0);
 assert.equal(routine.errors.length, 0);
 assert.ok(routine.output.some((line) => /Manifest\/discovery parity: PASS/.test(line)));
@@ -646,16 +673,81 @@ function changedSources(relative, change) {
   else sources.set(relative, change(sources.get(relative)));
   return sources;
 }
-function rejectWired(label, sources, expected) {
-  const fixture = loadFixture(sources);
+function rejectWired(label, sources, expected, explicitDirectories = []) {
+  const fixture = loadFixture(sources, false, explicitDirectories);
   assertRejected(`${label} aggregate`, () => fixture.contracts.checkCustomizationContracts(fixture.discover()), expected);
-  const result = loadFixture(sources, true);
+  const result = loadFixture(sources, true, explicitDirectories);
   assert.equal(result.process.exitCode, 1, `${label} routine must fail`);
   assert.ok(result.errors.some((line) => /DIAGNOSTIC FAIL/.test(line)), `${label} must report an explicit failure`);
   assert.ok(result.output.some((line) => /Static structure only:/.test(line)));
   cases += 1;
   return result;
 }
+
+const adapter = fixtureFilesystem(fixtureSources, [
+  '.github/skills/rpir-safe-implementation/empty/child'
+]);
+const adapterParent = path.join(fixtureRoot, '.github/skills/rpir-safe-implementation/empty');
+const adapterChild = path.join(adapterParent, 'child');
+assert.ok(adapter.fs.lstatSync(adapterChild).isDirectory(), 'explicit childless directories exist without files');
+assert.deepEqual(adapter.fs.readdirSync(adapterParent), ['child'], 'explicit directories imply their parents');
+assert.deepEqual(adapter.fs.readdirSync(adapterChild), [], 'childless directory listing stays empty');
+assertRejected('fixture host file read', () => adapter.fs.readFileSync(path.join(root, 'package.json'), 'utf8'),
+  (error) => error.code === 'ENOENT');
+for (const operation of ['statSync', 'existsSync', 'writeFileSync', 'rmSync']) {
+  assertRejected(`unsupported fixture ${operation}`, () => adapter.fs[operation](path.join(root, 'package.json')),
+    /Unsupported fixture filesystem operation/);
+}
+assertRejected('fixture directory escapes memory root', () => fixtureFilesystem(fixtureSources, ['../outside']),
+  /Fixture path must stay inside its in-memory root/);
+assertRejected('fixture file replaces memory root', () => fixtureFilesystem(new Map([['.', 'Invalid root file']])),
+  /Fixture files must be beneath the in-memory root/);
+
+for (const [label, directory] of [
+  ['childless resource directory', '.github/skills/rpir-safe-implementation/empty'],
+  ['nested resource directory', '.github/skills/rpir-architecture-decision-records/references/empty/child'],
+  ['hidden empty descendant', '.github/skills/rpir-research/.hidden'],
+  ['legacy empty shell', '.github/skills/code-review'],
+  ['nested legacy shell', '.github/skills/architecture-decision-records/references/templates'],
+  ['post-move empty shell', '.github/skills/create-copilot-agent/templates']
+]) {
+  const fixture = loadFixture(fixtureSources, false, [directory]);
+  assert.deepEqual(clone(fixture.discover()), clone(controlledInventory), `${label} does not become a Skill alias`);
+  const expected = (error) => error.contractId === 'SKILL-INVENTORY-001' &&
+    error.message.includes(`Empty Skill directory: ${directory}`);
+  assertRejected(`${label} inventory`, () => fixture.contracts.checkSkillInventory(fixture.discover()), expected);
+  const result = rejectWired(label, fixtureSources, expected, [directory]);
+  assert.ok(result.errors.some((line) => line.includes(`DIAGNOSTIC FAIL SKILL-INVENTORY-001: Empty Skill directory: ${directory}`)));
+  assert.ok(result.output.some((line) => /Manifest\/discovery parity: PASS/.test(line)),
+    'physical emptiness must fail independently of passing manifest parity');
+}
+for (const orphan of [
+  '.github/skills/orphan-resources/references/fixture.md',
+  '.github/skills/architecture-decision-records/references/leftover.bin',
+  '.github/skills/orphan.bin'
+]) {
+  const sources = new Map(fixtureSources);
+  sources.set(orphan, 'Unowned resource.\n');
+  const fixture = loadFixture(sources);
+  assert.deepEqual(clone(fixture.discover()), clone(controlledInventory), 'orphan resources are invisible to definition discovery');
+  const expected = (error) => error.contractId === 'SKILL-INVENTORY-001' &&
+    error.message.includes(`Orphan Skill resource: ${orphan}`);
+  assertRejected('orphan resource inventory', () => fixture.contracts.checkSkillInventory(fixture.discover()), expected);
+  const result = rejectWired(`orphan resource ${orphan}`, sources, expected);
+  assert.ok(result.errors.some((line) => line.includes(`DIAGNOSTIC FAIL SKILL-INVENTORY-001: Orphan Skill resource: ${orphan}`)));
+}
+const validNestedSources = new Map(fixtureSources);
+validNestedSources.set(`${localSkillRoot}/references/nested/local-only.bin`, Buffer.from([1, 2]));
+const validNestedFixture = loadFixture(validNestedSources, false, [
+  ...validDirectories, `${localSkillRoot}/references/nested`
+]);
+const validNestedInventory = validNestedFixture.contracts.checkSkillInventory(validNestedFixture.discover());
+assert.equal(validNestedInventory.skillCount, 24, 'local-only resources do not create another Skill');
+assert.equal(validNestedInventory.fileCount, physicalFixture.fileCount + 1, 'inventory counts nested binary resources too');
+assert.equal(validNestedInventory.directoryCount, physicalFixture.directoryCount + 2, 'inventory includes nested resource directories');
+assert.doesNotThrow(() => validNestedFixture.contracts.checkCustomizationContracts(validNestedFixture.discover()));
+assert.equal(loadFixture(validNestedSources, true, validDirectories).process.exitCode, 0);
+cases += 3;
 
 // Neutral bodies exercise discovery -> parser -> entry checker -> routine.
 // Require the intended entry diagnostic, not unrelated model/parity failure.

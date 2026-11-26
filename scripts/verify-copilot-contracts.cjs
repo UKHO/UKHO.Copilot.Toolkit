@@ -329,6 +329,40 @@ function skillMarkdownResources(inventory) {
   return [...resources].sort();
 }
 
+// Inspect the whole physical Skills tree, not just discovered payload roots.
+// Keep this callable independently of unrelated model/policy diagnostics.
+function checkSkillInventory(inventory) {
+  const skillsDirectory = '.github/skills';
+  const skillRoots = skillPayloadRoots(inventory.chatSkills);
+  let directoryCount = 0;
+  let fileCount = 0;
+  const reject = (message) => fail(message, 'SKILL-INVENTORY-001');
+  function visit(relative) {
+    let full;
+    let stat;
+    try { ({ full, stat } = inspectPath(relative)); }
+    catch (error) { reject(`Cannot inspect Skill inventory ${relative}: ${error.message}`); }
+    if (stat.isFile()) {
+      if (!skillRoots.some((skillRoot) => relative.startsWith(`${skillRoot}/`))) {
+        reject(`Orphan Skill resource: ${relative}`);
+      }
+      fileCount += 1;
+      return;
+    }
+    if (!stat.isDirectory()) reject(`Unsupported Skill inventory path: ${relative}`);
+    let names;
+    try { names = fs.readdirSync(full).sort(); }
+    catch (error) { reject(`Cannot read Skill inventory directory ${relative}: ${error.message}`); }
+    if (relative !== skillsDirectory) {
+      directoryCount += 1;
+      if (!names.length) reject(`Empty Skill directory: ${relative}`);
+    }
+    for (const name of names) visit(`${relative}/${name}`);
+  }
+  visit(skillsDirectory);
+  return { skillCount: skillRoots.length, directoryCount, fileCount };
+}
+
 // The role-profile table and its heading scope are a mechanically consumed interface.
 function section(text, heading) {
   const lines = text.split('\n');
@@ -493,6 +527,7 @@ function checkCustomizationContracts(inventory) {
   checkArchitectureDecisionRecordContract();
   checkLifecycleCandidatePatterns(readText('.github/instructions/lifecycle-records.instructions.md'));
   checkModelAuthoringContract();
+  checkSkillInventory(inventory);
   return { artifactCount: artifacts.length, resourceCount: resources.length };
 }
 
@@ -548,7 +583,7 @@ if (require.main === module) {
 
 module.exports = {
   checkAgentMetadata, checkLocalLinks, checkManifestParity, checkPromptMetadata,
-  checkManualEntryContracts, checkSkillIdentities, skillMarkdownResources,
+  checkManualEntryContracts, checkSkillIdentities, skillMarkdownResources, checkSkillInventory,
   checkNativeAgentContract, checkNativeSupportMetadata,
   checkLifecycleCandidatePatterns,
   checkCustomizationContracts, checkArchitectureDecisionRecordContract, checkModelAuthoringContract, checkModelProfileCoverage, checkModelProjection,
