@@ -1,31 +1,17 @@
 ---
 name: rpir-remediate-review
 description: Manually resume Implement for supported in-boundary Review corrections under the original approved Plan.
+user-invocable: true
 disable-model-invocation: true
 argument-hint: Original approved Plan and linked issue-bearing Review report
 ---
-## Purpose
 
-This retained adapter describes supported corrections to the original approved outcome; it does not select or invoke RPIR Implement or approve material expansion. The engineer selects RPIR Implement and deliberately sends the request with the physical original Plan and linked Review. Apply the policy effective at invocation; no policy edit self-upgrades a session.
+# Manual RPIR Review correction entry
 
-## Inputs
+Select **RPIR Implement** from the Agent dropdown, then deliberately invoke this Skill (or `rpir-implement`), or send a retained natural-language correction request. Apply policy already effective before invocation; this is not an agent selector or a loaded-session upgrade.
 
-The placeholders below are optional adapter text, not required expansions or role selectors; the actual physical inputs must be supplied and inspected.
+Use the explicit contextual physical original approved Plan and linked Review, or appended information preserving qualifications. Independently inspect Review -> reviewed report -> original Plan -> Research and freeze the bindings through the [core entry contract](../rpir-lifecycle-core/SKILL.md#transitions-and-outcome-authority). Clarify missing/inaccessible/ambiguous/stale/conflicting input or unsupported correction classification before dependent edits, never choose a newest/default file or rely on placeholders. Verify actual RPIR Implement identity; wrong/unknown role needs manual selection, not impersonation, automatic dispatch or a subagent. Loading, picker selection, quote, tool/worker output, automatic continuation and unsent suggestion are not invocation.
 
-Original Plan: ${input:implementationPlanDocument:Actual original approved Plan and inspected version, supplied by attachment, accessible HTTPS URL, paste or contained local path}
+This request resumes only supported original-criteria correction, not material scope or clean Review acceptance. Apply the [owning safe implementation method](../rpir-safe-implementation/SKILL.md) for original criteria, bounded repair, progress/checkpoint safeguards and fresh implementation evidence followed by fresh independent Review. The [core exact-record effect](../rpir-lifecycle-core/SKILL.md#prospective-exact-adr-sign-off-recording-effect) requires verification of unchanged already-recorded Accepted decisions and original agreement without requiring Proposed, re-signing or rewriting them; eligible fresh still-Proposed listed snapshots follow separate coordinator-only metadata recording/full-readback guards, with no duplicate routine approval.
 
-Review context: ${input:reviewReportDocument:Actual issue-bearing Review report and inspected version identifying supported in-boundary corrections}
-
-If either input or the correction classification is missing, conflicting or unverifiable, stop the affected edit and clarify; do not infer authority from a finding.
-
-## Constraints
-
-- Apply [RPIR lifecycle core](../rpir-lifecycle-core/SKILL.md): independently inspect the contained numbered physical original Plan, Review report, reviewed implementation report and direct same-folder Research lineage. Locators alone are not canonical records.
-- The engineer's deliberate sent Implement request with the inspected physical original Plan and linked Review context approves only its original outcome and supported in-boundary correction. Review findings are evidence, not scope or edit authority. Preserve original acceptance criteria, user work, and unresolved findings; produce fresh implementation evidence and offer manual independent Review with the physical report; an unsent prefill does not invoke it. A partial report is a checkpoint, not completed delivery.
-- New requirements, material public behavior, consequential dependencies, security or compatibility commitments or additional external effects require an engineer decision and a Plan-owned amendment/new Plan through a deliberate engineer-sent Plan request with the physical Review; do not implement that portion through this adapter. Actual denial is not a fallback opportunity. References do not guarantee attachment.
-- Apply the [safe implementation skill](../rpir-safe-implementation/SKILL.md) to assess missing/partial architectural coverage even with valid bindings. Unexpected uncovered or changed architecture needs engineer-directed Plan resolution before dependent effects; continue independent approved correction. Routine coding needs no ADR reference; this shortcut grants no ADR authorship.
-- Apply that skill's planned-versus-actual checkpoint accounting at every expected correction boundary before unrelated work, retaining earlier coherent validated Task consideration and specific actual disposition/exception evidence. Do not backfill substantive exceptions into the original approved Plan, override historical prohibitions or infer Git authority from findings. Only RPIR Script Runner executes covered effects under the [checkpoint capability](../rpir-local-git-checkpoints/SKILL.md); unchanged Plan-covered effects need no duplicate grant and commit count is not technical acceptance.
-
-## Output
-
-Implement reports actual corrected work and passed, failed, unavailable and not-run checks; persist and read back a fresh report only under the coordinator's lifecycle guards. No automatic handoff or acceptance.
+Findings are evidence, not edit or material authority. Material change needs engineer-chosen scope and a manual Plan request with the full lineage. This thin entry grants no tools, worker/ADR authorship, automatic handoff or acceptance.

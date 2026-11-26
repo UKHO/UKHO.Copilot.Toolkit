@@ -12,10 +12,12 @@ Use this Skill to produce and iterate an evidence-based working plan for a featu
 
 ## Inputs
 
-- Approved requirements, the inspected Research document or agreed issue-bearing Review report, and relevant repository evidence.
+- Approved requirements, the inspected Research snapshot for planning-only sign-off or the inspected Review report with engineer-chosen material scope, and relevant repository evidence.
 - For a Review-origin plan, its direct implementation-report, previous-plan, and original-Research lineage.
 
 ## Procedure
+
+Coordinator entry follows the [core manual-entry contract](../rpir-lifecycle-core/SKILL.md#transitions-and-outcome-authority): select RPIR Plan, then deliberately invoke `rpir-plan` or send a retained natural-language Plan request under already-effective policy. Use explicit contextual or appended physical predecessor information; independently inspect and freeze the snapshot with qualifications, containment, freshness and lineage. Missing/inaccessible/ambiguous/stale/conflicting input requires clarification, never newest/default selection or placeholder expansion. Actual receiving-role mismatch needs manual selection, not impersonation, automatic delegation or a subagent. Invocation signs off Research for planning only without duplicate routine approval; material Review-origin planning requires engineer-chosen scope and the full physical Review -> report -> prior Plan -> original Research chain, not authority to implement the resulting Plan. Loading, picker selection, quote, worker/tool output, automatic continuation and unsent prefill are not invocation. Policy edits do not self-upgrade this session.
 
 Use this skill to produce and iterate an evidence-based working plan without independently changing repository files. Investigate and disclose uncertainty; an agent readiness opinion does not veto an engineer-approved, inspected-version transition. Plan defines the outcome, acceptance and material boundaries; Implement chooses ordinary in-boundary details.
 

@@ -48,6 +48,7 @@ const nativeSkills = {
   'RPIR Script Runner': ['agent-model-selection', 'rpir-local-git-checkpoints']
 };
 const manualHandoffCoordinators = new Set(['RPIR Research', 'RPIR Plan', 'RPIR Implement', 'RPIR Review']);
+const manualEntryNames = ['rpir-research', 'rpir-plan', 'rpir-implement', 'rpir-review', 'rpir-remediate-review'];
 const coordinatorProfileFiles = new Set(['research.agent.md', 'plan.agent.md', 'implement.agent.md', 'review.agent.md']);
 const specialistProfileFiles = new Set([
   'architecture-analyst.agent.md', 'codebase-investigator.agent.md', 'correctness-reviewer.agent.md',
@@ -272,6 +273,25 @@ function checkAgentMetadata(relative, values, blocks, agentNames) {
   if (!manualHandoffCoordinators.has(name) && values['user-invocable'] !== 'false') fail(`${relative} worker must not be user-invocable`);
 }
 
+// Metadata/discovery only: this does not recognize English consent policy,
+// select a receiver, or establish human invocation or runtime compliance.
+function checkManualEntryContracts(inventory, parsedByPath) {
+  const allowed = new Set(['name', 'description', 'user-invocable', 'disable-model-invocation', 'argument-hint']);
+  for (const name of manualEntryNames) {
+    const relative = `.github/skills/${name}/SKILL.md`;
+    const reject = (message) => fail(`${relative}: ${message}`, 'ENTRY-CONTRACT-001');
+    if (!inventory.chatSkills.includes(relative)) reject('required manual entry must be discovered');
+    const { values } = parsedByPath.get(relative);
+    if (values.name !== name) reject('entry name must match its directory');
+    if (values['user-invocable'] !== 'true' || values['disable-model-invocation'] !== 'true') {
+      reject('entry must explicitly declare user-invocable: true and disable-model-invocation: true');
+    }
+    for (const field of Object.keys(values)) {
+      if (!allowed.has(field)) reject(`unsupported manual entry metadata: ${field}; Skills do not select an agent`);
+    }
+  }
+}
+
 function skillMarkdownResources(inventory) {
   const resources = new Set();
   for (const skill of skillPayloadRoots(inventory.chatSkills)) {
@@ -422,6 +442,7 @@ function checkCustomizationContracts(inventory) {
     parsedByPath.set(relative, parsed);
   }
 
+  checkManualEntryContracts(inventory, parsedByPath);
   const agentPaths = inventory.chatAgents;
   const nativeProfile = readText('.github/skills/agent-model-selection/references/role-profiles.md');
   const skillNames = new Set(inventory.chatSkills.map((relative) => parsedByPath.get(relative).values.name));
@@ -513,6 +534,7 @@ if (require.main === module) {
 
 module.exports = {
   checkAgentMetadata, checkLocalLinks, checkManifestParity, checkPromptMetadata,
+  checkManualEntryContracts,
   checkNativeAgentContract, checkNativeSupportMetadata,
   checkLifecycleCandidatePatterns,
   checkCustomizationContracts, checkArchitectureDecisionRecordContract, checkModelAuthoringContract, checkModelProfileCoverage, checkModelProjection,

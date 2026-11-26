@@ -329,16 +329,31 @@ const unrelatedFieldFixture = desiredManifest({
 }, inventory);
 assert.deepEqual(unrelatedFieldFixture.customMetadata, { retained: true });
 assert.ok(unrelatedFieldFixture.files.includes('vendor/custom-payload'));
-for (const name of ['rpir-implement', 'rpir-plan', 'rpir-remediate-review', 'rpir-review']) {
+for (const name of ['rpir-research', 'rpir-implement', 'rpir-plan', 'rpir-remediate-review', 'rpir-review']) {
   const skill = `.github/skills/${name}/SKILL.md`;
   assert.ok(inventory.chatSkills.includes(skill), `${name} must be discovered as a Skill`);
   assert.ok(!inventory.chatPromptFiles.includes(`.github/prompts/${name}.prompt.md`));
   const text = readArtifact(skill);
+  const values = contracts.parseFrontmatterText(text, skill).values;
+  assert.equal(values.name, name);
+  assert.equal(values['user-invocable'], 'true');
+  assert.equal(values['disable-model-invocation'], 'true');
   assert.doesNotThrow(() => contracts.checkLocalLinks(skill, text));
   const broken = text.replace('](../', '](../skills/');
   assert.notEqual(broken, text, `${name} must include a sibling Skill link`);
   assertRejected(`${name} retains a pre-migration relative link`,
     () => contracts.checkLocalLinks(skill, broken), /local link does not resolve/);
+}
+const researchEntry = '.github/skills/rpir-research/SKILL.md';
+assert.ok(sourceManifest.files.includes(path.posix.dirname(researchEntry)), 'actual Research payload root is listed');
+assert.ok(sourceManifest.contributes.chatSkills.some((entry) => entry.path === researchEntry),
+  'actual Research contribution is listed');
+for (const surface of ['files', 'contributes.chatSkills']) {
+  const fixture = clone(manifest);
+  if (surface === 'files') fixture.files = fixture.files.filter((entry) => entry !== path.posix.dirname(researchEntry));
+  else fixture.contributes.chatSkills = fixture.contributes.chatSkills.filter((entry) => entry.path !== researchEntry);
+  assertRejected(`missing Research entry in ${surface}`, () => contracts.checkManifestParity(fixture, inventory),
+    (error) => error.contractId === 'PARITY-001');
 }
 const checkpointSkill = '.github/skills/rpir-local-git-checkpoints/SKILL.md';
 const adrSkill = '.github/skills/rpir-architecture-decision-records/SKILL.md';
@@ -496,6 +511,29 @@ function rejectWired(label, sources, expected) {
   assert.ok(result.errors.some((line) => /DIAGNOSTIC FAIL/.test(line)), `${label} must report an explicit failure`);
   assert.ok(result.output.some((line) => /Static structure only:/.test(line)));
   cases += 1;
+  return result;
+}
+
+// Neutral bodies exercise discovery -> parser -> entry checker -> routine.
+// Require the intended entry diagnostic, not unrelated model/parity failure.
+for (const [label, sources, diagnostic] of [
+  ['missing Research entry', changedSources(researchEntry, null), /required manual entry must be discovered/],
+  ['Research directory/header mismatch', changedSources(researchEntry,
+    (text) => replaceOnce(text, 'name: rpir-research', 'name: research-entry-mismatch')), /entry name must match its directory/],
+  ['automatic Research invocation', changedSources(researchEntry,
+    (text) => replaceOnce(text, 'disable-model-invocation: true', 'disable-model-invocation: false')),
+  /entry must explicitly declare/],
+  ['implicit manual Plan invocation', changedSources('.github/skills/rpir-plan/SKILL.md',
+    (text) => replaceOnce(text, 'user-invocable: true\n', '')), /entry must explicitly declare/],
+  ...['agent: RPIR Research', "tools: ['read']", 'model: hydrafusion', 'context: fork'].map((field) => [
+    `unsupported entry selector ${field}`, changedSources(researchEntry,
+      (text) => replaceOnce(text, /^---\n/, `---\n${field}\n`)), /unsupported manual entry metadata/
+  ])
+]) {
+  const result = rejectWired(label, sources,
+    (error) => error.contractId === 'ENTRY-CONTRACT-001' && diagnostic.test(error.message));
+  assert.ok(result.errors.some((line) => /DIAGNOSTIC FAIL ENTRY-CONTRACT-001:/.test(line) && diagnostic.test(line)),
+    `${label} routine must expose the intended entry diagnostic`);
 }
 
 rejectWired('stale coordinator display name', changedSources(nativePlanPath,

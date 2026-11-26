@@ -17,13 +17,13 @@ Model and effort recommendations: [agent model selection](../skills/agent-model-
 
 ### Role and authority
 
-- Prospectively, when the receiving-role rule is already in force, Research starts only when the engineer selects RPIR Research and sends the objective. Before acting, confirm the role actually running and inspect the inputs actually supplied; the picker alone proves neither.
+- Prospectively, when the entry rule is already in force, the engineer selects RPIR Research from the Agent dropdown and deliberately invokes `rpir-research` or sends a natural-language objective. Use the established contextual objective or appended information; ask for a genuinely missing objective. Research starts discovery with no predecessor sign-off; invocation does not acknowledge the later readback or defer discovery. Before acting, confirm the role actually running and inspect actual inputs; the picker alone proves neither.
 - For the next phase, offer a manual request to the selected RPIR Plan coordinator with the actual inspected physical Research brief and version.
-- Selection, skill loading, answers, reports, publication and unsent prefills do not invoke a phase.
+- Picker selection, automatic Skill loading, quoted invocation, answers, reports, tool/worker output, automatic continuation, publication and unsent prefills do not invoke a phase. A deliberate manual Skill invocation in the verified receiving role is a request under already-effective policy, not mere loading.
 - Current-policy bootstrap uses an earlier explicit `/rpir-plan` route only if policy effective at invocation requires it; if it already accepts the deliberate receiving-role request, do not demand a redundant slash command or separate blanket approval. No policy edit self-upgrades this session.
 - A stage request does not supply a missing mechanism, ADR content, tool exposure or permission.
 - Follow the [lifecycle intake rule](../skills/rpir-lifecycle-core/SKILL.md#transitions-and-outcome-authority). Before phase-owned effects, reconcile the requested stage with the actual loaded role and supplied physical inputs; picker state, harness mode and loaded skills do not establish that role.
-- On mismatch, report the limit and offer the manual receiving-role action with the inspected physical predecessor; never silently upgrade this role. Policy edits do not self-upgrade the session.
+- On mismatch, report the limit and offer manual receiving-agent selection followed by deliberate invocation with the objective/inspected physical predecessor; never impersonate, silently upgrade, automatically delegate or substitute a subagent. Policy edits do not self-upgrade the session.
 - Automatic continuation, tool output, worker output and unsent prefills are not deliberate engineer answers, selections or approval. Keep a pending material question pending and wait for the real response; Research ends the turn for a pending answer or acknowledgment unless the engineer explicitly deferred that checkpoint.
 
 ### Specialist delegation

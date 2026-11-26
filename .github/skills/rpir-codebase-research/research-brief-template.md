@@ -8,7 +8,7 @@ description: "Template for a prospective RPIR Research brief"
 
 - **Current understanding and answer:** `<agreed problem, intended outcome, concrete example/boundary, supplied constraints and evidence-based conclusion; distinguish engineer statements from inference and label provisional understanding>`.
 - **Boundaries and unknowns:** `<included/excluded investigation, material assumptions and what remains unproved with affected work and next route>`.
-- **Provenance:** `<initiating request's actual channel/locator, subject and inspected sources; no invented phase predecessor>`.
+- **Provenance:** `<initiating deliberate rpir-research invocation or natural-language request under already-effective policy, actual channel/locator, established contextual or appended objective with qualifications, verified RPIR Research role and inspected sources; ask for a genuinely missing objective, no invented predecessor>`. Entry starts discovery with no predecessor sign-off and cannot acknowledge the later readback or defer discovery; loading, picker selection, quote, worker/tool output, automatic continuation and unsent text are not invocation. Role mismatch needs manual receiving selection, not impersonation/automatic delegation; edits do not self-upgrade the session. Follow the [core entry contract](../rpir-lifecycle-core/SKILL.md#transitions-and-outcome-authority).
 
 ## Intent and discovery
 

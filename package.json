@@ -67,6 +67,7 @@
     ".github/skills/rpir-local-git-checkpoints",
     ".github/skills/rpir-plan",
     ".github/skills/rpir-remediate-review",
+    ".github/skills/rpir-research",
     ".github/skills/rpir-review",
     ".github/skills/rpir-safe-implementation",
     ".github/skills/rpir-stage-assurance",
@@ -187,6 +188,9 @@
       },
       {
         "path": ".github/skills/rpir-remediate-review/SKILL.md"
+      },
+      {
+        "path": ".github/skills/rpir-research/SKILL.md"
       },
       {
         "path": ".github/skills/rpir-review/SKILL.md"
