@@ -1,5 +1,5 @@
 ---
-name: Test Worker
+name: RPIR Test Worker
 target: github-copilot
 model: fusion
 description: Prepare or assess tests and verification cases for an approved implementation without changing repository files or running commands.

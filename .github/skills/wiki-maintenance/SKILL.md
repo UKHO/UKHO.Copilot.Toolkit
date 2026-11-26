@@ -12,7 +12,7 @@ Use this Skill for repository-managed Markdown Wiki work. It does not approve ed
 
 For **new Wiki creation**, the engineer must explicitly select an exact repository-contained, non-lifecycle parent. Derive only `<selected-parent>/Wiki/`; do not infer a parent, default to `docs/`, or use RPIR documentation-root selection as Wiki approval. The creation scope must identify its pages, index and navigation intent; every created Wiki page/index/navigation target stays in that root. A nonexistent parent may be created only when explicitly selected. Do not create a parent, Wiki root or target in `docs/planning/`, `docs/delivery/`, a verified `<documentation-directory>/copilot/` RPIR parent or numbered topic, or another lifecycle namespace. New targets outside the chosen root or materially expanded documentation outcomes need a decision.
 
-Follow the [RPIR lifecycle core](../rpir-lifecycle-core/SKILL.md) and [implementation validation checklist](../safe-implementation/validation-checklist.md) for the active stage. No hosted-wiki integration, authentication, publishing or remote effect is implied.
+Follow the [RPIR lifecycle core](../rpir-lifecycle-core/SKILL.md) and [implementation validation checklist](../rpir-safe-implementation/validation-checklist.md) for the active stage. No hosted-wiki integration, authentication, publishing or remote effect is implied.
 
 ## Procedure
 

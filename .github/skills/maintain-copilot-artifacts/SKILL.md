@@ -41,7 +41,7 @@ Do not use this method to settle a policy contradiction, delete a rule as obsole
 
 ## Validation and output
 
-Produce a bidirectional rule map, protected-interface comparison, focused validation evidence, and a concise account of changed paths and unresolved items. Use the [preservation checklist](references/preservation-checklist.md) for manual review. Reuse the existing [Skill authoring](../create-copilot-skill/SKILL.md), [test-design](../test-design/SKILL.md), and [code-review](../code-review/SKILL.md) methods when relevant; this Skill does not replace their schemas or grant their authority.
+Produce a bidirectional rule map, protected-interface comparison, focused validation evidence, and a concise account of changed paths and unresolved items. Use the [preservation checklist](references/preservation-checklist.md) for manual review. Reuse the existing [Skill authoring](../create-copilot-skill/SKILL.md), [test-design](../test-design/SKILL.md), and [rpir-code-review](../rpir-code-review/SKILL.md) methods when relevant; this Skill does not replace their schemas or grant their authority.
 
 ## Bundled resources
 

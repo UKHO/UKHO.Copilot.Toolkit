@@ -1,0 +1,50 @@
+---
+name: rpir-codebase-research
+description: Investigate repository structure, existing patterns, and constraints with cited evidence. Use when researching a feature, issue, architecture choice, or Copilot customization before planning.
+user-invocable: false
+---
+
+# RPIR codebase research
+
+## Trigger
+
+Use this Skill for read-only investigation that turns an ambiguous request into evidence a coordinator can use before planning.
+
+## Inputs
+
+- The research question and request scope, including success criteria and terms needing clarification.
+- Relevant repository documentation, files, symbols, patterns, and tests.
+
+## Procedure
+
+When supporting the RPIR Research coordinator, assign significant investigation, analysis and drafting to the appropriate RPIR Codebase Investigator, RPIR Domain Investigator or RPIR Feasibility Investigator, and commands to RPIR Script Runner. The coordinator retains only brief orientation, engineer dialogue and decisions, bounded assignment, checking returned evidence and effects, synthesis, and authorship and readback of its physical phase record. An unavailable or ambiguous required specialist is reported to the engineer for an alternate route, not replaced by coordinator execution; never bypass a real denial. This is a behavioral contract, not a runtime guarantee.
+
+1. Identify the request, scope, success criteria, and terms that need clarification.
+2. Inspect documentation and relevant files before drawing conclusions; search for symbols, patterns, and related tests.
+3. Prefer existing conventions and reusable components over speculative design.
+4. Separate observed facts, assumptions, options, risks, and open questions.
+5. Cite precise file paths and symbols for every material claim.
+6. Explicitly identify architectural choices only within the existing discovery/acknowledgment or explicit-deferral boundary, using the shared [ADR capability](../rpir-architecture-decision-records/SKILL.md) and [input coverage map](../rpir-architecture-decision-records/references/research-input-coverage.md). Reuse supplied answers/citations without a questionnaire or field quota. Small reversible spikes are not exempt; proportionality governs detail, not coverage. Topology, technology/toolchain baselines, public contracts and security/data boundaries are architectural signals. Assess dependency/test-framework changes in context of platform, integration, compatibility or operating commitments; naming, helper extraction and architecture-preserving repairs are routine coding without ADR reference. Return material classification ambiguity to the coordinator for evidence-led engineer resolution, not silent exclusion.
+7. Before handoff, resolve foreseeable engineer-owned architectural choices where practicable; distinguish a decision that needs engineer selection from a non-decision fact that evidence cannot yet establish. Do not present an unresolved architectural choice as a factual unknown. Do not treat a complete Proposed ADR as missing decision content merely because sign-off is pending. Return a narrow evidence report containing the research question, observed facts, cited files and symbols, constraints, assumptions, risks, and unanswered questions. Include a compact **ADR inputs and remaining gaps** handover: each architectural choice's rationale, realistic alternatives/reasons, actual selection or pending state, conditions, likely affected work, existing ADR candidates and consequential gaps/routes; separately identify remaining factual unknowns, their current evidence and consequence, and a supported next check or acquisition route. Distinguish an essential unestablished mechanism, including a nonarchitectural one, from a justified residual fact testing a supported mechanism; report the former as unfinished Research with affected effects and an evidence route. If no architecture is identified, give an evidence-supported routine-only disposition. Omit irrelevant map categories, not architectural choices. Plan reconciles Research and planning discoveries to complete inspected ADR coverage and formal Work Item IDs; Research supplies evidence only and never authors the standalone ADR or delivery hierarchy. Unknown destinations, records or conditions constrain dependent effects, not phase invocation or independent safe work.
+
+8. Make readiness evidence inspectable in the existing handover after intake permits investigation: cite the proportionate decision-critical feasibility investigation pursued, realistic alternatives and their trade-offs, recommendation and actual engineer direction, including qualified or nonrecommended answers. Establish an evidence-supported viable mechanism and its decision-critical feasibility before presenting the technical conclusion as ready for delivery conversion. If essential feasibility or the mechanism is unestablished, whether architectural or not, report unfinished Research, affected effects and a supported evidence route rather than a ready implementation task. For each material carry-forward, explain what was investigated, why it reasonably remains, the downstream consequence and supported resolution route. Identify the supported mechanism the residual tests; execution-dependent, newly exposed or permission-limited facts may reasonably remain, but a bounded route alone does not justify accessible essential research left undone. Do not require proof that earlier discovery was impossible or zero unknowns. Do not substitute the recommendation for the actual answer, invent certainty, require exhaustive prototypes or impose an investigation quota, second register or new approval gate. Return supported issues and correction evidence to the coordinator; Research corrects only its own eligible working brief and rechecks it, while delegated investigators remain read-only. Plan retains formal scope, acceptance and hierarchy.
+
+A Plan or Implement request does not establish missing essential feasibility. Keep the unestablished mechanism and its evidence route in unfinished Research, not a delivery task. A justified execution-dependent fact tests an already supported mechanism and retains its bounded interpretation, response and escalation; source-dependent builds, launch and browser behavior need not precede the existence of source code. This distinction supplies neither tool exposure nor permission and does not change manual transitions.
+
+## Outputs
+
+- A narrow evidence report for the Research coordinator, with material claims tied to precise repository paths and symbols; omit unsupported categories.
+- Follow the [shared reader-facing rule](../rpir-lifecycle-core/SKILL.md#reader-facing-outputs): retain current understanding, provenance, actual qualified/nonrecommended selections and conditions, meaningful alternative-framing outcome and material unknowns, not a running discovery/Q&A or answer-change history. This does not remove adaptive discovery, actual acknowledgment/waiting or explicit-deferral safeguards.
+
+## Limits
+
+When this method supports the RPIR Research coordinator, the [lifecycle core](../rpir-lifecycle-core/SKILL.md#contain-allocation-and-effects) owns automatic setup: reuse safe existing directories, or separately guard each selected missing documentation root, direct `copilot/` parent and topic before asking RPIR Script Runner to create that one literal directory and inspecting its result. Research, Plan and Review route commands through Runner; this is behavioral guidance, not platform-enforced isolation. Guard and save/read back the brief separately. Report unavailable operations, collisions, containment or permission uncertainty, denial and failed or unverifiable saves; do not use the coordinator shell or implicit-parent file creation as a workaround. An actually exposed dedicated directory operation may remain an alternative only where permitted. Manual setup is recovery, not an automation pass. This does not change discovery acknowledgment or deferral. These coordinator effects are not delegated investigator authority.
+
+This delegated evidence report is input to the Research coordinator; it is not a research brief and must not allocate, select, create, persist, revise, or authorize any lifecycle artifact, handoff, command, cleanup, scope, hierarchy, or approval. Only the coordinator may synthesize and persist a lifecycle record.
+
+Do not edit files, invent commands or dependencies, or report an inference as a repository fact.
+
+## Validation
+
+- Check that each material claim cites precise file paths and symbols and distinguishes observed facts from assumptions.
+- Check that the report remains advisory input rather than a lifecycle record or authorization, and that unanswered questions are disclosed.

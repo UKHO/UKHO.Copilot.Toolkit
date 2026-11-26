@@ -34,7 +34,7 @@ These artifacts guide Copilot; they do not provide deterministic security or app
 ## Canonical references
 
 - [Repository Copilot instructions](../../.github/copilot-instructions.md) — Canonical repository governance, least-privilege, approval, and scope boundaries.
-- [Custom agent guidance](../../.github/agents/implement.agent.md) — Example of explicit role, tool, delegation, and manual-handoff boundaries.
+- [RPIR Implement custom agent guidance](../../.github/agents/implement.agent.md) — Example of explicit role, tool, delegation, and manual-handoff boundaries; all 18 agents have RPIR-prefixed display names and unchanged physical filenames.
 - [Wiki-maintenance Skill](../../.github/skills/wiki-maintenance/SKILL.md) — Boundaries for repository-managed Markdown and canonical-source linking.
 
 ## Related links

@@ -5,49 +5,49 @@ const path = require('node:path');
 const { classes, discover, inspectPath, normalize, root, skillPayloadRoots } = require('./discover-copilot-artifacts.cjs');
 
 const coordinatorTools = {
-  Research: ['read', 'search', 'web', 'edit', 'edit/createDirectory', 'agent', 'execute'],
-  Plan: ['read', 'search', 'edit', 'agent', 'execute'],
-  Implement: ['read', 'search', 'edit', 'agent', 'runInTerminal'],
-  Review: ['read', 'search', 'edit', 'agent', 'execute']
+  'RPIR Research': ['read', 'search', 'web', 'edit', 'edit/createDirectory', 'agent', 'execute'],
+  'RPIR Plan': ['read', 'search', 'edit', 'agent', 'execute'],
+  'RPIR Implement': ['read', 'search', 'edit', 'agent', 'runInTerminal'],
+  'RPIR Review': ['read', 'search', 'edit', 'agent', 'execute']
 };
-const promptRoutes = { plan: 'Plan', implement: 'Implement', review: 'Review', 'remediate-review': 'Implement' };
+const promptRoutes = { plan: 'RPIR Plan', implement: 'RPIR Implement', review: 'RPIR Review', 'remediate-review': 'RPIR Implement' };
 const workerTools = {
-  'Architecture Analyst': ['read', 'search'], 'Codebase Investigator': ['read', 'search'],
-  'Correctness Reviewer': ['read', 'search'], 'Domain Investigator': ['read', 'search', 'web'],
-  'Feasibility Investigator': ['read', 'search', 'web'], 'Implementation Worker': ['read', 'search', 'edit', 'runInTerminal'],
-  'Maintainability Reviewer': ['read', 'search'], 'Requirements Analyst': ['read', 'search'],
-  'Security Reviewer': ['read', 'search'], 'Stage Assurance': ['read', 'search'],
-  'Test Strategist': ['read', 'search'], 'Test Worker': ['read', 'search'],
-  'Validation Worker': ['read', 'search']
+  'RPIR Architecture Analyst': ['read', 'search'], 'RPIR Codebase Investigator': ['read', 'search'],
+  'RPIR Correctness Reviewer': ['read', 'search'], 'RPIR Domain Investigator': ['read', 'search', 'web'],
+  'RPIR Feasibility Investigator': ['read', 'search', 'web'], 'RPIR Implementation Worker': ['read', 'search', 'edit', 'runInTerminal'],
+  'RPIR Maintainability Reviewer': ['read', 'search'], 'RPIR Requirements Analyst': ['read', 'search'],
+  'RPIR Security Reviewer': ['read', 'search'], 'RPIR Stage Assurance': ['read', 'search'],
+  'RPIR Test Strategist': ['read', 'search'], 'RPIR Test Worker': ['read', 'search'],
+  'RPIR Validation Worker': ['read', 'search']
 };
 // These projections describe authored boundaries, not runtime isolation.
 const nativeTools = {
   ...coordinatorTools, ...workerTools,
-  Implement: ['read', 'search', 'edit', 'agent', 'execute'],
-  'Implementation Worker': ['read', 'search', 'edit', 'execute'],
-  'Script Runner': ['read', 'search', 'execute']
+  'RPIR Implement': ['read', 'search', 'edit', 'agent', 'execute'],
+  'RPIR Implementation Worker': ['read', 'search', 'edit', 'execute'],
+  'RPIR Script Runner': ['read', 'search', 'execute']
 };
 const nativeSkills = {
-  Research: ['agent-model-selection', 'codebase-research', 'rpir-lifecycle-core', 'agent-question-resolution', 'architecture-decision-records', 'local-git-checkpoints'],
-  Plan: ['agent-model-selection', 'architecture-planning', 'rpir-lifecycle-core', 'agent-question-resolution', 'architecture-decision-records', 'local-git-checkpoints'],
-  Implement: ['agent-model-selection', 'safe-implementation', 'rpir-lifecycle-core', 'agent-question-resolution', 'architecture-decision-records', 'local-git-checkpoints'],
-  Review: ['agent-model-selection', 'code-review', 'rpir-lifecycle-core', 'agent-question-resolution', 'architecture-decision-records', 'local-git-checkpoints', 'rpir-stage-assurance'],
-  'Architecture Analyst': ['agent-model-selection', 'architecture-planning'],
-  'Codebase Investigator': ['agent-model-selection', 'codebase-research'],
-  'Correctness Reviewer': ['agent-model-selection', 'code-review'],
-  'Domain Investigator': ['agent-model-selection', 'codebase-research'],
-  'Feasibility Investigator': ['agent-model-selection', 'codebase-research'],
-  'Implementation Worker': ['agent-model-selection', 'safe-implementation'],
-  'Maintainability Reviewer': ['agent-model-selection', 'code-review'],
-  'Requirements Analyst': ['agent-model-selection', 'architecture-planning'],
-  'Security Reviewer': ['agent-model-selection', 'code-review'],
-  'Stage Assurance': ['agent-model-selection', 'rpir-stage-assurance'],
-  'Test Strategist': ['agent-model-selection', 'test-design'],
-  'Test Worker': ['agent-model-selection', 'test-design'],
-  'Validation Worker': ['agent-model-selection', 'safe-implementation'],
-  'Script Runner': ['agent-model-selection', 'local-git-checkpoints']
+  'RPIR Research': ['agent-model-selection', 'rpir-codebase-research', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints'],
+  'RPIR Plan': ['agent-model-selection', 'rpir-architecture-planning', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints'],
+  'RPIR Implement': ['agent-model-selection', 'rpir-safe-implementation', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints'],
+  'RPIR Review': ['agent-model-selection', 'rpir-code-review', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints', 'rpir-stage-assurance'],
+  'RPIR Architecture Analyst': ['agent-model-selection', 'rpir-architecture-planning'],
+  'RPIR Codebase Investigator': ['agent-model-selection', 'rpir-codebase-research'],
+  'RPIR Correctness Reviewer': ['agent-model-selection', 'rpir-code-review'],
+  'RPIR Domain Investigator': ['agent-model-selection', 'rpir-codebase-research'],
+  'RPIR Feasibility Investigator': ['agent-model-selection', 'rpir-codebase-research'],
+  'RPIR Implementation Worker': ['agent-model-selection', 'rpir-safe-implementation'],
+  'RPIR Maintainability Reviewer': ['agent-model-selection', 'rpir-code-review'],
+  'RPIR Requirements Analyst': ['agent-model-selection', 'rpir-architecture-planning'],
+  'RPIR Security Reviewer': ['agent-model-selection', 'rpir-code-review'],
+  'RPIR Stage Assurance': ['agent-model-selection', 'rpir-stage-assurance'],
+  'RPIR Test Strategist': ['agent-model-selection', 'test-design'],
+  'RPIR Test Worker': ['agent-model-selection', 'test-design'],
+  'RPIR Validation Worker': ['agent-model-selection', 'rpir-safe-implementation'],
+  'RPIR Script Runner': ['agent-model-selection', 'rpir-local-git-checkpoints']
 };
-const manualHandoffCoordinators = new Set(['Research', 'Plan', 'Implement', 'Review']);
+const manualHandoffCoordinators = new Set(['RPIR Research', 'RPIR Plan', 'RPIR Implement', 'RPIR Review']);
 const coordinatorProfileFiles = new Set(['research.agent.md', 'plan.agent.md', 'implement.agent.md', 'review.agent.md']);
 const specialistProfileFiles = new Set([
   'architecture-analyst.agent.md', 'codebase-investigator.agent.md', 'correctness-reviewer.agent.md',
@@ -308,10 +308,10 @@ function section(text, heading) {
 }
 
 function checkArchitectureDecisionRecordContract(sources = {}) {
-  const relative = '.github/skills/architecture-decision-records/SKILL.md';
+  const relative = '.github/skills/rpir-architecture-decision-records/SKILL.md';
   const skill = sources.skill ?? readText(relative);
   const metadata = parseFrontmatterText(skill, relative).values;
-  if (metadata.name !== 'architecture-decision-records' || metadata['user-invocable'] !== 'false') {
+  if (metadata.name !== 'rpir-architecture-decision-records' || metadata['user-invocable'] !== 'false') {
     fail('ADR Skill must use its directory name and remain non-invocable', 'ADR-CONTRACT-001');
   }
   for (const resource of ['references/research-input-coverage.md', 'templates/adr.md']) {

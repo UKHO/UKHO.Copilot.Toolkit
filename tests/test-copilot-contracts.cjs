@@ -102,11 +102,11 @@ for (const [label, manifestInput, lockInput] of [
 ]) assertRejected(label, () => contracts.checkNativeSupportMetadata(manifestInput, lockInput),
   (error) => error.contractId === 'NATIVE-SUPPORT-001');
 
-const nativeResearchPath = agentPath('Research');
+const nativeResearchPath = agentPath('RPIR Research');
 const nativeResearch = agentTexts.get(nativeResearchPath);
 const researchTools = "tools: ['read', 'search', 'web', 'edit', 'edit/createDirectory', 'agent', 'execute']";
 assert.ok(nativeResearch.includes(researchTools), 'Research retains the qualified directory reference alongside edit');
-for (const name of ['Research', 'Plan', 'Review']) {
+for (const name of ['RPIR Research', 'RPIR Plan', 'RPIR Review']) {
   const relative = agentPath(name);
   assertRejected(`native ${name} requires execute`,
     () => nativeCheck(relative, replaceOnce(agentTexts.get(relative), ", 'execute']", "]")),
@@ -121,17 +121,17 @@ for (const [label, replacement] of [
   replaceOnce(nativeResearch, researchTools, replacement)),
   (error) => error.contractId === 'NATIVE-AGENT-001' && /tools differ from the nonempty role boundary/.test(error.message));
 
-const nativePlanPath = agentPath('Plan');
+const nativePlanPath = agentPath('RPIR Plan');
 const nativePlan = agentTexts.get(nativePlanPath);
 for (const [label, target, replacement] of [
   ['wrong target', 'target: github-copilot', 'target: vscode'],
   ['empty tools', "tools: ['read', 'search', 'edit', 'agent', 'execute']", 'tools: []'],
-  ['unsupported Local delegation metadata', 'target: github-copilot', "target: github-copilot\nagents: ['Script Runner']"],
+  ['unsupported Local delegation metadata', 'target: github-copilot', "target: github-copilot\nagents: ['RPIR Script Runner']"],
   ['fallback model list', 'model: gpt-6.1-sol', "model: ['gpt-6.1-sol', 'gpt-6.1-terra']"],
   ['wrong effort', 'reasoning-effort: high', 'reasoning-effort:']
 ]) assertRejected(`native ${label}`, () => nativeCheck(nativePlanPath, replaceOnce(nativePlan, target, replacement)));
 assertRejected('unresolved named skill', () => nativeCheck(nativePlanPath, nativePlan,
-  new Set([...nativeSkillNames].filter((name) => name !== 'architecture-planning'))),
+  new Set([...nativeSkillNames].filter((name) => name !== 'rpir-architecture-planning'))),
   (error) => error.contractId === 'NATIVE-AGENT-001' && /named skills/.test(error.message));
 assertRejected('missing native profile row', () => nativeCheck(nativePlanPath, nativePlan, nativeSkillNames,
   replaceOnce(profileText, '| `plan.agent.md` | `gpt-6.1-sol` | High; authored override | Required |', '')),
@@ -152,7 +152,7 @@ for (const [label, field] of [
 ]) assertRejected(`${label} authored reasoning-effort`, () => projectSerialized(
   projectionPath, serializedProjection(projectionPath, field), profiles
 ), (error) => error.contractId === 'MODEL-PROJECTION-001' && /must omit authored reasoning-effort/.test(error.message));
-for (const name of ['Research', 'Plan', 'Implement', 'Review']) {
+for (const name of ['RPIR Research', 'RPIR Plan', 'RPIR Implement', 'RPIR Review']) {
   const relative = agentPath(name);
   const original = agentTexts.get(relative);
   for (const [label, target, replacement] of [
@@ -170,7 +170,7 @@ for (const name of ['Research', 'Plan', 'Implement', 'Review']) {
     assertRejected(`${name} ${label} native contract`, () => nativeCheck(relative, changed),
       (error) => error.contractId === 'NATIVE-AGENT-001');
   }
-  const row = `| \`${name.toLowerCase()}.agent.md\` | \`gpt-6.1-sol\` | High; authored override | Required |`;
+  const row = `| \`${path.posix.basename(relative)}\` | \`gpt-6.1-sol\` | High; authored override | Required |`;
   for (const changed of [row.replace('Required', 'No authored override'),
     row.replace('High; authored override', 'Fusion-managed; no authored override'), row.replace('gpt-6.1-sol', 'hydrafusion')]) {
     assertRejected(`${name} profile drift`, () => contracts.checkModelProfileCoverage(replaceOnce(profileText, row, changed), agentPaths),
@@ -220,13 +220,13 @@ assertRejected('profile entry cannot bypass unknown-role guard', () => contracts
   futurePath, futureValues, {}, new Set([...agentNames, 'Future Role'])
 ), /unrecognized agent role/);
 
-const runnerPath = agentPath('Script Runner');
+const runnerPath = agentPath('RPIR Script Runner');
 const runner = agents.get(runnerPath);
 for (const [label, mutate] of [
   ['Runner edit tool', (values) => { values.tools = "['read', 'search', 'execute', 'edit']"; }],
   ['Runner agent tool', (values) => { values.tools = "['read', 'search', 'execute', 'agent']"; }],
   ['Runner user invocation', (values) => { values['user-invocable'] = 'true'; }],
-  ['Runner nested delegation', (values) => { values.agents = "['Implement']"; }],
+  ['Runner nested delegation', (values) => { values.agents = "['RPIR Implement']"; }],
   ['Runner handoff declaration', (values) => { values.handoffs = ''; }]
 ]) {
   const values = clone(runner.values);
@@ -236,37 +236,37 @@ for (const [label, mutate] of [
 const plan = agents.get(nativePlanPath);
 for (const [field, value] of [
   ['tools', "['read', 'search', 'edit', 'agent', 'runInTerminal']"],
-  ['agents', "['Requirements Analyst', 'Architecture Analyst', 'Test Strategist', 'Domain Investigator', 'Feasibility Investigator', 'Stage Assurance', 'Script Runner', 'Test Worker']"]
+  ['agents', "['RPIR Requirements Analyst', 'RPIR Architecture Analyst', 'RPIR Test Strategist', 'RPIR Domain Investigator', 'RPIR Feasibility Investigator', 'RPIR Stage Assurance', 'RPIR Script Runner', 'RPIR Test Worker']"]
 ]) assertRejected(`coordinator ${field} expansion`, () => contracts.checkAgentMetadata(
   nativePlanPath, { ...plan.values, [field]: value }, plan.blocks, agentNames));
-const implementPath = agentPath('Implement');
+const implementPath = agentPath('RPIR Implement');
 const implementText = agentTexts.get(implementPath);
 for (const [label, handoffs] of [
-  ['manual legacy handoff', ['  - label: Review', '    agent: Review', '    prompt: Review the report', '    send: false']],
-  ['automatic handoff', ['  - label: Review', '    agent: Review', '    prompt: Review the report', '    send: true']],
-  ['wrong handoff target', ['  - label: Review', '    agent: Plan', '    prompt: Review the report', '    send: false']],
-  ['incomplete handoff', ['  - label: Review', '    agent: Review', '    send: false']]
+  ['manual legacy handoff', ['  - label: Review', '    agent: RPIR Review', '    prompt: Review the report', '    send: false']],
+  ['automatic handoff', ['  - label: Review', '    agent: RPIR Review', '    prompt: Review the report', '    send: true']],
+  ['wrong handoff target', ['  - label: Review', '    agent: RPIR Plan', '    prompt: Review the report', '    send: false']],
+  ['incomplete handoff', ['  - label: Review', '    agent: RPIR Review', '    send: false']]
 ]) {
   assertRejected(label, () => nativeCheck(implementPath, replaceOnce(implementText,
     'target: github-copilot', `target: github-copilot\nhandoffs:\n${handoffs.join('\n')}`)),
   (error) => error.contractId === 'NATIVE-AGENT-001' && /Local delegation metadata/.test(error.message));
-  assertRejected(`${label} parser`, () => contracts.parseHandoffs(implementPath, handoffs, ['Review'], agentNames),
+  assertRejected(`${label} parser`, () => contracts.parseHandoffs(implementPath, handoffs, ['RPIR Review'], agentNames),
     (error) => error.contractId === 'NATIVE-AGENT-001');
 }
-for (const [name, agent] of [['plan', 'Plan'], ['implement', 'Implement'], ['review', 'Review'], ['remediate-review', 'Implement']]) {
+for (const [name, agent] of [['plan', 'RPIR Plan'], ['implement', 'RPIR Implement'], ['review', 'RPIR Review'], ['remediate-review', 'RPIR Implement']]) {
   for (const route of [agent, 'wrong role']) assertRejected(`legacy ${name} prompt route ${route}`,
     () => contracts.checkPromptMetadata(`.github/prompts/${name}.prompt.md`, { name, agent: route }, agentNames),
     (error) => error.contractId === 'STRUCT-PROMPT-001');
 }
 const ordinaryPrompt = '.github/prompts/explain-change.prompt.md';
-for (const values of [{ name: 'explain-change' }, { name: 'explain-change', agent: 'Implement' },
-  { name: 'explain-change', agent: 'Implement', tools: "['read', 'execute']" },
-  { name: 'explain-change', agent: 'Test Worker', tools: "['read', 'search']" }]) {
+for (const values of [{ name: 'explain-change' }, { name: 'explain-change', agent: 'RPIR Implement' },
+  { name: 'explain-change', agent: 'RPIR Implement', tools: "['read', 'execute']" },
+  { name: 'explain-change', agent: 'RPIR Test Worker', tools: "['read', 'search']" }]) {
   assert.doesNotThrow(() => contracts.checkPromptMetadata(ordinaryPrompt, values, agentNames));
   cases += 1;
 }
-for (const values of [{ name: 'wrong-name', agent: 'Implement' }, { name: 'explain-change', agent: 'Missing Role' },
-  { name: 'explain-change', tools: "['read']" }, { name: 'explain-change', agent: 'Test Worker', tools: "['read', 'execute']" }]) {
+for (const values of [{ name: 'wrong-name', agent: 'RPIR Implement' }, { name: 'explain-change', agent: 'Missing Role' },
+  { name: 'explain-change', tools: "['read']" }, { name: 'explain-change', agent: 'RPIR Test Worker', tools: "['read', 'execute']" }]) {
   assertRejected('invalid ordinary prompt metadata', () => contracts.checkPromptMetadata(ordinaryPrompt, values, agentNames));
 }
 
@@ -292,13 +292,44 @@ assert.deepEqual(manifest.files.filter((entry) => entry.startsWith('.github/skil
   inventory.chatSkills.map((entry) => path.posix.dirname(entry)));
 assert.deepEqual(differences(manifest, inventory), [], 'the generated manifest projection must be idempotent');
 assert.doesNotThrow(() => contracts.checkManifestParity(manifest, inventory));
+// Couple the selected namespace to real discovery, parsed headers and payload
+// projection. The projection still includes unrelated baseline inventory; it
+// does not synchronize the checkout or conceal the actual verifier's failures.
+const selectedRenames = [
+  'plan', 'implement', 'review', 'remediate-review',
+  'agent-question-resolution', 'architecture-decision-records', 'architecture-planning',
+  'codebase-research', 'safe-implementation', 'code-review', 'local-git-checkpoints'
+];
+for (const oldName of selectedRenames) {
+  const name = `rpir-${oldName}`;
+  const relative = `.github/skills/${name}/SKILL.md`;
+  assert.ok(inventory.chatSkills.includes(relative), `${name} is discovered`);
+  assert.equal(contracts.parseFrontmatterText(readArtifact(relative), relative).values.name, name);
+  assert.ok(!inventory.chatSkills.includes(`.github/skills/${oldName}/SKILL.md`), `${oldName} is not an alias`);
+  assert.ok(manifest.files.includes(path.posix.dirname(relative)), `${name} has its payload root`);
+  cases += 1;
+}
+for (const surface of ['files', 'contributes.chatSkills']) {
+  const fixture = clone(manifest);
+  if (surface === 'files') {
+    const index = fixture.files.indexOf('.github/skills/rpir-plan');
+    assert.ok(index >= 0);
+    fixture.files[index] = '.github/skills/plan';
+  } else {
+    const entry = fixture.contributes.chatSkills.find((item) => item.path === '.github/skills/rpir-plan/SKILL.md');
+    assert.ok(entry);
+    entry.path = '.github/skills/plan/SKILL.md';
+  }
+  assertRejected(`stale phase path in ${surface}`, () => contracts.checkManifestParity(fixture, inventory),
+    (error) => error.contractId === 'PARITY-001');
+}
 const unrelatedFieldFixture = desiredManifest({
   ...clone(sourceManifest), customMetadata: { retained: true },
   files: [...sourceManifest.files, 'vendor/custom-payload']
 }, inventory);
 assert.deepEqual(unrelatedFieldFixture.customMetadata, { retained: true });
 assert.ok(unrelatedFieldFixture.files.includes('vendor/custom-payload'));
-for (const name of ['implement', 'plan', 'remediate-review', 'review']) {
+for (const name of ['rpir-implement', 'rpir-plan', 'rpir-remediate-review', 'rpir-review']) {
   const skill = `.github/skills/${name}/SKILL.md`;
   assert.ok(inventory.chatSkills.includes(skill), `${name} must be discovered as a Skill`);
   assert.ok(!inventory.chatPromptFiles.includes(`.github/prompts/${name}.prompt.md`));
@@ -309,8 +340,8 @@ for (const name of ['implement', 'plan', 'remediate-review', 'review']) {
   assertRejected(`${name} retains a pre-migration relative link`,
     () => contracts.checkLocalLinks(skill, broken), /local link does not resolve/);
 }
-const checkpointSkill = '.github/skills/local-git-checkpoints/SKILL.md';
-const adrSkill = '.github/skills/architecture-decision-records/SKILL.md';
+const checkpointSkill = '.github/skills/rpir-local-git-checkpoints/SKILL.md';
+const adrSkill = '.github/skills/rpir-architecture-decision-records/SKILL.md';
 for (const skill of [checkpointSkill, adrSkill]) {
   for (const surface of ['files', 'contributes.chatSkills']) {
     for (const defect of ['missing', 'duplicate', 'misordered']) {
@@ -329,7 +360,7 @@ for (const skill of [checkpointSkill, adrSkill]) {
     }
   }
 }
-for (const contribution of ['.github/skills/local-git-checkpoints', '.github/skills/local-git-checkpoints/SKILL.md/SKILL.md']) {
+for (const contribution of ['.github/skills/rpir-local-git-checkpoints', '.github/skills/rpir-local-git-checkpoints/SKILL.md/SKILL.md']) {
   const fixture = clone(manifest);
   fixture.contributes.chatSkills.find((item) => item.path === checkpointSkill).path = contribution;
   assertRejected('invalid Skill contribution', () => contracts.checkManifestParity(fixture, inventory),
@@ -414,9 +445,9 @@ function loadFixture(sources, routine = false) {
 
 const lifecyclePath = '.github/instructions/lifecycle-records.instructions.md';
 const templatePath = '.github/skills/create-copilot-agent/templates/agent.md';
-const coveragePath = '.github/skills/architecture-decision-records/references/research-input-coverage.md';
-const adrTemplatePath = '.github/skills/architecture-decision-records/templates/adr.md';
-const nestedResourcePath = '.github/skills/architecture-decision-records/references/nested/fixture.md';
+const coveragePath = '.github/skills/rpir-architecture-decision-records/references/research-input-coverage.md';
+const adrTemplatePath = '.github/skills/rpir-architecture-decision-records/templates/adr.md';
+const nestedResourcePath = '.github/skills/rpir-architecture-decision-records/references/nested/fixture.md';
 const fixtureSources = new Map();
 for (const definition of classes) {
   for (const relative of inventory[definition.name]) {
@@ -433,7 +464,7 @@ fixtureSources.set(profilePath, profileText);
 fixtureSources.set('package.json', JSON.stringify(manifest));
 fixtureSources.set('package-lock.json', JSON.stringify(nativeLock));
 // Exercise prompt wiring even when the real optional prompt directory is absent.
-fixtureSources.set(ordinaryPrompt, "---\nname: explain-change\nagent: Implement\ntools: ['read']\n---\nNeutral prompt.\n");
+fixtureSources.set(ordinaryPrompt, "---\nname: explain-change\nagent: RPIR Implement\ntools: ['read']\n---\nNeutral prompt.\n");
 const controlledInventory = loadFixture(fixtureSources).discover();
 fixtureSources.set('package.json', JSON.stringify(desiredManifest(sourceManifest, controlledInventory)));
 
@@ -467,9 +498,28 @@ function rejectWired(label, sources, expected) {
   cases += 1;
 }
 
+rejectWired('stale coordinator display name', changedSources(nativePlanPath,
+  (text) => replaceOnce(text, 'name: RPIR Plan', 'name: Plan')),
+  (error) => error.contractId === 'NATIVE-AGENT-001' && /unrecognized role/.test(error.message));
+rejectWired('stale specialist Skill projection', changedSources(runnerPath,
+  (text) => replaceOnce(text, "'rpir-local-git-checkpoints'", "'local-git-checkpoints'")),
+  (error) => error.contractId === 'NATIVE-AGENT-001' && /named skills/.test(error.message));
+const staleDirectorySources = new Map(fixtureSources);
+staleDirectorySources.set('.github/skills/architecture-decision-records/SKILL.md',
+  replaceOnce(staleDirectorySources.get(adrSkill), 'name: rpir-architecture-decision-records', 'name: architecture-decision-records'));
+staleDirectorySources.delete(adrSkill);
+const staleDirectoryInventory = loadFixture(staleDirectorySources).discover();
+assert.ok(staleDirectoryInventory.chatSkills.includes('.github/skills/architecture-decision-records/SKILL.md'));
+assert.ok(!staleDirectoryInventory.chatSkills.includes(adrSkill));
+rejectWired('stale discovered method directory', staleDirectorySources,
+  (error) => error.contractId === 'NATIVE-AGENT-001' && /named skills/.test(error.message));
+rejectWired('stale moved-resource sibling link', changedSources(coveragePath,
+  () => '[method](../../architecture-planning/SKILL.md)\n'),
+  /local link does not resolve/);
+
 // Neutral bodies above remove *all* original coordinator/worker narratives.
 // Additional unrelated bodies must also pass through native, aggregate and main.
-for (const name of ['Research', 'Plan', 'Implement', 'Review', 'Implementation Worker', 'Script Runner', 'Stage Assurance']) {
+for (const name of ['RPIR Research', 'RPIR Plan', 'RPIR Implement', 'RPIR Review', 'RPIR Implementation Worker', 'RPIR Script Runner', 'RPIR Stage Assurance']) {
   const relative = agentPath(name);
   const text = `${frontmatter(agentTexts.get(relative))}\n# Neutral heading\n\nBlue triangles.\n`;
   assert.doesNotThrow(() => nativeCheck(relative, text));
@@ -489,9 +539,9 @@ rejectWired('neutral worker invalid invocation', changedSources(runnerPath,
 // Skill/template/instruction prose has been replaced, and policy-only inputs
 // are absent. Linked resources remain discoverable for mechanical validation.
 for (const obsolete of ['.github/copilot-instructions.md', 'README.md', 'docs/Wiki/rpir.md',
-  '.github/skills/agent-question-resolution/references/research-intent-discovery.md',
-  '.github/skills/safe-implementation/implementation-report-template.md',
-  '.github/skills/local-git-checkpoints/references/checkpoint-checklist.md']) {
+  '.github/skills/rpir-agent-question-resolution/references/research-intent-discovery.md',
+  '.github/skills/rpir-safe-implementation/implementation-report-template.md',
+  '.github/skills/rpir-local-git-checkpoints/references/checkpoint-checklist.md']) {
   assert.ok(!fixtureSources.has(obsolete), `${obsolete} is not a required read dependency`);
   assert.ok(!routine.reads.includes(obsolete), `${obsolete} must not be eagerly read`);
 }
@@ -504,13 +554,13 @@ for (const [label, sources, expected] of [
   ['missing inert starter source', changedSources(templatePath, null), /Cannot read/],
   ['active starter model', changedSources(templatePath, (text) => replaceOnce(text, /^---\n/, '---\nmodel: hydrafusion\n')),
   (error) => error.contractId === 'MODEL-AUTHORING-001'],
-  ['wrong ADR identity', changedSources(adrSkill, (text) => replaceOnce(text, 'name: architecture-decision-records', 'name: neutral-adr')),
+  ['wrong ADR identity', changedSources(adrSkill, (text) => replaceOnce(text, 'name: rpir-architecture-decision-records', 'name: neutral-adr')),
   (error) => error.contractId === 'NATIVE-AGENT-001' && /named skills/.test(error.message)],
   ['invocable ADR Skill', changedSources(adrSkill, (text) => replaceOnce(text, 'user-invocable: false', 'user-invocable: true')),
   (error) => error.contractId === 'ADR-CONTRACT-001']
 ]) rejectWired(label, sources, expected);
 assertRejected('ADR identity directly', () => contracts.checkArchitectureDecisionRecordContract({
-  skill: replaceOnce(fixtureSources.get(adrSkill), 'name: architecture-decision-records', 'name: neutral-adr')
+  skill: replaceOnce(fixtureSources.get(adrSkill), 'name: rpir-architecture-decision-records', 'name: neutral-adr')
 }), (error) => error.contractId === 'ADR-CONTRACT-001' && /directory name/.test(error.message));
 
 // Vary only narrative outside the structured profile table/scope.
@@ -593,13 +643,13 @@ for (const [label, sources, expected] of [
   ['missing profile source', changedSources(profilePath, null), /Cannot read/],
   ['missing lock source', changedSources('package-lock.json', null), /Cannot read/],
   ['missing lifecycle instruction source', changedSources(lifecyclePath, null), /Cannot read/],
-  ['invalid prompt target', changedSources(ordinaryPrompt, (text) => replaceOnce(text, 'agent: Implement', 'agent: Missing')),
+  ['invalid prompt target', changedSources(ordinaryPrompt, (text) => replaceOnce(text, 'agent: RPIR Implement', 'agent: Missing')),
   (error) => error.contractId === 'STRUCT-PROMPT-001'],
   ['engine drift', changedSources('package-lock.json', () => JSON.stringify({ packages: { '': { engines: { vscode: '^1.130.0' } } } })),
   (error) => error.contractId === 'NATIVE-SUPPORT-001'],
   ['empty Skill description', changedSources(checkpointSkill, (text) => replaceOnce(text, /^description:.*$/m, 'description:')),
   /non-empty text description/],
-  ['duplicate contributed name', changedSources(ordinaryPrompt, (text) => replaceOnce(text, 'name: explain-change', 'name: Plan')),
+  ['duplicate contributed name', changedSources(ordinaryPrompt, (text) => replaceOnce(text, 'name: explain-change', 'name: RPIR Plan')),
   /Duplicate contributed customization name/],
   ['instruction applicability missing', changedSources(lifecyclePath, (text) => replaceOnce(text, applyLine, "applyTo: ''")),
   /non-empty applyTo/]

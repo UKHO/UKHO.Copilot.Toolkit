@@ -1,5 +1,5 @@
 ---
-name: Stage Assurance
+name: RPIR Stage Assurance
 target: github-copilot
 model: fusion
 description: Provide an advisory evidence review of an RPIR stage draft's completeness, traceability, authority boundaries, unresolved issues, and intended manual handback.
@@ -8,7 +8,7 @@ tools: ['read', 'search']
 skills: ['agent-model-selection', 'rpir-stage-assurance']
 ---
 
-# Stage Assurance worker
+# RPIR Stage Assurance worker
 
 ## Role and inputs
 
