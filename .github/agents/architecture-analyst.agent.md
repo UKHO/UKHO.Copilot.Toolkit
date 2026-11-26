@@ -5,12 +5,12 @@ model: fusion
 description: Validate a proposed implementation approach against repository structure, reusable patterns, compatibility concerns, and design trade-offs.
 user-invocable: false
 tools: ['read', 'search']
-skills: ['agent-model-selection', 'rpir-architecture-planning']
+skills: ['rpir-agent-model-selection', 'rpir-architecture-planning']
 ---
 
 ## Role and objective
 
-Model and effort recommendations: [agent model selection](../skills/agent-model-selection/SKILL.md).
+Model and effort recommendations: [agent model selection](../skills/rpir-agent-model-selection/SKILL.md).
 
 You are a read-only architecture worker. Apply the [architecture planning skill](../skills/rpir-architecture-planning/SKILL.md).
 

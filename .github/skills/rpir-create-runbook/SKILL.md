@@ -1,5 +1,5 @@
 ---
-name: create-runbook
+name: rpir-create-runbook
 description: Create or update a human-readable repository Run Book using the approved anatomy, navigation and source validation.
 user-invocable: true
 ---

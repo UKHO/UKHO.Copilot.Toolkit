@@ -113,6 +113,16 @@ function discoverSkills(definition) {
   return result;
 }
 
+// Repository discovery stays complete. Only this exact repository-only Skill
+// is excluded from extension contributions and their complete payload roots.
+function distributionInventory(inventory) {
+  return {
+    ...inventory,
+    chatSkills: inventory.chatSkills.filter((relative) =>
+      relative !== '.github/skills/agent-instruction-refactoring/SKILL.md')
+  };
+}
+
 function skillPayloadRoots(contributions) {
   if (!Array.isArray(contributions)) fail('Skill contributions must be an array');
   const roots = contributions.map((contribution) => {
@@ -147,4 +157,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { classes, discover, inspectPath, normalize, root, skillPayloadRoots };
+module.exports = { classes, discover, distributionInventory, inspectPath, normalize, root, skillPayloadRoots };

@@ -1,5 +1,5 @@
 ---
-name: create-copilot-instruction
+name: rpir-create-copilot-instruction
 description: Create and validate a focused VS Code custom instruction for repository conventions, with the narrowest applicable applyTo scope. Use when guidance should apply automatically to matching files or universally across a repository; do not use for reusable task workflows, role boundaries, or manually invoked shortcuts.
 user-invocable: true
 ---

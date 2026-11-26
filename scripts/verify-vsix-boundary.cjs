@@ -5,7 +5,7 @@ const path = require('path');
 const zlib = require('zlib');
 const crypto = require('crypto');
 const { isDeepStrictEqual } = require('node:util');
-const { discover, inspectPath, skillPayloadRoots } = require('./discover-copilot-artifacts.cjs');
+const { discover, distributionInventory, inspectPath, skillPayloadRoots } = require('./discover-copilot-artifacts.cjs');
 
 const root = path.resolve(__dirname, '..');
 const manifestPath = path.join(root, 'package.json');
@@ -111,7 +111,11 @@ function readManifest() {
     fail('package.json name, publisher and version are required');
   }
   assertPackageIdentity(manifest);
-  const discovered = discover();
+  const repositoryInventory = discover();
+  const discovered = distributionInventory(repositoryInventory);
+  const distributedSkillRoots = new Set(skillPayloadRoots(discovered.chatSkills));
+  const excludedSkillRoots = skillPayloadRoots(repositoryInventory.chatSkills)
+    .filter((relative) => !distributedSkillRoots.has(relative));
   const contributions = [];
   for (const name of contributionNames) {
     if (!Array.isArray(manifest.contributes?.[name])) {
@@ -136,6 +140,9 @@ function readManifest() {
     const relative = normalize(entry);
     assertAllowed(relative);
     for (const file of inventory(relative)) {
+      if (excludedSkillRoots.some((skillRoot) => file === skillRoot || file.startsWith(`${skillRoot}/`))) {
+        fail(`Repository-only Skill payload is prohibited: ${file}`);
+      }
       if (boundary.has(file)) fail(`Duplicate package files member: ${file}`);
       boundary.add(file);
     }

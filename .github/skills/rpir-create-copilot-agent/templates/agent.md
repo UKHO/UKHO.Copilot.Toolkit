@@ -33,7 +33,7 @@ State the sustained responsibility this agent owns and the outcome it is expecte
 
 ## Model profile (authoring guidance)
 
-For a Toolkit suite role, use [agent model selection](../../agent-model-selection/SKILL.md) to record the capability/consequence classification and one profile recommendation. Add the role to the authoritative profile and verify the supported Copilot runtime ID and preference path. If evidence is unresolved, disclose the gap; do not activate an invented `model` field or claim observed routing.
+For a Toolkit suite role, use [agent model selection](../../rpir-agent-model-selection/SKILL.md) to record the capability/consequence classification and one profile recommendation. Add the role to the authoritative profile and verify the supported Copilot runtime ID and preference path. If evidence is unresolved, disclose the gap; do not activate an invented `model` field or claim observed routing.
 
 For a current Toolkit role, use the approved profile's model, reasoning and selection policy. The current 18-role profile assigns `gpt-6.1-sol`/high/required to four coordinators; the 14 `hydrafusion` specialists omit `reasoning-effort` and `model-policy` for Fusion-managed reasoning, not an effective setting. Omission does not clear inherited or external configuration or establish observed effective effort. This starter has no active model, selection policy or effort placeholder; only add model fields and any separately approved supported effort policy when adapting it to a classified role. Do not invent a fallback.
 

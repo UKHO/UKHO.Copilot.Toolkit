@@ -17,7 +17,7 @@ Installation does not create workspace lifecycle records or begin RPIR. Start wo
 
 ## Agent model recommendations
 
-The [shared role profiles](.github/skills/agent-model-selection/references/role-profiles.md) own each agent's allocation. The current 18-role candidate projects the scalar preference `hydrafusion` and omits `reasoning-effort` so Fusion manages reasoning. This authored preference is not observed dispatch, and omission does not clear inherited or external configuration or establish effective effort. Explicit overrides require an evidenced supported route and do not grant authority.
+The [shared role profiles](.github/skills/rpir-agent-model-selection/references/role-profiles.md) own each agent's allocation. The current 18-role candidate projects the scalar preference `hydrafusion` and omits `reasoning-effort` so Fusion manages reasoning. This authored preference is not observed dispatch, and omission does not clear inherited or external configuration or establish effective effort. Explicit overrides require an evidenced supported route and do not grant authority.
 
 Report assigned and observed effective models separately. If effective selection is unavailable, say "not observable"; if a fallback is observed but its reason is unavailable, say "cause not exposed". Missing telemetry alone does not establish fallback or stop independent safe work; a known wrong default is not a pass. Static configuration does not prove active client version, model availability, dispatch, effective reasoning or compatibility across future builds. No quality, speed or cost comparison is claimed.
 
@@ -34,6 +34,8 @@ Select the receiving **RPIR Research**, **RPIR Plan**, **RPIR Implement** or **R
 | RPIR Implement | `/rpir-implement` or `/rpir-implement Deliver the attached Plan within its stated scope` |
 | RPIR Review | `/rpir-review` or `/rpir-review Independently review the attached implementation report` |
 | RPIR Implement (correction) | `/rpir-remediate-review` or `/rpir-remediate-review Correct the supported findings under the attached original Plan and linked Review` |
+
+The repository contains 24 Skill definitions. The extension distributes exactly 23 `rpir-*` Skills; unchanged `agent-instruction-refactoring` is repository-only and its complete payload is excluded. The shared prefix does not turn general authoring, testing or documentation capabilities into lifecycle phases.
 
 Bare Research entry reuses an established objective or asks for one; it has no predecessor sign-off and does not acknowledge its later discovery readback. Later entries require an explicit physical predecessor binding. Plan-from-Research signs off planning only; material Review-origin planning additionally requires your chosen material scope and the full Review -> report -> prior Plan -> Research chain. Review entry admits independent assessment, not clean acceptance or a partial pass.
 

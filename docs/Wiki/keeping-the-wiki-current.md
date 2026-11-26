@@ -12,7 +12,7 @@ description: Bounded Wiki maintenance, source verification and navigation checks
 ## Prerequisites
 
 - Start with the approved documentation outcome, intended pages and relevant canonical sources; check nearby links for necessary in-outcome repairs.
-- Read the [Wiki maintenance skill](../../.github/skills/wiki-maintenance/SKILL.md), [Wiki page template](../../.github/skills/wiki-maintenance/templates/wiki-page.md), and [Wiki validation checklist](../../.github/skills/wiki-maintenance/references/wiki-validation-checklist.md).
+- Read the [Wiki maintenance skill](../../.github/skills/rpir-wiki-maintenance/SKILL.md), [Wiki page template](../../.github/skills/rpir-wiki-maintenance/templates/wiki-page.md), and [Wiki validation checklist](../../.github/skills/rpir-wiki-maintenance/references/wiki-validation-checklist.md).
 - Treat `.github/` policy, lifecycle records, manifest data, and artifact metadata as canonical sources rather than copying their bodies into Wiki pages.
 
 ## Content
@@ -64,9 +64,9 @@ Use manual inspection when automated checks are unavailable; permitted local val
 
 ## Canonical references
 
-- [Wiki maintenance skill](../../.github/skills/wiki-maintenance/SKILL.md) — authoritative scope, procedure, and reporting boundaries.
-- [Wiki page template](../../.github/skills/wiki-maintenance/templates/wiki-page.md) — required page structure.
-- [Wiki validation checklist](../../.github/skills/wiki-maintenance/references/wiki-validation-checklist.md) — manual validation expectations.
+- [Wiki maintenance skill](../../.github/skills/rpir-wiki-maintenance/SKILL.md) — authoritative scope, procedure, and reporting boundaries.
+- [Wiki page template](../../.github/skills/rpir-wiki-maintenance/templates/wiki-page.md) — required page structure.
+- [Wiki validation checklist](../../.github/skills/rpir-wiki-maintenance/references/wiki-validation-checklist.md) — manual validation expectations.
 - [Repository guidance](../../.github/copilot-instructions.md) — canonical policy and RPIR controls.
 
 ## Related links

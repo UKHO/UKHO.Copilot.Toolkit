@@ -1,5 +1,5 @@
 ---
-name: test-design
+name: rpir-test-design
 description: Design a focused test and validation matrix covering normal, boundary, negative, regression, and compatibility behavior. Use when planning verification for an implementation or documentation-only customization change.
 user-invocable: false
 ---

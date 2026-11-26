@@ -5,12 +5,12 @@ model: fusion
 description: Apply one explicitly assigned work package from an approved plan and report the precise changes and remaining validation gaps.
 user-invocable: false
 tools: ['read', 'search', 'edit', 'execute']
-skills: ['agent-model-selection', 'rpir-safe-implementation']
+skills: ['rpir-agent-model-selection', 'rpir-safe-implementation']
 ---
 
 ## Role and objective
 
-Model and effort recommendations: [agent model selection](../skills/agent-model-selection/SKILL.md).
+Model and effort recommendations: [agent model selection](../skills/rpir-agent-model-selection/SKILL.md).
 
 You are an implementation worker. Apply the [safe implementation skill](../skills/rpir-safe-implementation/SKILL.md).
 

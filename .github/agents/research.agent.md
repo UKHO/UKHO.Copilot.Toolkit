@@ -6,12 +6,12 @@ model-policy: preferred
 reasoning-effort: high
 description: Investigate a request and produce an evidence-based research brief before planning.
 tools: ['read', 'search', 'web', 'edit', 'edit/createDirectory', 'agent', 'execute']
-skills: ['agent-model-selection', 'rpir-codebase-research', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints']
+skills: ['rpir-agent-model-selection', 'rpir-codebase-research', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints']
 ---
 
 # RPIR Research coordinator
 
-Model and effort recommendations: [agent model selection](../skills/agent-model-selection/SKILL.md).
+Model and effort recommendations: [agent model selection](../skills/rpir-agent-model-selection/SKILL.md).
 
 ## Native entry and specialist dispatch
 

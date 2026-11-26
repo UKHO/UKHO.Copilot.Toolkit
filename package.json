@@ -50,29 +50,29 @@
     ".github/agents/test-strategist.agent.md",
     ".github/agents/test-worker.agent.md",
     ".github/agents/validation-worker.agent.md",
-    ".github/skills/agent-model-selection",
-    ".github/skills/create-copilot-agent",
-    ".github/skills/create-copilot-instruction",
-    ".github/skills/create-copilot-prompt",
-    ".github/skills/create-copilot-skill",
-    ".github/skills/create-runbook",
-    ".github/skills/maintain-copilot-artifacts",
+    ".github/skills/rpir-agent-model-selection",
     ".github/skills/rpir-agent-question-resolution",
     ".github/skills/rpir-architecture-decision-records",
     ".github/skills/rpir-architecture-planning",
     ".github/skills/rpir-code-review",
     ".github/skills/rpir-codebase-research",
+    ".github/skills/rpir-create-copilot-agent",
+    ".github/skills/rpir-create-copilot-instruction",
+    ".github/skills/rpir-create-copilot-prompt",
+    ".github/skills/rpir-create-copilot-skill",
+    ".github/skills/rpir-create-runbook",
     ".github/skills/rpir-implement",
     ".github/skills/rpir-lifecycle-core",
     ".github/skills/rpir-local-git-checkpoints",
+    ".github/skills/rpir-maintain-copilot-artifacts",
     ".github/skills/rpir-plan",
     ".github/skills/rpir-remediate-review",
     ".github/skills/rpir-research",
     ".github/skills/rpir-review",
     ".github/skills/rpir-safe-implementation",
     ".github/skills/rpir-stage-assurance",
-    ".github/skills/test-design",
-    ".github/skills/wiki-maintenance"
+    ".github/skills/rpir-test-design",
+    ".github/skills/rpir-wiki-maintenance"
   ],
   "contributes": {
     "chatInstructions": [
@@ -139,25 +139,7 @@
     "chatPromptFiles": [],
     "chatSkills": [
       {
-        "path": ".github/skills/agent-model-selection/SKILL.md"
-      },
-      {
-        "path": ".github/skills/create-copilot-agent/SKILL.md"
-      },
-      {
-        "path": ".github/skills/create-copilot-instruction/SKILL.md"
-      },
-      {
-        "path": ".github/skills/create-copilot-prompt/SKILL.md"
-      },
-      {
-        "path": ".github/skills/create-copilot-skill/SKILL.md"
-      },
-      {
-        "path": ".github/skills/create-runbook/SKILL.md"
-      },
-      {
-        "path": ".github/skills/maintain-copilot-artifacts/SKILL.md"
+        "path": ".github/skills/rpir-agent-model-selection/SKILL.md"
       },
       {
         "path": ".github/skills/rpir-agent-question-resolution/SKILL.md"
@@ -175,6 +157,21 @@
         "path": ".github/skills/rpir-codebase-research/SKILL.md"
       },
       {
+        "path": ".github/skills/rpir-create-copilot-agent/SKILL.md"
+      },
+      {
+        "path": ".github/skills/rpir-create-copilot-instruction/SKILL.md"
+      },
+      {
+        "path": ".github/skills/rpir-create-copilot-prompt/SKILL.md"
+      },
+      {
+        "path": ".github/skills/rpir-create-copilot-skill/SKILL.md"
+      },
+      {
+        "path": ".github/skills/rpir-create-runbook/SKILL.md"
+      },
+      {
         "path": ".github/skills/rpir-implement/SKILL.md"
       },
       {
@@ -182,6 +179,9 @@
       },
       {
         "path": ".github/skills/rpir-local-git-checkpoints/SKILL.md"
+      },
+      {
+        "path": ".github/skills/rpir-maintain-copilot-artifacts/SKILL.md"
       },
       {
         "path": ".github/skills/rpir-plan/SKILL.md"
@@ -202,10 +202,10 @@
         "path": ".github/skills/rpir-stage-assurance/SKILL.md"
       },
       {
-        "path": ".github/skills/test-design/SKILL.md"
+        "path": ".github/skills/rpir-test-design/SKILL.md"
       },
       {
-        "path": ".github/skills/wiki-maintenance/SKILL.md"
+        "path": ".github/skills/rpir-wiki-maintenance/SKILL.md"
       }
     ]
   }

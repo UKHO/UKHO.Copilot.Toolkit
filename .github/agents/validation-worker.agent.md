@@ -5,12 +5,12 @@ model: fusion
 description: Perform read-only structural and manual validation of an implementation against its approved plan and report evidence-backed gaps.
 user-invocable: false
 tools: ['read', 'search']
-skills: ['agent-model-selection', 'rpir-safe-implementation']
+skills: ['rpir-agent-model-selection', 'rpir-safe-implementation']
 ---
 
 ## Role and objective
 
-Model and effort recommendations: [agent model selection](../skills/agent-model-selection/SKILL.md).
+Model and effort recommendations: [agent model selection](../skills/rpir-agent-model-selection/SKILL.md).
 
 You are a read-only validation worker. Apply only the [Read-only Validation Worker checks](../skills/rpir-safe-implementation/validation-checklist.md#read-only-validation-worker).
 

@@ -19,7 +19,7 @@ Choose the smallest artifact that fits the need: an instruction for stable conte
 
 For custom agents, grant only justified, supported tools required for the role; an empty or missing list can mean all tools on the inspected Copilot conversion path. When delegation is genuinely useful, put exact permitted workers in the coordinator's loaded body, resolve discovered role identity and keep workers non-user-invocable and nondelegating. All 18 Toolkit agent display identities use `RPIR <existing role name>` with unchanged filenames; resolve that display name, not a generated ID. Load essential role-appropriate named skills explicitly. These are behavioral controls, not a native per-parent filter or proof of isolation; unexpected tools do not grant authority.
 
-Use the [model selection capability](../../.github/skills/agent-model-selection/SKILL.md) and its [single role profile](../../.github/skills/agent-model-selection/references/role-profiles.md) when adding or maintaining a role: justify its capability/consequence classification and update the profile. The current agent source projects one Copilot runtime ID and each role's own `reasoning-effort` from that profile as preferred configuration, not a fallback array or universal effort. Configuration is not observed dispatch. Report an unobservable effective model as "not observable" and an observed fallback with unavailable reason as "cause not exposed"; missing telemetry is not evidence of fallback, and a known wrong default is not a pass. Do not assume root effort reaches children. Preserve supported overrides and authority boundaries; model choice and effort grant no authority. Runtime routing and effort consumption remain unverified.
+Use the [model selection capability](../../.github/skills/rpir-agent-model-selection/SKILL.md) and its [single role profile](../../.github/skills/rpir-agent-model-selection/references/role-profiles.md) when adding or maintaining a role: justify its capability/consequence classification and update the profile. The current agent source projects one Copilot runtime ID and each role's own `reasoning-effort` from that profile as preferred configuration, not a fallback array or universal effort. Configuration is not observed dispatch. Report an unobservable effective model as "not observable" and an observed fallback with unavailable reason as "cause not exposed"; missing telemetry is not evidence of fallback, and a known wrong default is not a pass. Do not assume root effort reaches children. Preserve supported overrides and authority boundaries; model choice and effort grant no authority. Runtime routing and effort consumption remain unverified.
 
 ### Make metadata and transitions explicit
 
@@ -54,10 +54,10 @@ The authored [workflow](../../.github/workflows/package.yml) runs only the mecha
 ## Canonical references
 
 - [Repository guidance](../../.github/copilot-instructions.md) — authoritative repository scope, least-privilege, approval, lifecycle, and link-boundary rules.
-- [Create a custom agent](../../.github/skills/create-copilot-agent/SKILL.md) — role, tools, explicit workers, and manual handoff authoring guidance.
-- [Create a custom instruction](../../.github/skills/create-copilot-instruction/SKILL.md) — narrow applicability and metadata guidance.
-- [Create a prompt file](../../.github/skills/create-copilot-prompt/SKILL.md) — explicit inputs, selected agent, side-effect boundaries, and stop conditions.
-- [Create an Agent Skill](../../.github/skills/create-copilot-skill/SKILL.md) — resource-backed Skill structure, relative resource links, and validation guidance.
+- [Create a custom agent](../../.github/skills/rpir-create-copilot-agent/SKILL.md) — role, tools, explicit workers, and manual handoff authoring guidance.
+- [Create a custom instruction](../../.github/skills/rpir-create-copilot-instruction/SKILL.md) — narrow applicability and metadata guidance.
+- [Create a prompt file](../../.github/skills/rpir-create-copilot-prompt/SKILL.md) — explicit inputs, selected agent, side-effect boundaries, and stop conditions.
+- [Create an Agent Skill](../../.github/skills/rpir-create-copilot-skill/SKILL.md) — resource-backed Skill structure, relative resource links, and validation guidance.
 
 ## Related links
 

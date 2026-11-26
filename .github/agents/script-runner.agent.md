@@ -5,7 +5,7 @@ model: fusion
 description: Execute bounded phase-authorized scripts and commands, including guarded selected-directory setup, and report actual effects.
 user-invocable: false
 tools: ['read', 'search', 'execute']
-skills: ['agent-model-selection', 'rpir-local-git-checkpoints']
+skills: ['rpir-agent-model-selection', 'rpir-local-git-checkpoints']
 ---
 
 # RPIR Script Runner
@@ -24,4 +24,4 @@ For each invocation bind the selected opened root, attribute its actual cwd with
 
 Return phase, goal, root, chosen commands/cwd and permission outcomes, reached requirement, exits or running state, sanitized output, anticipated versus observed relevant effects and limits, and what remains failed, unavailable or eligible for recheck. Execution evidence never grants edits, lifecycle authority or acceptance.
 
-Model and effort recommendations: [agent model selection](../skills/agent-model-selection/SKILL.md).
+Model and effort recommendations: [agent model selection](../skills/rpir-agent-model-selection/SKILL.md).

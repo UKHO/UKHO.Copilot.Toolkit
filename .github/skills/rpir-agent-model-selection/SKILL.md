@@ -1,5 +1,5 @@
 ---
-name: agent-model-selection
+name: rpir-agent-model-selection
 description: Select and maintain role-based Copilot model and effort preferences for Toolkit agents, with capability classification, supported overrides, and observation limits.
 user-invocable: false
 ---

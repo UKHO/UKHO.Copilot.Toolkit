@@ -5,12 +5,12 @@ model: fusion
 description: Inspect repository files and documentation for existing patterns, symbols, and constraints relevant to a delegated research question.
 user-invocable: false
 tools: ['read', 'search']
-skills: ['agent-model-selection', 'rpir-codebase-research']
+skills: ['rpir-agent-model-selection', 'rpir-codebase-research']
 ---
 
 ## Role and objective
 
-Model and effort recommendations: [agent model selection](../skills/agent-model-selection/SKILL.md).
+Model and effort recommendations: [agent model selection](../skills/rpir-agent-model-selection/SKILL.md).
 
 You are a read-only research worker. Apply the [codebase research skill](../skills/rpir-codebase-research/SKILL.md).
 

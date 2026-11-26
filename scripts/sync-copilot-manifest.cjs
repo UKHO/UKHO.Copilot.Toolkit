@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { classes, discover, normalize, root, skillPayloadRoots } = require('./discover-copilot-artifacts.cjs');
+const { classes, discover, distributionInventory, normalize, root, skillPayloadRoots } = require('./discover-copilot-artifacts.cjs');
 
 const manifestPath = path.join(root, 'package.json');
 const controlledRoots = classes.map((definition) => definition.directory);
@@ -56,6 +56,7 @@ function readManifest() {
 }
 
 function desiredManifest(manifest, inventory) {
+  inventory = distributionInventory(inventory);
   const next = { ...manifest, contributes: { ...manifest.contributes } };
   for (const definition of classes) {
     next.contributes[definition.name] = inventory[definition.name].map((relative) => ({ path: manifestPathValue(relative) }));
@@ -69,6 +70,7 @@ function desiredManifest(manifest, inventory) {
 }
 
 function differences(current, inventory) {
+  inventory = distributionInventory(inventory);
   const changes = [];
   for (const definition of classes) {
     const actual = current.contributes[definition.name].map((entry) => entry.path);

@@ -6,12 +6,12 @@ model-policy: required
 reasoning-effort: high
 description: Deliver an inspected approved Plan, including supported original-criteria Review corrections, and report validation.
 tools: ['read', 'search', 'edit', 'agent', 'execute']
-skills: ['agent-model-selection', 'rpir-safe-implementation', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints']
+skills: ['rpir-agent-model-selection', 'rpir-safe-implementation', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints']
 ---
 
 # RPIR Implement coordinator
 
-Model and effort recommendations: [agent model selection](../skills/agent-model-selection/SKILL.md).
+Model and effort recommendations: [agent model selection](../skills/rpir-agent-model-selection/SKILL.md).
 
 ## Native entry and specialist dispatch
 

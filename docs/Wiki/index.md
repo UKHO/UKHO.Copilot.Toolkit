@@ -31,8 +31,8 @@ This Wiki covers the repository's `.github` instructions, skills, prompts, agent
 
 - [Repository guidance](../../.github/copilot-instructions.md) — Authoritative repository policy, scope boundaries, and approval controls.
 - [RPIR lifecycle core](../../.github/skills/rpir-lifecycle-core/SKILL.md) — Lifecycle provenance, authority, and phase-boundary rules.
-- [Wiki maintenance skill](../../.github/skills/wiki-maintenance/SKILL.md) — Bounded Markdown Wiki authoring and source-validation procedure.
-- [Wiki page template](../../.github/skills/wiki-maintenance/templates/wiki-page.md) — Required page anatomy for future Wiki pages.
+- [Wiki maintenance skill](../../.github/skills/rpir-wiki-maintenance/SKILL.md) — Bounded Markdown Wiki authoring and source-validation procedure.
+- [Wiki page template](../../.github/skills/rpir-wiki-maintenance/templates/wiki-page.md) — Required page anatomy for future Wiki pages.
 
 ## Related links
 

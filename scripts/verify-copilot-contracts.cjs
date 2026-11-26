@@ -2,7 +2,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { classes, discover, inspectPath, normalize, root, skillPayloadRoots } = require('./discover-copilot-artifacts.cjs');
+const { classes, discover, distributionInventory, inspectPath, normalize, root, skillPayloadRoots } = require('./discover-copilot-artifacts.cjs');
 
 const coordinatorTools = {
   'RPIR Research': ['read', 'search', 'web', 'edit', 'edit/createDirectory', 'agent', 'execute'],
@@ -28,24 +28,24 @@ const nativeTools = {
   'RPIR Script Runner': ['read', 'search', 'execute']
 };
 const nativeSkills = {
-  'RPIR Research': ['agent-model-selection', 'rpir-codebase-research', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints'],
-  'RPIR Plan': ['agent-model-selection', 'rpir-architecture-planning', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints'],
-  'RPIR Implement': ['agent-model-selection', 'rpir-safe-implementation', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints'],
-  'RPIR Review': ['agent-model-selection', 'rpir-code-review', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints', 'rpir-stage-assurance'],
-  'RPIR Architecture Analyst': ['agent-model-selection', 'rpir-architecture-planning'],
-  'RPIR Codebase Investigator': ['agent-model-selection', 'rpir-codebase-research'],
-  'RPIR Correctness Reviewer': ['agent-model-selection', 'rpir-code-review'],
-  'RPIR Domain Investigator': ['agent-model-selection', 'rpir-codebase-research'],
-  'RPIR Feasibility Investigator': ['agent-model-selection', 'rpir-codebase-research'],
-  'RPIR Implementation Worker': ['agent-model-selection', 'rpir-safe-implementation'],
-  'RPIR Maintainability Reviewer': ['agent-model-selection', 'rpir-code-review'],
-  'RPIR Requirements Analyst': ['agent-model-selection', 'rpir-architecture-planning'],
-  'RPIR Security Reviewer': ['agent-model-selection', 'rpir-code-review'],
-  'RPIR Stage Assurance': ['agent-model-selection', 'rpir-stage-assurance'],
-  'RPIR Test Strategist': ['agent-model-selection', 'test-design'],
-  'RPIR Test Worker': ['agent-model-selection', 'test-design'],
-  'RPIR Validation Worker': ['agent-model-selection', 'rpir-safe-implementation'],
-  'RPIR Script Runner': ['agent-model-selection', 'rpir-local-git-checkpoints']
+  'RPIR Research': ['rpir-agent-model-selection', 'rpir-codebase-research', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints'],
+  'RPIR Plan': ['rpir-agent-model-selection', 'rpir-architecture-planning', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints'],
+  'RPIR Implement': ['rpir-agent-model-selection', 'rpir-safe-implementation', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints'],
+  'RPIR Review': ['rpir-agent-model-selection', 'rpir-code-review', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints', 'rpir-stage-assurance'],
+  'RPIR Architecture Analyst': ['rpir-agent-model-selection', 'rpir-architecture-planning'],
+  'RPIR Codebase Investigator': ['rpir-agent-model-selection', 'rpir-codebase-research'],
+  'RPIR Correctness Reviewer': ['rpir-agent-model-selection', 'rpir-code-review'],
+  'RPIR Domain Investigator': ['rpir-agent-model-selection', 'rpir-codebase-research'],
+  'RPIR Feasibility Investigator': ['rpir-agent-model-selection', 'rpir-codebase-research'],
+  'RPIR Implementation Worker': ['rpir-agent-model-selection', 'rpir-safe-implementation'],
+  'RPIR Maintainability Reviewer': ['rpir-agent-model-selection', 'rpir-code-review'],
+  'RPIR Requirements Analyst': ['rpir-agent-model-selection', 'rpir-architecture-planning'],
+  'RPIR Security Reviewer': ['rpir-agent-model-selection', 'rpir-code-review'],
+  'RPIR Stage Assurance': ['rpir-agent-model-selection', 'rpir-stage-assurance'],
+  'RPIR Test Strategist': ['rpir-agent-model-selection', 'rpir-test-design'],
+  'RPIR Test Worker': ['rpir-agent-model-selection', 'rpir-test-design'],
+  'RPIR Validation Worker': ['rpir-agent-model-selection', 'rpir-safe-implementation'],
+  'RPIR Script Runner': ['rpir-agent-model-selection', 'rpir-local-git-checkpoints']
 };
 const manualHandoffCoordinators = new Set(['RPIR Research', 'RPIR Plan', 'RPIR Implement', 'RPIR Review']);
 const manualEntryNames = ['rpir-research', 'rpir-plan', 'rpir-implement', 'rpir-review', 'rpir-remediate-review'];
@@ -58,9 +58,9 @@ const specialistProfileFiles = new Set([
   'test-worker.agent.md', 'validation-worker.agent.md'
 ]);
 const templateLinkPlaceholders = new Map([
-  ['.github/skills/create-copilot-skill/templates/skill.md', 'relative-path'],
-  ['.github/skills/create-runbook/templates/runbook.md', 'repository-relative-link'],
-  ['.github/skills/wiki-maintenance/templates/wiki-page.md', 'repository-relative-link']
+  ['.github/skills/rpir-create-copilot-skill/templates/skill.md', 'relative-path'],
+  ['.github/skills/rpir-create-runbook/templates/runbook.md', 'repository-relative-link'],
+  ['.github/skills/rpir-wiki-maintenance/templates/wiki-page.md', 'repository-relative-link']
 ]);
 const limitation = 'Static structure only: this check does not establish conversation compliance, installed loading, platform permissions, or runtime safety. It checks supported inline Markdown links and a bounded frontmatter subset; it is not a complete YAML/Markdown parser.';
 
@@ -227,6 +227,7 @@ function readManifest() {
 }
 
 function checkManifestParity(manifest, inventory) {
+  inventory = distributionInventory(inventory);
   const roots = classes.map((definition) => definition.directory);
   const controlled = (relative) => roots.some((directory) => relative === directory || relative.startsWith(`${directory}/`));
   const expectedFiles = classes.flatMap((definition) => (
@@ -288,6 +289,18 @@ function checkManualEntryContracts(inventory, parsedByPath) {
     }
     for (const field of Object.keys(values)) {
       if (!allowed.has(field)) reject(`unsupported manual entry metadata: ${field}; Skills do not select an agent`);
+    }
+  }
+}
+
+function checkSkillIdentities(inventory, parsedByPath) {
+  const names = new Set();
+  for (const relative of inventory.chatSkills) {
+    const name = parsedByPath.get(relative).values.name;
+    if (names.has(name)) fail(`Duplicate Skill identity: ${name}`, 'SKILL-IDENTITY-001');
+    names.add(name);
+    if (name !== path.posix.basename(path.posix.dirname(relative))) {
+      fail(`${relative} Skill name must match its directory`, 'SKILL-IDENTITY-001');
     }
   }
 }
@@ -358,7 +371,7 @@ function checkLifecycleCandidatePatterns(instruction) {
 }
 
 function checkModelAuthoringContract(sources = {}) {
-  const relative = '.github/skills/create-copilot-agent/templates/agent.md';
+  const relative = '.github/skills/rpir-create-copilot-agent/templates/agent.md';
   const template = sources.agentTemplate ?? readText(relative);
   const templateFrontmatter = template.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1] || '';
   if (!templateFrontmatter || /^\s*(?:model|model-policy|reasoning-effort):/m.test(templateFrontmatter)) {
@@ -443,8 +456,9 @@ function checkCustomizationContracts(inventory) {
   }
 
   checkManualEntryContracts(inventory, parsedByPath);
+  checkSkillIdentities(inventory, parsedByPath);
   const agentPaths = inventory.chatAgents;
-  const nativeProfile = readText('.github/skills/agent-model-selection/references/role-profiles.md');
+  const nativeProfile = readText('.github/skills/rpir-agent-model-selection/references/role-profiles.md');
   const skillNames = new Set(inventory.chatSkills.map((relative) => parsedByPath.get(relative).values.name));
   const nativeAgentNames = new Set(agentPaths.map((relative) => parsedByPath.get(relative).values.name));
   checkNativeSupportMetadata(readManifest(), JSON.parse(readText('package-lock.json')));
@@ -534,7 +548,7 @@ if (require.main === module) {
 
 module.exports = {
   checkAgentMetadata, checkLocalLinks, checkManifestParity, checkPromptMetadata,
-  checkManualEntryContracts,
+  checkManualEntryContracts, checkSkillIdentities, skillMarkdownResources,
   checkNativeAgentContract, checkNativeSupportMetadata,
   checkLifecycleCandidatePatterns,
   checkCustomizationContracts, checkArchitectureDecisionRecordContract, checkModelAuthoringContract, checkModelProfileCoverage, checkModelProjection,

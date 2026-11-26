@@ -1,5 +1,5 @@
 ---
-name: create-copilot-skill
+name: rpir-create-copilot-skill
 description: Create and validate a focused repository-scoped Agent Skill with optional linked resources. Use when a repeatable, task-specific capability needs a SKILL.md, checklist, template, reference, asset, or deterministic script; do not use for ordinary instructions, custom agents, or prompt shortcuts.
 user-invocable: true
 ---

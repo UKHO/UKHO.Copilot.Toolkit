@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const contracts = require('../scripts/verify-copilot-contracts.cjs');
-const { classes, discover, root } = require('../scripts/discover-copilot-artifacts.cjs');
+const { classes, discover, distributionInventory, root } = require('../scripts/discover-copilot-artifacts.cjs');
 const { desiredManifest, differences } = require('../scripts/sync-copilot-manifest.cjs');
 
 function readArtifact(relative) {
@@ -34,11 +34,11 @@ function replaceOnce(text, target, replacement) {
 
 const inventory = discover();
 const sourceManifest = JSON.parse(readArtifact('package.json'));
-// Projection is fixture input, not synchronization or a claim that the checkout
-// is valid. The normal verifier separately checks the actual manifest and agents.
+// Distribution parity below checks the actual manifest. Controlled model
+// projections remain fixture-only and do not conceal checkout model drift.
 const manifest = desiredManifest(sourceManifest, inventory);
 const agentPaths = inventory.chatAgents;
-const profilePath = '.github/skills/agent-model-selection/references/role-profiles.md';
+const profilePath = '.github/skills/rpir-agent-model-selection/references/role-profiles.md';
 const profileText = readArtifact(profilePath);
 const profiles = contracts.checkModelProfileCoverage(profileText, agentPaths);
 const expectedProfiles = {
@@ -284,22 +284,70 @@ for (const value of ['[read]', '["read"]', "['read', 'read']", "['']", '*tools']
   assertRejected('unsupported string list', () => contracts.parseStringList(value, 'fixture.md', 'tools'), /frontmatter|declaration/);
 }
 
-// Retain discovery/manifest projection tests without assuming the dirty checkout
-// is already synchronized. Actual parity is required by the normal verifier.
+// Full repository discovery includes the sole local-only Skill. All exported
+// distribution consumers must exclude only that exact identity and payload.
+const localSkill = '.github/skills/agent-instruction-refactoring/SKILL.md';
+const localSkillRoot = path.posix.dirname(localSkill);
+const inventoryPreimage = clone(inventory);
+const distributed = distributionInventory(inventory);
+assert.equal(inventory.chatSkills.length, 24);
+assert.equal(distributed.chatSkills.length, 23);
+assert.ok(inventory.chatSkills.includes(localSkill));
+assert.ok(!distributed.chatSkills.includes(localSkill));
+assert.deepEqual(inventory, inventoryPreimage, 'distribution projection must not mutate discovery');
+assert.deepEqual(distributionInventory(distributed), distributed, 'distribution projection is idempotent');
+assert.deepEqual(distributionInventory({
+  ...inventory, chatSkills: [localSkill, '.github/skills/another-unprefixed-skill/SKILL.md',
+    '.github/skills/agent-instruction-refactoring-extra/SKILL.md']
+}).chatSkills, ['.github/skills/another-unprefixed-skill/SKILL.md',
+  '.github/skills/agent-instruction-refactoring-extra/SKILL.md'], 'exclusion is exact, not prefix-based');
 assert.ok(inventory.chatSkills.every((entry) => entry.endsWith('/SKILL.md') && fs.statSync(path.join(root, entry)).isFile()));
-assert.deepEqual(manifest.contributes.chatSkills.map((entry) => entry.path), inventory.chatSkills);
+assert.deepEqual(manifest.contributes.chatSkills.map((entry) => entry.path), distributed.chatSkills);
 assert.deepEqual(manifest.files.filter((entry) => entry.startsWith('.github/skills/')),
-  inventory.chatSkills.map((entry) => path.posix.dirname(entry)));
+  distributed.chatSkills.map((entry) => path.posix.dirname(entry)));
 assert.deepEqual(differences(manifest, inventory), [], 'the generated manifest projection must be idempotent');
 assert.doesNotThrow(() => contracts.checkManifestParity(manifest, inventory));
-// Couple the selected namespace to real discovery, parsed headers and payload
-// projection. The projection still includes unrelated baseline inventory; it
-// does not synchronize the checkout or conceal the actual verifier's failures.
+assert.deepEqual(differences(sourceManifest, inventory), [], 'actual manifest must be synchronized');
+assert.doesNotThrow(() => contracts.checkManifestParity(sourceManifest, inventory), 'actual manifest parity');
+assert.deepEqual(desiredManifest(manifest, inventory), manifest, 'synchronization is idempotent');
+const skillHeaders = new Map(inventory.chatSkills.map((relative) => [
+  relative, contracts.parseFrontmatterText(readArtifact(relative), relative)
+]));
+assert.doesNotThrow(() => contracts.checkSkillIdentities(inventory, skillHeaders));
+assertRejected('duplicate Skill identity input', () => contracts.checkSkillIdentities({
+  ...inventory, chatSkills: [inventory.chatSkills[0], inventory.chatSkills[0]]
+}, skillHeaders), (error) => error.contractId === 'SKILL-IDENTITY-001' && /Duplicate Skill identity/.test(error.message));
 const selectedRenames = [
   'plan', 'implement', 'review', 'remediate-review',
   'agent-question-resolution', 'architecture-decision-records', 'architecture-planning',
-  'codebase-research', 'safe-implementation', 'code-review', 'local-git-checkpoints'
+  'codebase-research', 'safe-implementation', 'code-review', 'local-git-checkpoints',
+  'agent-model-selection', 'create-copilot-agent', 'create-copilot-instruction',
+  'create-copilot-prompt', 'create-copilot-skill', 'create-runbook',
+  'maintain-copilot-artifacts', 'test-design', 'wiki-maintenance'
 ];
+const expectedDistributedNames = [...selectedRenames.map((name) => `rpir-${name}`),
+  'rpir-lifecycle-core', 'rpir-stage-assurance', 'rpir-research'].sort();
+assert.deepEqual(distributed.chatSkills.map((relative) => skillHeaders.get(relative).values.name),
+  expectedDistributedNames, 'exact selected distributed identities');
+assert.deepEqual([...skillHeaders.values()].map(({ values }) => values.name).sort(),
+  ['agent-instruction-refactoring', ...expectedDistributedNames].sort(), 'exact repository identity set');
+const manualNames = new Set(['rpir-research', 'rpir-plan', 'rpir-implement', 'rpir-review', 'rpir-remediate-review']);
+const userCapabilityNames = new Set(['rpir-create-copilot-agent', 'rpir-create-copilot-instruction',
+  'rpir-create-copilot-prompt', 'rpir-create-copilot-skill', 'rpir-create-runbook',
+  'rpir-maintain-copilot-artifacts', 'rpir-wiki-maintenance']);
+for (const { values } of skillHeaders.values()) {
+  const local = values.name === 'agent-instruction-refactoring';
+  assert.equal(Object.hasOwn(values, 'user-invocable'), !local, `${values.name} invocation field presence`);
+  if (!local) assert.equal(values['user-invocable'],
+    manualNames.has(values.name) || userCapabilityNames.has(values.name) ? 'true' : 'false');
+  assert.equal(Object.hasOwn(values, 'disable-model-invocation'), manualNames.has(values.name),
+    `${values.name} preserves explicit versus omitted model-invocation metadata`);
+}
+const actualPayload = contracts.skillMarkdownResources(inventory);
+assert.equal(actualPayload.length, 49, 'all repository payload files remain discoverable');
+for (const relative of [...inventory.chatAgents, ...inventory.chatInstructions, ...actualPayload]) {
+  assert.doesNotThrow(() => contracts.checkLocalLinks(relative, readArtifact(relative)), `actual links in ${relative}`);
+}
 for (const oldName of selectedRenames) {
   const name = `rpir-${oldName}`;
   const relative = `.github/skills/${name}/SKILL.md`;
@@ -309,6 +357,31 @@ for (const oldName of selectedRenames) {
   assert.ok(manifest.files.includes(path.posix.dirname(relative)), `${name} has its payload root`);
   cases += 1;
 }
+for (const surface of ['files', 'contributes.chatSkills']) {
+  for (const defect of ['local-only inclusion', 'distributed omission']) {
+    const fixture = clone(sourceManifest);
+    if (surface === 'files') {
+      if (defect === 'local-only inclusion') fixture.files.push(localSkillRoot);
+      else fixture.files = fixture.files.filter((entry) => entry !== '.github/skills/rpir-test-design');
+    } else {
+      if (defect === 'local-only inclusion') fixture.contributes.chatSkills.push({ path: localSkill });
+      else fixture.contributes.chatSkills = fixture.contributes.chatSkills
+        .filter((entry) => entry.path !== '.github/skills/rpir-test-design/SKILL.md');
+    }
+    assertRejected(`${defect} in ${surface}`, () => contracts.checkManifestParity(fixture, inventory),
+      (error) => error.contractId === 'PARITY-001');
+    assert.ok(differences(fixture, inventory).length, `${surface} drift is detected by synchronizer`);
+    const preimage = clone(fixture);
+    assert.deepEqual(desiredManifest(fixture, inventory), manifest, 'synchronizer restores selected distribution');
+    assert.deepEqual(fixture, preimage, 'synchronizer does not mutate its manifest input');
+  }
+}
+const payloadOnlyFixture = clone(sourceManifest);
+payloadOnlyFixture.files.push(`${localSkillRoot}/references/local-only.md`);
+assertRejected('refactoring payload alone in files', () => contracts.checkManifestParity(payloadOnlyFixture, inventory),
+  (error) => error.contractId === 'PARITY-001');
+assert.ok(differences(payloadOnlyFixture, inventory).length);
+assert.deepEqual(desiredManifest(payloadOnlyFixture, inventory), manifest);
 for (const surface of ['files', 'contributes.chatSkills']) {
   const fixture = clone(manifest);
   if (surface === 'files') {
@@ -323,12 +396,20 @@ for (const surface of ['files', 'contributes.chatSkills']) {
   assertRejected(`stale phase path in ${surface}`, () => contracts.checkManifestParity(fixture, inventory),
     (error) => error.contractId === 'PARITY-001');
 }
-const unrelatedFieldFixture = desiredManifest({
+const unrelatedInput = {
   ...clone(sourceManifest), customMetadata: { retained: true },
-  files: [...sourceManifest.files, 'vendor/custom-payload']
-}, inventory);
+  contributes: { ...clone(sourceManifest.contributes), customContribution: { retained: true } },
+  files: [...sourceManifest.files, 'vendor/custom-payload', localSkillRoot]
+};
+const unrelatedPreimage = clone(unrelatedInput);
+const unrelatedFieldFixture = desiredManifest(unrelatedInput, inventory);
 assert.deepEqual(unrelatedFieldFixture.customMetadata, { retained: true });
+assert.deepEqual(unrelatedFieldFixture.contributes.customContribution, { retained: true });
 assert.ok(unrelatedFieldFixture.files.includes('vendor/custom-payload'));
+assert.ok(!unrelatedFieldFixture.files.includes(localSkillRoot));
+assert.deepEqual(unrelatedInput, unrelatedPreimage);
+assert.deepEqual(inventory, inventoryPreimage);
+assert.deepEqual(desiredManifest(unrelatedFieldFixture, inventory), unrelatedFieldFixture);
 for (const name of ['rpir-research', 'rpir-implement', 'rpir-plan', 'rpir-remediate-review', 'rpir-review']) {
   const skill = `.github/skills/${name}/SKILL.md`;
   assert.ok(inventory.chatSkills.includes(skill), `${name} must be discovered as a Skill`);
@@ -388,20 +469,21 @@ for (const destination of ['references/not-present.md', '../../../../README.md',
     () => contracts.checkLocalLinks(checkpointSkill, `[fixture](${destination})`), /local link|filesystem link/);
 }
 for (const [relative, placeholder] of [
-  ['.github/skills/create-copilot-skill/templates/skill.md', 'relative-path'],
-  ['.github/skills/create-runbook/templates/runbook.md', 'repository-relative-link'],
-  ['.github/skills/wiki-maintenance/templates/wiki-page.md', 'repository-relative-link']
+  ['.github/skills/rpir-create-copilot-skill/templates/skill.md', 'relative-path'],
+  ['.github/skills/rpir-create-runbook/templates/runbook.md', 'repository-relative-link'],
+  ['.github/skills/rpir-wiki-maintenance/templates/wiki-page.md', 'repository-relative-link']
 ]) {
   assert.doesNotThrow(() => contracts.checkLocalLinks(relative, `[fixture](<${placeholder}>)`));
   assertRejected('placeholder outside its supported template',
     () => contracts.checkLocalLinks(checkpointSkill, `[fixture](<${placeholder}>)`), /local link/);
 }
 
-// A small test-local filesystem adapter feeds both real modules. All discovery,
+// A small test-local filesystem adapter feeds the real source modules. All discovery,
 // guarded reads, resource traversal and routine composition run unmodified.
 // There is no host fallback and no filesystem write API.
 const discoverySource = readArtifact('scripts/discover-copilot-artifacts.cjs');
 const verifierSource = readArtifact('scripts/verify-copilot-contracts.cjs');
+const boundarySource = readArtifact('scripts/verify-vsix-boundary.cjs');
 const fixtureRoot = path.resolve(root, '__contract_fixture__');
 function loadFixture(sources, routine = false) {
   const files = new Map([...sources].map(([relative, text]) => [path.resolve(fixtureRoot, relative), text]));
@@ -426,17 +508,19 @@ function loadFixture(sources, routine = false) {
       return [...new Set([...directories, ...files.keys()]
         .filter((entry) => entry !== full && path.dirname(entry) === full).map((entry) => path.basename(entry)))].sort();
     },
-    readFileSync(full) {
+    readFileSync(full, encoding) {
       const relative = path.relative(fixtureRoot, full).split(path.sep).join('/');
       reads.push(relative);
       if (!files.has(full)) throw missing(full);
-      return files.get(full);
+      const content = files.get(full);
+      return encoding ? content.toString() : Buffer.from(content);
     }
   };
   const discoveryModule = { exports: {} };
   const fixtureBuiltin = (name) => {
     if (name === 'fs' || name === 'node:fs') return fixtureFs;
     if (name === 'path' || name === 'node:path') return path;
+    if (['zlib', 'crypto', 'node:util'].includes(name)) return require(name);
     throw new Error(`Unsupported fixture module: ${name}`);
   };
   vm.runInNewContext(discoverySource, {
@@ -454,12 +538,20 @@ function loadFixture(sources, routine = false) {
     module: fixtureModule, require: fixtureRequire, process: processState,
     console: { log: (message) => output.push(message), error: (message) => errors.push(message) }
   });
+  const boundaryModule = { exports: {} };
+  const boundaryRequire = (name) => name === './discover-copilot-artifacts.cjs'
+    ? discoveryModule.exports : fixtureBuiltin(name);
+  vm.runInNewContext(boundarySource, {
+    module: boundaryModule, require: boundaryRequire,
+    __dirname: path.join(fixtureRoot, 'scripts'), Buffer
+  });
   return { contracts: fixtureModule.exports, discover: discoveryModule.exports.discover,
+    boundary: boundaryModule.exports,
     output, errors, reads, process: processState };
 }
 
 const lifecyclePath = '.github/instructions/lifecycle-records.instructions.md';
-const templatePath = '.github/skills/create-copilot-agent/templates/agent.md';
+const templatePath = '.github/skills/rpir-create-copilot-agent/templates/agent.md';
 const coveragePath = '.github/skills/rpir-architecture-decision-records/references/research-input-coverage.md';
 const adrTemplatePath = '.github/skills/rpir-architecture-decision-records/templates/adr.md';
 const nestedResourcePath = '.github/skills/rpir-architecture-decision-records/references/nested/fixture.md';
@@ -496,6 +588,57 @@ assert.ok(routine.output.some((line) => /Manifest\/discovery parity: PASS/.test(
 assert.ok(routine.output.some((line) => /Customization structure .*: PASS/.test(line)));
 assert.ok(routine.output.some((line) => /Static structure only:/.test(line)));
 cases += 2;
+
+// Source-only boundary selection uses the same full discovery/projection.
+// In-memory payloads exercise readManifest without archives or filesystem writes.
+const boundarySources = new Map(fixtureSources);
+for (const [relative, content] of [
+  ['README.md', '# Fixture\n'], ['CHANGELOG.md', '# Changelog\n'],
+  ['LICENSE', 'Fixture license\n'], ['resources/ukho-icon.png', Buffer.from([0, 1, 2])]
+]) boundarySources.set(relative, content);
+const localPayload = `${localSkillRoot}/references/nested/local-only.bin`;
+boundarySources.set(localPayload, Buffer.from([3, 4, 5]));
+const sourceOnlyFixture = loadFixture(boundarySources);
+assert.equal(sourceOnlyFixture.reads.length, 0, 'boundary import is guarded and reads no source');
+const fixtureBoundary = sourceOnlyFixture.boundary.readManifest();
+assert.deepEqual(Array.from(fixtureBoundary.contributions.filter(({ name }) => name === 'chatSkills'),
+  ({ relative }) => relative), distributed.chatSkills);
+assert.ok(fixtureBoundary.boundary.has(nestedResourcePath));
+assert.ok(![...fixtureBoundary.boundary].some((relative) => relative.startsWith(`${localSkillRoot}/`)));
+assert.ok(!fixtureBoundary.sourceFiles.has(localPayload));
+cases += 1;
+
+function changedBoundaryManifest(change) {
+  const sources = new Map(boundarySources);
+  const input = JSON.parse(sources.get('package.json'));
+  change(input);
+  sources.set('package.json', JSON.stringify(input));
+  return loadFixture(sources).boundary;
+}
+for (const [label, change, expected] of [
+  ['local-only contribution', (input) => input.contributes.chatSkills.push({ path: localSkill }),
+    /chatSkills does not match shared discovery inventory/],
+  ['local-only complete payload', (input) => input.files.push(localSkillRoot),
+    /Repository-only Skill payload is prohibited/],
+  ['local-only nested payload alone', (input) => input.files.push(localPayload),
+    /Repository-only Skill payload is prohibited/],
+  ['broad Skill payload selection', (input) => { input.files = input.files
+    .filter((relative) => !relative.startsWith('.github/skills/')); input.files.push('.github/skills'); },
+    /Repository-only Skill payload is prohibited/],
+  ['distributed contribution omission', (input) => { input.contributes.chatSkills = input.contributes.chatSkills
+    .filter(({ path: relative }) => relative !== '.github/skills/rpir-test-design/SKILL.md'); },
+    /chatSkills does not match shared discovery inventory/],
+  ['distributed payload omission', (input) => { input.files = input.files
+    .filter((relative) => relative !== '.github/skills/rpir-test-design'); },
+    /contribution is outside the package files boundary/],
+  ['distributed resource omission', (input) => { input.files = input.files
+    .map((relative) => relative === '.github/skills/rpir-create-copilot-agent' ? `${relative}/SKILL.md` : relative); },
+    /Skill file is outside the package files boundary/],
+  ['duplicate contribution', (input) => input.contributes.chatSkills.push(clone(input.contributes.chatSkills[0])),
+    /chatSkills does not match shared discovery inventory/],
+  ['duplicate payload', (input) => input.files.push('.github/skills/rpir-test-design'),
+    /Duplicate package files member/]
+]) assertRejected(`source-only boundary ${label}`, () => changedBoundaryManifest(change).readManifest(), expected);
 
 function changedSources(relative, change) {
   const sources = new Map(fixtureSources);
@@ -542,6 +685,25 @@ rejectWired('stale coordinator display name', changedSources(nativePlanPath,
 rejectWired('stale specialist Skill projection', changedSources(runnerPath,
   (text) => replaceOnce(text, "'rpir-local-git-checkpoints'", "'local-git-checkpoints'")),
   (error) => error.contractId === 'NATIVE-AGENT-001' && /named skills/.test(error.message));
+rejectWired('stale model-selection declaration', changedSources(runnerPath,
+  (text) => replaceOnce(text, "'rpir-agent-model-selection'", "'agent-model-selection'")),
+  (error) => error.contractId === 'NATIVE-AGENT-001' && /named skills/.test(error.message));
+rejectWired('stale test-design declaration', changedSources(agentPath('RPIR Test Worker'),
+  (text) => replaceOnce(text, "'rpir-test-design'", "'test-design'")),
+  (error) => error.contractId === 'NATIVE-AGENT-001' && /named skills/.test(error.message));
+const designSkill = '.github/skills/rpir-test-design/SKILL.md';
+rejectWired('general Skill directory/header mismatch', changedSources(designSkill,
+  (text) => replaceOnce(text, 'name: rpir-test-design', 'name: test-design')),
+  (error) => error.contractId === 'SKILL-IDENTITY-001' && /match its directory/.test(error.message));
+rejectWired('duplicate Skill name', changedSources(designSkill,
+  (text) => replaceOnce(text, 'name: rpir-test-design', 'name: rpir-create-runbook')),
+  /Duplicate contributed customization name/);
+rejectWired('local-only Skill directory/header mismatch', changedSources(localSkill,
+  (text) => replaceOnce(text, 'name: agent-instruction-refactoring', 'name: local-refactoring')),
+  (error) => error.contractId === 'SKILL-IDENTITY-001');
+rejectWired('broken local-only dependency', changedSources(localSkill,
+  (text) => `${text}\n[starter](../create-copilot-agent/templates/agent.md)\n`),
+  /local link does not resolve/);
 const staleDirectorySources = new Map(fixtureSources);
 staleDirectorySources.set('.github/skills/architecture-decision-records/SKILL.md',
   replaceOnce(staleDirectorySources.get(adrSkill), 'name: rpir-architecture-decision-records', 'name: architecture-decision-records'));
@@ -593,7 +755,7 @@ for (const [label, sources, expected] of [
   ['active starter model', changedSources(templatePath, (text) => replaceOnce(text, /^---\n/, '---\nmodel: hydrafusion\n')),
   (error) => error.contractId === 'MODEL-AUTHORING-001'],
   ['wrong ADR identity', changedSources(adrSkill, (text) => replaceOnce(text, 'name: rpir-architecture-decision-records', 'name: neutral-adr')),
-  (error) => error.contractId === 'NATIVE-AGENT-001' && /named skills/.test(error.message)],
+  (error) => error.contractId === 'SKILL-IDENTITY-001' && /match its directory/.test(error.message)],
   ['invocable ADR Skill', changedSources(adrSkill, (text) => replaceOnce(text, 'user-invocable: false', 'user-invocable: true')),
   (error) => error.contractId === 'ADR-CONTRACT-001']
 ]) rejectWired(label, sources, expected);
@@ -742,8 +904,18 @@ assert.deepEqual(prepareVsix.validateArguments([
   expectedPendingNotes: 'old notes', proposedNotes: 'new notes'
 });
 assert.equal(typeof prepareVsix.applyConfirmedReleaseInputs, 'function');
-for (const relative of ['docs/run-books/vsix-packaging.md', '.github/skills/create-runbook/SKILL.md',
-  '.github/skills/create-runbook/templates/runbook.md']) {
+const actualBoundary = require('../scripts/verify-vsix-boundary.cjs').readManifest();
+assert.deepEqual(actualBoundary.contributions.filter(({ name }) => name === 'chatSkills')
+  .map(({ relative }) => relative), distributed.chatSkills, 'actual source-only boundary contribution parity');
+assert.equal([...actualBoundary.boundary].filter((relative) => relative.startsWith('.github/skills/')).length, 48,
+  'all distributed payload files are selected');
+assert.ok(![...actualBoundary.boundary].some((relative) => relative.startsWith(`${localSkillRoot}/`)),
+  'actual source-only boundary excludes all refactoring payload');
+assert.ok(actualBoundary.sourceFiles.has('.github/skills/rpir-agent-model-selection/references/role-profiles.md'));
+assert.ok(actualBoundary.sourceFiles.has('.github/skills/rpir-wiki-maintenance/references/wiki-validation-checklist.md'));
+cases += 1;
+for (const relative of ['docs/run-books/vsix-packaging.md', '.github/skills/rpir-create-runbook/SKILL.md',
+  '.github/skills/rpir-create-runbook/templates/runbook.md', localSkill]) {
   assert.doesNotThrow(() => contracts.checkLocalLinks(relative, readArtifact(relative)));
 }
 assert.match(readArtifact('.github/workflows/package.yml'), /package:\s*\n\s+if: false/,

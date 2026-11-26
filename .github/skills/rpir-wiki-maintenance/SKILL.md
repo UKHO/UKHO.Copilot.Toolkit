@@ -1,5 +1,5 @@
 ---
-name: wiki-maintenance
+name: rpir-wiki-maintenance
 description: Maintain repository-managed Markdown wiki pages with bounded anatomy, navigation, and source validation; use for drafting or updating approved wiki content and indexes.
 user-invocable: true
 ---

@@ -142,5 +142,5 @@ Static documentation/contract checks can validate authored structure and links, 
 - [`package.json`](../../package.json) — exact npm scripts, package identity, engine, and pinned `@vscode/vsce` 3.9.2.
 - [`CHANGELOG.md`](../../CHANGELOG.md) — existing Semantic Versioning convention and release-note history.
 - [`tests/test-vsix-boundary.cjs`](../../tests/test-vsix-boundary.cjs) — fixture coverage; it does not demonstrate a real VSIX build.
-- [Run Book authoring Skill](../../.github/skills/create-runbook/SKILL.md) and [template](../../.github/skills/create-runbook/templates/runbook.md) — scoped authoring requirements and anatomy.
+- [Run Book authoring Skill](../../.github/skills/rpir-create-runbook/SKILL.md) and [template](../../.github/skills/rpir-create-runbook/templates/runbook.md) — scoped authoring requirements and anatomy.
 

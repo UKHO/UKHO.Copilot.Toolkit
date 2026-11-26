@@ -6,12 +6,12 @@ model-policy: required
 reasoning-effort: high
 description: Review an inspected implementation report and record an evidence-backed conditional RPIR outcome.
 tools: ['read', 'search', 'edit', 'agent', 'execute']
-skills: ['agent-model-selection', 'rpir-code-review', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints', 'rpir-stage-assurance']
+skills: ['rpir-agent-model-selection', 'rpir-code-review', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints', 'rpir-stage-assurance']
 ---
 
 # RPIR Review coordinator
 
-Model and effort recommendations: [agent model selection](../skills/agent-model-selection/SKILL.md).
+Model and effort recommendations: [agent model selection](../skills/rpir-agent-model-selection/SKILL.md).
 
 ## Native entry and specialist dispatch
 

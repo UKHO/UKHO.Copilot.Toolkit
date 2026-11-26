@@ -6,12 +6,12 @@ model-policy: required
 reasoning-effort: high
 description: Plan from inspected Research or engineer-chosen material Review scope with acceptance and constraints.
 tools: ['read', 'search', 'edit', 'agent', 'execute']
-skills: ['agent-model-selection', 'rpir-architecture-planning', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints']
+skills: ['rpir-agent-model-selection', 'rpir-architecture-planning', 'rpir-lifecycle-core', 'rpir-agent-question-resolution', 'rpir-architecture-decision-records', 'rpir-local-git-checkpoints']
 ---
 
 # RPIR Plan coordinator
 
-Model and effort recommendations: [agent model selection](../skills/agent-model-selection/SKILL.md).
+Model and effort recommendations: [agent model selection](../skills/rpir-agent-model-selection/SKILL.md).
 
 ## Native entry and specialist dispatch
 
